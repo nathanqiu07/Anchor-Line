@@ -23,8 +23,8 @@ export function CompareTable({ offers }: CompareTableProps) {
       <div className="comparison__scroll" tabIndex={0} aria-label="Offer comparison table">
         <table className="comparison-table">
           <caption>
-            Annual offer amounts, except projected four-year debt. Work-study is not
-            subtracted from net price.
+            Annual amounts use stated yearly values and semester values ×2. Total or
+            unclear periods are not annualized. Work-study is not subtracted from net price.
           </caption>
           <thead>
             <tr>
@@ -51,21 +51,44 @@ export function CompareTable({ offers }: CompareTableProps) {
               )}
             </ComparisonRow>
             <ComparisonRow label="Gift aid">
-              {columns.map(({ offer, totals }, index) => (
-                <td key={`${offer.id}-${index}`}>{money.format(totals.giftAid)}</td>
-              ))}
+              {columns.map(({ offer, totals }, index) =>
+                totals.giftAid === null ? (
+                  <PeriodUnclearCell
+                    key={`${offer.id}-${index}`}
+                    statedTotal={totals.giftAidStatedTotal}
+                    unknownPeriodAmount={totals.giftAidUnknownPeriodAmount}
+                    detail="Annual gift aid is not comparable"
+                  />
+                ) : (
+                  <td key={`${offer.id}-${index}`}>{money.format(totals.giftAid)}</td>
+                ),
+              )}
             </ComparisonRow>
             <ComparisonRow label="Loans">
-              {columns.map(({ offer, totals }, index) => (
-                <td key={`${offer.id}-${index}`}>{money.format(totals.loans)}</td>
-              ))}
+              {columns.map(({ offer, totals }, index) =>
+                totals.loans === null ? (
+                  <PeriodUnclearCell
+                    key={`${offer.id}-${index}`}
+                    statedTotal={totals.loanStatedTotal}
+                    unknownPeriodAmount={totals.loanUnknownPeriodAmount}
+                    detail="Annual loans are not comparable"
+                  />
+                ) : (
+                  <td key={`${offer.id}-${index}`}>{money.format(totals.loans)}</td>
+                ),
+              )}
             </ComparisonRow>
             <ComparisonRow label="Net price">
               {columns.map(({ offer, totals }, index) =>
-                totals.netPrice === null ? (
+                totals.costHidden ? (
                   <td className="comparison-cell--danger" key={`${offer.id}-${index}`}>
                     <strong>cost hidden</strong>
                     <span>Net price cannot be checked</span>
+                  </td>
+                ) : totals.netPrice === null ? (
+                  <td className="comparison-cell--unclear" key={`${offer.id}-${index}`}>
+                    <strong>period unclear</strong>
+                    <span>Net price is not comparable</span>
                   </td>
                 ) : (
                   <td key={`${offer.id}-${index}`}>{money.format(totals.netPrice)}</td>
@@ -73,11 +96,18 @@ export function CompareTable({ offers }: CompareTableProps) {
               )}
             </ComparisonRow>
             <ComparisonRow label="Projected 4-year debt">
-              {columns.map(({ offer, totals }, index) => (
-                <td key={`${offer.id}-${index}`}>
-                  {money.format(totals.projectedFourYearDebt)}
-                </td>
-              ))}
+              {columns.map(({ offer, totals }, index) =>
+                totals.projectedFourYearDebt === null ? (
+                  <td className="comparison-cell--unclear" key={`${offer.id}-${index}`}>
+                    <strong>period unclear</strong>
+                    <span>Four-year debt is not comparable</span>
+                  </td>
+                ) : (
+                  <td key={`${offer.id}-${index}`}>
+                    {money.format(totals.projectedFourYearDebt)}
+                  </td>
+                ),
+              )}
             </ComparisonRow>
           </tbody>
         </table>
@@ -99,6 +129,31 @@ export function CompareTable({ offers }: CompareTableProps) {
         </div>
       </section>
     </div>
+  );
+}
+
+function PeriodUnclearCell({
+  statedTotal,
+  unknownPeriodAmount,
+  detail,
+}: {
+  statedTotal: number;
+  unknownPeriodAmount: number;
+  detail: string;
+}) {
+  const sourceAmount =
+    statedTotal > 0
+      ? `${money.format(statedTotal)} stated total`
+      : unknownPeriodAmount > 0
+        ? `${money.format(unknownPeriodAmount)} with period not stated`
+        : detail;
+
+  return (
+    <td className="comparison-cell--unclear">
+      <strong>period unclear</strong>
+      <span>{sourceAmount}</span>
+      {sourceAmount === detail ? null : <span>{detail}</span>}
+    </td>
   );
 }
 

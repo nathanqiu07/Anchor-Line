@@ -15,13 +15,15 @@ function percent(value: number): string {
 
 describe("release documentation", () => {
   test("documents the verified sample workflow, submission story, and final milestone state", async () => {
-    const [readme, writeup, demoScript, progress, humanTodo, evaluation] = await Promise.all([
+    const [readme, writeup, demoScript, progress, humanTodo, evaluation, envExample, gitignore] = await Promise.all([
       text("README.md"),
       text("submission/WRITEUP.md"),
       text("submission/DEMO_SCRIPT.md"),
       text("PROGRESS.md"),
       text("HUMAN_TODO.md"),
       text("eval/last-run.json"),
+      text(".env.example"),
+      text(".gitignore"),
     ]);
     const report = JSON.parse(evaluation) as {
       summary: {
@@ -49,7 +51,7 @@ describe("release documentation", () => {
       "PNG",
       "JPG",
       "PDF",
-      "10 MB",
+      "4 MB",
       "synthetic",
       "ANTHROPIC_API_KEY",
       "server-only",
@@ -58,6 +60,9 @@ describe("release documentation", () => {
       "Vercel",
       "processed in memory",
       "not financial advice",
+      "best-effort",
+      "not distributed",
+      "checked-in synthetic extraction snapshots",
     ]) {
       expect(readme).toContain(phrase);
     }
@@ -92,11 +97,19 @@ describe("release documentation", () => {
     expect(demoScript).toContain(`${anchorRate} / ${anchorCount.replace("/", "-of-")}`);
     expect(demoScript).toContain("comparison");
     expect(demoScript).toContain("cost hidden");
+    expect(demoScript).toContain("Cedar Ridge Presidential Scholarship");
+    expect(demoScript).not.toContain("Cedar Ridge Grant");
 
     expect(progress).not.toMatch(/^\s*- \[ \]/m);
     expect(progress).toContain("zero-key verified path");
     expect(progress).toContain("ANTHROPIC_API_KEY");
     expect(progress).toContain("documented deviation");
+    expect(progress).toContain("4 MiB");
+    expect(progress).toContain("390×844");
+
+    expect(envExample).toContain("ANTHROPIC_API_KEY=your_anthropic_api_key_here");
+    expect(envExample).toContain("EXTRACTION_MODEL=claude-sonnet-4-6");
+    expect(gitignore).toContain("!.env.example");
 
     for (const phrase of [
       "Collect 15",

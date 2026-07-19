@@ -2,7 +2,13 @@ import { describe, expect, test } from "vitest";
 
 import type { LetterAnalysis } from "../lib/schema";
 
-import { calculateOffer, financialAidGlossary, warningsFor } from "./financial-aid";
+import {
+  calculateOffer,
+  classifyAidItem,
+  deriveAidPeriod,
+  financialAidGlossary,
+  warningsFor,
+} from "./financial-aid";
 
 const analysis: LetterAnalysis = {
   school_name: "Northstar College",
@@ -61,8 +67,19 @@ describe("financial-aid pack", () => {
       loans: 13_500,
       workStudy: 2_000,
       otherAid: 0,
+      giftAidComparable: true,
+      loansComparable: true,
+      giftAidIncomplete: false,
+      loansIncomplete: false,
+      giftAidStatedTotal: 0,
+      loanStatedTotal: 0,
+      giftAidUnknownPeriodAmount: 0,
+      loanUnknownPeriodAmount: 0,
       netPrice: 30_000,
       projectedFourYearDebt: 54_000,
+      netPriceComparable: true,
+      fourYearDebtComparable: true,
+      incomplete: false,
       costHidden: false,
     });
   });
@@ -87,5 +104,129 @@ describe("financial-aid pack", () => {
   test("includes plain-language definitions for varied loan terminology", () => {
     expect(financialAidGlossary["direct unsub"]).toContain("repay");
     expect(financialAidGlossary["unsubsidized stafford loan dl"]).toContain("interest");
+  });
+
+  test.each([
+    ["Direct Loan", "Direct Loan $5,500", "loan", "Federal Direct Loan"],
+    ["Federal Pell Grant", "Federal Pell Grant $3,200", "gift_aid", "Federal Pell Grant"],
+    ["Parent PLUS", "Federal Direct Parent PLUS $8,000", "loan", "Federal Direct Parent PLUS Loan"],
+    ["Parent Loan for Undergraduate Students (PLUS)", "Parent Loan for Undergraduate Students (PLUS) $8,000", "loan", "Federal Direct Parent PLUS Loan"],
+    ["William D. Ford Federal Direct Unsubsidized Stafford Loan", "William D. Ford Federal Direct Unsubsidized Stafford Loan $5,500", "loan", "Federal Direct Unsubsidized Loan"],
+    ["Campus Employment Program", "Campus Employment Program $1,800", "work_study", "Campus Employment Program"],
+    ["Mystery Tuition Credit", "Mystery Tuition Credit $900", "other", "Mystery Tuition Credit"],
+  ])(
+    "classifies %s deterministically from its verbatim label and quote",
+    (rawLabel, sourceQuote, category, normalizedName) => {
+      const result = classifyAidItem(rawLabel, sourceQuote);
+
+      expect(result).toMatchObject({ category, normalizedName });
+      expect(result.explanation.length).toBeGreaterThan(20);
+    },
+  );
+
+  test("derives only explicit, unambiguous aid periods from source text", () => {
+    expect(deriveAidPeriod("Fall semester grant $2,000", "Fall semester grant $2,000")).toBe("semester");
+    expect(
+      deriveAidPeriod(
+        "Northstar Grant $4,000",
+        "Northstar Grant $4,000\nAll aid amounts are for the academic year.",
+      ),
+    ).toBe("year");
+    expect(deriveAidPeriod("Total program loan $12,000", "Total program loan $12,000")).toBe("total");
+    expect(
+      deriveAidPeriod(
+        "Northstar Grant $4,000",
+        "Northstar Grant $4,000\nAll amounts are annual.",
+      ),
+    ).toBe("year");
+    expect(deriveAidPeriod("Northstar Grant $4,000", "Northstar Grant $4,000")).toBe("unknown");
+  });
+
+  test("does not let another claim on a multi-amount line classify an unknown label", () => {
+    expect(
+      classifyAidItem(
+        "Campus Award",
+        "Campus Award $1,000; Federal Direct Loan $5,500",
+      ),
+    ).toMatchObject({
+      category: "other",
+      normalizedName: "Campus Award",
+      recognized: false,
+    });
+  });
+
+  test("annualizes semester gift aid and loans exactly twice", () => {
+    const semester = {
+      ...analysis,
+      line_items: analysis.line_items.map((item) => ({
+        ...item,
+        period: "semester" as const,
+      })),
+    };
+
+    expect(calculateOffer(semester)).toMatchObject({
+      giftAid: 20_000,
+      loans: 27_000,
+      workStudy: 4_000,
+      netPrice: 20_000,
+      projectedFourYearDebt: 108_000,
+      netPriceComparable: true,
+      fourYearDebtComparable: true,
+    });
+  });
+
+  test("keeps a total-period loan as a stated total without a four-year projection", () => {
+    const totalLoan = {
+      ...analysis,
+      line_items: analysis.line_items.map((item) =>
+        item.category === "loan" ? { ...item, period: "total" as const } : item,
+      ),
+    };
+
+    expect(calculateOffer(totalLoan)).toMatchObject({
+      loans: null,
+      loanStatedTotal: 13_500,
+      loansComparable: false,
+      loansIncomplete: true,
+      projectedFourYearDebt: null,
+      fourYearDebtComparable: false,
+      incomplete: true,
+    });
+  });
+
+  test("makes net price not comparable when gift-aid period is unknown", () => {
+    const unknownGift = {
+      ...analysis,
+      line_items: analysis.line_items.map((item) =>
+        item.category === "gift_aid" ? { ...item, period: "unknown" as const } : item,
+      ),
+    };
+
+    expect(calculateOffer(unknownGift)).toMatchObject({
+      giftAid: null,
+      giftAidUnknownPeriodAmount: 10_000,
+      giftAidComparable: false,
+      giftAidIncomplete: true,
+      netPrice: null,
+      netPriceComparable: false,
+    });
+  });
+
+  test("does not blend annual and total-period amounts in a mixed offer", () => {
+    const mixed = {
+      ...analysis,
+      line_items: analysis.line_items.map((item, index) =>
+        item.category === "loan" && index === 3
+          ? { ...item, period: "total" as const }
+          : item,
+      ),
+    };
+
+    expect(calculateOffer(mixed)).toMatchObject({
+      loans: null,
+      loanStatedTotal: 8_000,
+      loansComparable: false,
+      projectedFourYearDebt: null,
+    });
   });
 });

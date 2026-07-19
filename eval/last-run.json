@@ -1,13 +1,14 @@
 {
-  "generatedAt": "2026-07-19T07:22:57.496Z",
+  "generatedAt": "2026-07-19T08:34:23.652Z",
+  "methodology": "Offline comparison of checked-in synthetic extraction snapshots against separate checked-in expected truth; not a live-provider benchmark.",
   "results": [
     {
       "fixture": "cedar-ridge",
-      "fieldAccuracy": 1,
-      "matchedFields": 35,
+      "fieldAccuracy": 0.7714285714285715,
+      "matchedFields": 27,
       "totalFields": 35,
-      "anchorVerification": 1,
-      "verifiedAnchors": 5,
+      "anchorVerification": 0.8,
+      "verifiedAnchors": 4,
       "totalAnchors": 5
     },
     {
@@ -30,11 +31,11 @@
     }
   ],
   "summary": {
-    "fieldAccuracy": 1,
-    "matchedFields": 91,
+    "fieldAccuracy": 0.9120879120879121,
+    "matchedFields": 83,
     "totalFields": 91,
-    "anchorVerification": 1,
-    "verifiedAnchors": 12,
+    "anchorVerification": 0.9166666666666666,
+    "verifiedAnchors": 11,
     "totalAnchors": 12
   }
 }

@@ -65,4 +65,33 @@ describe("CompareTable", () => {
     expect(html).toContain("Loans are not grants");
     expect(html).toContain("Parent PLUS is parent debt");
   });
+
+  test("shows total and unknown periods as unclear instead of false annual math", () => {
+    const unclearOffer: StoredAnalysis = {
+      ...offer,
+      id: "unclear",
+      analysis: {
+        ...hiddenCostAnalysis,
+        cost_of_attendance: {
+          amount: 30_000,
+          source_quote: "Cost of Attendance $30,000",
+        },
+        line_items: hiddenCostAnalysis.line_items.map((item) =>
+          item.category === "gift_aid"
+            ? { ...item, period: "unknown" as const }
+            : item.category === "loan"
+              ? { ...item, period: "total" as const, amount: 12_000 }
+              : item,
+        ),
+      },
+    };
+
+    const html = renderToStaticMarkup(<CompareTable offers={[unclearOffer, offer]} />);
+
+    expect(html).toContain("period unclear");
+    expect(html).toContain("$12,000 stated total");
+    expect(html).toContain("Net price is not comparable");
+    expect(html).toContain("Four-year debt is not comparable");
+    expect(html).not.toContain("$48,000");
+  });
 });

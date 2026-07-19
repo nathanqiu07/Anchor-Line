@@ -5,7 +5,7 @@ export interface EvaluationResult {
   fieldAccuracy: number;
   matchedFields: number;
   totalFields: number;
-  anchorVerification: number;
+  anchorVerification: number | null;
   verifiedAnchors: number;
   totalAnchors: number;
 }
@@ -24,29 +24,70 @@ function valuesForLineItem(item: LineItem | undefined): unknown[] {
   return [item.raw_label, item.category, item.normalized_name, item.amount, item.period, item.source_quote, item.explanation];
 }
 
-function comparisonFields(analysis: LetterAnalysis): unknown[] {
-  return [analysis.school_name, analysis.award_year, analysis.cost_of_attendance.amount, analysis.cost_of_attendance.source_quote, analysis.transcription, analysis.missing_info, analysis.line_items.length, ...analysis.line_items.flatMap(valuesForLineItem)];
-}
+function comparisonPairs(
+  actual: LetterAnalysis,
+  expected: LetterAnalysis,
+): Array<[unknown, unknown]> {
+  const actualBase = [
+    actual.school_name,
+    actual.award_year,
+    actual.cost_of_attendance.amount,
+    actual.cost_of_attendance.source_quote,
+    actual.transcription,
+    actual.missing_info,
+    actual.line_items.length,
+  ];
+  const expectedBase = [
+    expected.school_name,
+    expected.award_year,
+    expected.cost_of_attendance.amount,
+    expected.cost_of_attendance.source_quote,
+    expected.transcription,
+    expected.missing_info,
+    expected.line_items.length,
+  ];
+  const pairs = expectedBase.map(
+    (expectedValue, index) => [actualBase[index], expectedValue] as [unknown, unknown],
+  );
 
-function sourceQuotes(analysis: LetterAnalysis): string[] {
-  return [...(analysis.cost_of_attendance.source_quote ? [analysis.cost_of_attendance.source_quote] : []), ...analysis.line_items.map((item) => item.source_quote)];
+  for (const [index, expectedItem] of expected.line_items.entries()) {
+    const actualValues = valuesForLineItem(actual.line_items[index]);
+    const expectedValues = valuesForLineItem(expectedItem);
+    pairs.push(
+      ...expectedValues.map(
+        (expectedValue, fieldIndex) =>
+          [actualValues[fieldIndex], expectedValue] as [unknown, unknown],
+      ),
+    );
+  }
+
+  return pairs;
 }
 
 /** Compares a deterministic extracted analysis with its checked-in expectation. */
 export function evaluateLetter(actual: LetterAnalysis, expected: LetterAnalysis): EvaluationResult {
-  const actualFields = comparisonFields(actual);
-  const expectedFields = comparisonFields(expected);
-  const totalFields = Math.max(actualFields.length, expectedFields.length);
-  const matchedFields = Array.from({ length: totalFields }, (_, index) => sameValue(actualFields[index], expectedFields[index])).filter(Boolean).length;
-  const quotes = sourceQuotes(actual);
-  const verifiedAnchors = quotes.filter((quote) => anchorQuote(actual.transcription, quote)).length;
-  const totalAnchors = quotes.length;
+  const fields = comparisonPairs(actual, expected);
+  const totalFields = fields.length;
+  const matchedFields = fields.filter(([actualValue, expectedValue]) =>
+    sameValue(actualValue, expectedValue),
+  ).length;
+  const expectedAnchorClaims = [
+    ...(expected.cost_of_attendance.source_quote
+      ? [actual.cost_of_attendance.source_quote]
+      : []),
+    ...expected.line_items.map((_, index) => actual.line_items[index]?.source_quote),
+  ];
+  const verifiedAnchors = expectedAnchorClaims.filter(
+    (quote): quote is string =>
+      typeof quote === "string" && Boolean(anchorQuote(actual.transcription, quote)),
+  ).length;
+  const totalAnchors = expectedAnchorClaims.length;
 
   return {
     fieldAccuracy: totalFields === 0 ? 1 : matchedFields / totalFields,
     matchedFields,
     totalFields,
-    anchorVerification: totalAnchors === 0 ? 1 : verifiedAnchors / totalAnchors,
+    anchorVerification: totalAnchors === 0 ? null : verifiedAnchors / totalAnchors,
     verifiedAnchors,
     totalAnchors,
   };
@@ -62,8 +103,15 @@ export function summarizeEvaluation(results: EvaluationResult[]): EvaluationSumm
     fieldAccuracy: totalFields === 0 ? 1 : matchedFields / totalFields,
     matchedFields,
     totalFields,
-    anchorVerification: totalAnchors === 0 ? 1 : verifiedAnchors / totalAnchors,
+    anchorVerification: totalAnchors === 0 ? null : verifiedAnchors / totalAnchors,
     verifiedAnchors,
     totalAnchors,
   };
+}
+
+export function meetsAnchorThreshold(
+  result: Pick<EvaluationResult, "anchorVerification" | "totalAnchors">,
+  threshold = 0.85,
+): boolean {
+  return result.totalAnchors === 0 || (result.anchorVerification ?? 0) >= threshold;
 }

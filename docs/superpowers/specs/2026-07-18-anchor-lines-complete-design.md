@@ -9,9 +9,9 @@ The approved scope is the attached `CLAUDE.md` brief. Its stack, model provider,
 ## Architecture
 
 - Next.js App Router and TypeScript provide the application shell, server API, and deployable Vercel target.
-- `lib/llm.ts` performs a two-pass Anthropic vision workflow: exact transcription, then schema-constrained extraction with one validation retry.
+- `lib/llm.ts` performs a two-pass Anthropic vision workflow: exact transcription, then schema-constrained extraction with one validation retry plus deterministic source-line, semantic, amount, and period enforcement.
 - `lib/anchor.ts` normalizes text with an index map, attempts an exact match, then searches sliding windows using Levenshtein similarity at a minimum score of 0.85.
-- `packs/financial-aid.ts` owns normalization, warnings, and deterministic client-side comparison math.
+- `packs/financial-aid.ts` owns normalization, warnings, and deterministic period-aware client-side comparison math; total and unknown periods remain not comparable.
 - Browser session state is stored in `sessionStorage`; no database, auth, or persistence service is introduced.
 - Three synthetic award letters and checked-in expected JSON make the product and evaluation harness usable without real documents or an API key.
 
@@ -21,11 +21,11 @@ The visual direction is a restrained dark editorial workspace: near-black backgr
 
 ## Data and error flow
 
-Uploads accept PNG, JPEG, and PDF up to 10 MB. Samples bypass the external API by loading checked-in analyses, while user uploads call `/api/extract`. The API rejects unsupported or oversized input, fails clearly when `ANTHROPIC_API_KEY` is absent, converts PDFs to Anthropic-compatible document content, validates extracted JSON, retries once with validation feedback, and returns 422 when the model still violates the schema. The UI preserves no uploaded bytes after the request and surfaces a specific non-letter message when extraction produces no recognizable financial-aid content.
+Uploads accept PNG, JPEG, and PDF up to 4 MiB so multipart requests remain under Vercel Functions' 4.5 MB request-body limit. Samples bypass the external API by loading checked-in analyses, while user uploads call `/api/extract`. The API rejects unsupported or oversized input, fails clearly when `ANTHROPIC_API_KEY` is absent, converts PDFs to Anthropic-compatible document content, validates extracted JSON, retries once with validation feedback, and returns 422 when the model still violates the schema. The UI preserves no uploaded bytes after the request and surfaces a specific non-letter message when extraction produces no recognizable financial-aid content.
 
 ## Testing and acceptance
 
-Unit tests cover schemas, pack math and warnings, exact/fuzzy/absent anchoring, fixture validity, API validation, and evaluation calculations. The eval command operates deterministically on the checked-in expected data, prints per-letter field accuracy and anchor verification, writes `eval/last-run.json`, and exits non-zero below 85% anchor verification. Completion requires typecheck, lint, tests, eval, production build, and a browser smoke test of sample-to-analysis-to-compare.
+Unit tests cover schemas, pack math and warnings, exact/fuzzy/absent anchoring, fixture validity, API validation, and evaluation calculations. The eval command compares checked-in synthetic extraction snapshots against separate checked-in expected truth, prints per-letter field accuracy and expected-anchor verification, writes `eval/last-run.json`, and exits non-zero below 85% aggregate anchor verification. Completion requires typecheck, lint, tests, eval, production build, and a browser smoke test of sample-to-analysis-to-compare.
 
 ## Guardrails
 

@@ -19,6 +19,22 @@ const money = new Intl.NumberFormat("en-US", {
 
 export function ClaimCard({ item, anchor, active, onActivate }: ClaimCardProps) {
   const explanation = explainAidItem(item);
+  const annualizedAmount =
+    item.amount === null
+      ? null
+      : item.period === "year"
+        ? item.amount
+        : item.period === "semester"
+          ? item.amount * 2
+          : null;
+  const periodCopy =
+    item.period === "year"
+      ? "Per academic year"
+      : item.period === "semester"
+        ? `Per semester${annualizedAmount === null ? "" : ` · ${money.format(annualizedAmount)} annualized`}`
+        : item.period === "total"
+          ? "Stated total · not annualized"
+          : "Period unclear · not annualized";
 
   return (
     <article className={`claim-card${active ? " claim-card--active" : ""}`}>
@@ -41,10 +57,11 @@ export function ClaimCard({ item, anchor, active, onActivate }: ClaimCardProps) 
             <span className="claim-card__amount">{money.format(item.amount)}</span>
           )}
         </span>
+        <span className="claim-card__period">{periodCopy}</span>
         <span className="claim-card__explanation">{explanation}</span>
-        {item.category === "loan" && item.amount !== null ? (
+        {item.category === "loan" && annualizedAmount !== null ? (
           <span className="claim-card__projection">
-            Est. 4-yr total <strong>{money.format(item.amount * 4)}</strong>
+            Est. 4-yr total <strong>{money.format(annualizedAmount * 4)}</strong>
           </span>
         ) : null}
         <span className="claim-card__source">

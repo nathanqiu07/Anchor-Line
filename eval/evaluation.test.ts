@@ -2,7 +2,11 @@ import { describe, expect, test } from "vitest";
 
 import type { LetterAnalysis } from "../lib/schema";
 
-import { evaluateLetter, summarizeEvaluation } from "./evaluation";
+import {
+  evaluateLetter,
+  meetsAnchorThreshold,
+  summarizeEvaluation,
+} from "./evaluation";
 
 const expected: LetterAnalysis = {
   school_name: "Northstar College",
@@ -25,7 +29,7 @@ const expected: LetterAnalysis = {
 
 describe("deterministic fixture evaluation", () => {
   test("reports field accuracy and source-quote anchor verification", () => {
-    const result = evaluateLetter(expected, expected);
+    const result = evaluateLetter(structuredClone(expected), expected);
 
     expect(result.fieldAccuracy).toBe(1);
     expect(result.anchorVerification).toBe(1);
@@ -45,7 +49,7 @@ describe("deterministic fixture evaluation", () => {
   });
 
   test("requires aggregate anchor verification of at least 85 percent", () => {
-    const good = evaluateLetter(expected, expected);
+    const good = evaluateLetter(structuredClone(expected), expected);
     const poor = evaluateLetter(
       {
         ...expected,
@@ -60,5 +64,38 @@ describe("deterministic fixture evaluation", () => {
       summarizeEvaluation([good, good, good, good, good, poor])
         .anchorVerification,
     ).toBeGreaterThanOrEqual(0.85);
+  });
+
+  test("uses expected anchors as the denominator so omitted actual claims fail", () => {
+    const omittedActual: LetterAnalysis = {
+      ...expected,
+      cost_of_attendance: { amount: null, source_quote: null },
+      line_items: [],
+      transcription: "",
+    };
+
+    const result = evaluateLetter(omittedActual, expected);
+
+    expect(result).toMatchObject({
+      anchorVerification: 0,
+      verifiedAnchors: 0,
+      totalAnchors: 2,
+    });
+    expect(result.fieldAccuracy).toBeLessThan(1);
+    expect(result.totalFields).toBeGreaterThan(result.matchedFields);
+    expect(meetsAnchorThreshold(result)).toBe(false);
+  });
+
+  test("reports N/A only when expected truth contains no anchor claims", () => {
+    const noExpectedAnchors: LetterAnalysis = {
+      ...expected,
+      cost_of_attendance: { amount: null, source_quote: null },
+      line_items: [],
+    };
+    const result = evaluateLetter(structuredClone(noExpectedAnchors), noExpectedAnchors);
+
+    expect(result.anchorVerification).toBeNull();
+    expect(result.totalAnchors).toBe(0);
+    expect(meetsAnchorThreshold(result)).toBe(true);
   });
 });

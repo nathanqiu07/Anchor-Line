@@ -19,10 +19,17 @@ afterEach(() => {
 });
 
 describe("upload panel helpers", () => {
-  test("accepts PNG, JPG, and PDF files up to 10 MB", () => {
+  test("accepts PNG, JPG, and PDF files through the exact 4 MiB boundary", () => {
     expect(validateUpload(new File(["png"], "letter.png", { type: "image/png" }))).toBeNull();
     expect(validateUpload(new File(["jpg"], "letter.jpg", { type: "image/jpeg" }))).toBeNull();
     expect(validateUpload(new File(["pdf"], "letter.pdf", { type: "application/pdf" }))).toBeNull();
+    expect(
+      validateUpload(
+        new File([new Uint8Array(4 * 1024 * 1024)], "boundary.pdf", {
+          type: "application/pdf",
+        }),
+      ),
+    ).toBeNull();
   });
 
   test("rejects unsupported and oversized files with clear copy", () => {
@@ -31,11 +38,17 @@ describe("upload panel helpers", () => {
     );
     expect(
       validateUpload(
-        new File([new Uint8Array(10 * 1024 * 1024 + 1)], "letter.png", {
+        new File([new Uint8Array(4 * 1024 * 1024 + 1)], "letter.png", {
           type: "image/png",
         }),
       ),
-    ).toBe("Choose a file that is 10 MB or smaller.");
+    ).toBe("Choose a file that is 4 MB or smaller.");
+  });
+
+  test("shows the shared 4 MB contract in upload copy", () => {
+    const { container } = render(createElement(UploadPanel));
+    expect(container.textContent).toContain("4 MB max");
+    expect(container.textContent).not.toContain("10 MB max");
   });
 
   test("keeps the exact non-letter message", () => {

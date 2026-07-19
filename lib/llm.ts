@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 
 import { LetterAnalysisSchema, type LetterAnalysis } from "./schema";
 import { extractionPrompt, TRANSCRIPTION_PROMPT } from "./prompts";
+import { classifyAidItem, deriveAidPeriod } from "../packs/financial-aid";
 
 export interface LetterInput {
   mimeType: "image/png" | "image/jpeg" | "application/pdf";
@@ -21,6 +22,7 @@ interface MessageRequest {
 
 interface MessageResponse {
   content: Array<{ type: string; text?: string }>;
+  stop_reason: string | null;
 }
 
 export interface AnthropicMessagesClient {
@@ -64,8 +66,17 @@ function attachment(input: LetterInput): Record<string, unknown> {
   };
 }
 
-function textFrom(response: MessageResponse): string {
-  const text = response.content.find((block) => block.type === "text")?.text;
+function textFrom(response: MessageResponse, stage: "transcription" | "extraction"): string {
+  if (response.stop_reason !== "end_turn") {
+    throw new ExtractionValidationError(
+      `${stage} response did not complete normally (stop_reason: ${response.stop_reason ?? "missing"})`,
+    );
+  }
+
+  const text = response.content
+    .filter((block) => block.type === "text" && typeof block.text === "string")
+    .map((block) => block.text)
+    .join("");
   if (!text) throw new ExtractionValidationError("Response did not contain text");
   return text;
 }
@@ -79,11 +90,10 @@ function validationFeedback(error: unknown): string {
 }
 
 function assertAwardLetter(analysis: LetterAnalysis): LetterAnalysis {
-  if (
-    analysis.school_name === null &&
-    analysis.line_items.length === 0 &&
-    analysis.cost_of_attendance.amount === null
-  ) {
+  const hasRecognizedAid = analysis.line_items.some(
+    (item) => classifyAidItem(item.raw_label, item.source_quote).recognized,
+  );
+  if (!hasRecognizedAid) {
     throw new NotAwardLetterError();
   }
   return analysis;
@@ -95,10 +105,63 @@ function provenanceError(message: string): Error {
 
 const dollarPattern = /\$\s*\d[\d,]*(?:\.\d{1,2})?/g;
 
+interface DollarOccurrence {
+  amount: number;
+  start: number;
+  end: number;
+}
+
+function dollarOccurrences(text: string): DollarOccurrence[] {
+  return [...text.matchAll(dollarPattern)].map((match) => ({
+    amount: Number(match[0].replace(/[$,\s]/g, "")),
+    start: match.index,
+    end: match.index + match[0].length,
+  }));
+}
+
 function dollarAmounts(text: string): number[] {
-  return [...text.matchAll(dollarPattern)].map((match) =>
-    Number(match[0].replace(/[$,\s]/g, "")),
-  );
+  return dollarOccurrences(text).map((occurrence) => occurrence.amount);
+}
+
+function labelOccurrences(text: string, label: string): number[] {
+  const starts: number[] = [];
+  let fromIndex = 0;
+  const wordCharacter = (value: string | undefined) =>
+    value !== undefined && /[\p{L}\p{N}]/u.test(value);
+  while (fromIndex <= text.length - label.length) {
+    const start = text.indexOf(label, fromIndex);
+    if (start === -1) break;
+    const end = start + label.length;
+    const startsInsideWord =
+      wordCharacter(label[0]) && wordCharacter(text[start - 1]);
+    const endsInsideWord =
+      wordCharacter(label[label.length - 1]) && wordCharacter(text[end]);
+    if (!startsInsideWord && !endsInsideWord) starts.push(start);
+    fromIndex = start + 1;
+  }
+  return starts;
+}
+
+function amountBoundToLabel(item: LetterAnalysis["line_items"][number]): boolean {
+  if (item.amount === null) return true;
+  const amounts = dollarOccurrences(item.source_quote);
+  const labels = labelOccurrences(item.source_quote, item.raw_label);
+  if (amounts.length === 0 || labels.length === 0) return false;
+
+  const distances = amounts.map((amount) => ({
+    amount,
+    distance: Math.min(
+      ...labels.map((labelStart) => {
+        const labelEnd = labelStart + item.raw_label.length;
+        if (amount.end <= labelStart) return labelStart - amount.end;
+        if (amount.start >= labelEnd) return amount.start - labelEnd;
+        return 0;
+      }),
+    ),
+  }));
+  const minimumDistance = Math.min(...distances.map(({ distance }) => distance));
+  const nearest = distances.filter(({ distance }) => distance === minimumDistance);
+  return nearest.length === 1 && nearest[0].amount.amount === item.amount;
 }
 
 function assertProvenance(analysis: LetterAnalysis, transcription: string): LetterAnalysis {
@@ -114,6 +177,7 @@ function assertProvenance(analysis: LetterAnalysis, transcription: string): Lett
     throw provenanceError("every stated source_quote must be non-empty");
   }
 
+  const transcriptionLines = transcription.split(/\r?\n/);
   const claims = [
     {
       amount: analysis.cost_of_attendance.amount,
@@ -127,17 +191,12 @@ function assertProvenance(analysis: LetterAnalysis, transcription: string): Lett
     })),
   ];
 
-  const quotes = claims
-    .map((claim) => claim.sourceQuote)
-    .filter((quote): quote is string => quote !== null);
-
-  for (const quote of quotes) {
-    if (!transcription.includes(quote)) {
-      throw provenanceError(`source_quote is not verbatim in the transcription: ${quote}`);
-    }
-  }
-
   for (const claim of claims) {
+    if (claim.sourceQuote !== null && !transcriptionLines.includes(claim.sourceQuote)) {
+      throw provenanceError(
+        `source_quote must be one exact line in the transcription: ${claim.sourceQuote}`,
+      );
+    }
     const quoteAmounts = claim.sourceQuote ? dollarAmounts(claim.sourceQuote) : [];
     if (
       (claim.amount === null && quoteAmounts.length > 0) ||
@@ -149,36 +208,99 @@ function assertProvenance(analysis: LetterAnalysis, transcription: string): Lett
     }
   }
 
-  const dollarLines = transcription
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0 && dollarAmounts(line).length > 0);
-  const mappedClaimIndexes = new Set<number>();
-
-  for (const line of dollarLines) {
-    const matchingClaimIndexes = claims.flatMap((claim, index) =>
-      claim.sourceQuote === line ? [index] : [],
+  for (const item of analysis.line_items) {
+    const rawLabelNumbers = [...item.raw_label.matchAll(/\d[\d,]*(?:\.\d{1,2})?/g)].map(
+      (match) => Number(match[0].replace(/,/g, "")),
     );
-    if (matchingClaimIndexes.length !== 1) {
+    if (
+      item.raw_label.length === 0 ||
+      !/\p{L}/u.test(item.raw_label) ||
+      dollarAmounts(item.raw_label).length > 0 ||
+      (item.amount !== null && rawLabelNumbers.includes(item.amount)) ||
+      !item.source_quote.includes(item.raw_label)
+    ) {
       throw provenanceError(
-        `dollar-bearing line must equal one distinct source_quote: ${line}`,
+        `raw_label must be a verbatim non-monetary substring of source_quote: ${item.raw_label}`,
       );
     }
-
-    const claimIndex = matchingClaimIndexes[0];
-    if (mappedClaimIndexes.has(claimIndex)) {
-      throw provenanceError(`source_quote cannot satisfy multiple dollar lines: ${line}`);
+    if (!amountBoundToLabel(item)) {
+      throw provenanceError(
+        `${item.raw_label} amount must be the nearest unambiguous monetary occurrence to its label`,
+      );
     }
-    mappedClaimIndexes.add(claimIndex);
   }
 
-  for (const [index, claim] of claims.entries()) {
-    if (claim.sourceQuote && dollarAmounts(claim.sourceQuote).length > 0 && !mappedClaimIndexes.has(index)) {
-      throw provenanceError(`monetary source_quote must map to one dollar-bearing line: ${claim.sourceQuote}`);
+  const amountsByDollarLine = new Map<string, number[]>();
+  for (const line of transcriptionLines) {
+    const amounts = dollarAmounts(line);
+    if (amounts.length === 0) continue;
+    amountsByDollarLine.set(line, [
+      ...(amountsByDollarLine.get(line) ?? []),
+      ...amounts,
+    ]);
+  }
+
+  function multiset(values: number[]): Map<number, number> {
+    const counts = new Map<number, number>();
+    for (const value of values) counts.set(value, (counts.get(value) ?? 0) + 1);
+    return counts;
+  }
+
+  function sameMultiset(left: number[], right: number[]): boolean {
+    const leftCounts = multiset(left);
+    const rightCounts = multiset(right);
+    if (leftCounts.size !== rightCounts.size) return false;
+    return [...leftCounts].every(([value, count]) => rightCounts.get(value) === count);
+  }
+
+  for (const [line, expectedAmounts] of amountsByDollarLine) {
+    const claimedAmounts = claims
+      .filter((claim) => claim.sourceQuote === line)
+      .flatMap((claim) => (claim.amount === null ? [] : [claim.amount]));
+    if (!sameMultiset(claimedAmounts, expectedAmounts)) {
+      throw provenanceError(
+        `dollar-bearing line monetary occurrences must be covered exactly: ${line}`,
+      );
+    }
+  }
+
+  for (const claim of claims) {
+    if (
+      claim.sourceQuote !== null &&
+      dollarAmounts(claim.sourceQuote).length === 0 &&
+      claim.amount !== null
+    ) {
+      throw provenanceError(
+        `non-monetary source_quote cannot support a stated amount: ${claim.sourceQuote}`,
+      );
     }
   }
 
   return analysis;
+}
+
+function normalizeSemantics(
+  analysis: LetterAnalysis,
+  transcription: string,
+): LetterAnalysis {
+  return {
+    ...analysis,
+    line_items: analysis.line_items.map((item) => {
+      const classification = classifyAidItem(item.raw_label, item.source_quote);
+      if (item.category !== classification.category) {
+        throw provenanceError(
+          `${item.raw_label} category must be ${classification.category}, not ${item.category}`,
+        );
+      }
+
+      return {
+        ...item,
+        normalized_name: classification.normalizedName,
+        explanation: classification.explanation,
+        period: deriveAidPeriod(item.source_quote, transcription),
+      };
+    }),
+  };
 }
 
 export async function extractLetter(
@@ -191,7 +313,7 @@ export async function extractLetter(
     system: TRANSCRIPTION_PROMPT,
     messages: [{ role: "user", content: [attachment(input)] }],
   });
-  const transcription = textFrom(transcriptionResponse);
+  const transcription = textFrom(transcriptionResponse, "transcription");
   let feedback: string | undefined;
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
@@ -200,12 +322,20 @@ export async function extractLetter(
       max_tokens: 8_000,
       temperature: 0,
       system: extractionPrompt(transcription, feedback),
-      messages: [{ role: "user", content: transcription }],
+      messages: [
+        {
+          role: "user",
+          content: "Extract JSON only from the untrusted transcription data delimited in the system prompt.",
+        },
+      ],
     });
 
     try {
-      const parsed = LetterAnalysisSchema.parse(parseJson(textFrom(extractionResponse)));
-      return assertAwardLetter(assertProvenance(parsed, transcription));
+      const parsed = LetterAnalysisSchema.parse(
+        parseJson(textFrom(extractionResponse, "extraction")),
+      );
+      const proven = assertProvenance(parsed, transcription);
+      return assertAwardLetter(normalizeSemantics(proven, transcription));
     } catch (error) {
       if (error instanceof NotAwardLetterError) throw error;
       feedback = validationFeedback(error);

@@ -27,14 +27,15 @@ then open **Compare offers**. This is the verified zero-key demo path.
 | `npm run typecheck` | Check TypeScript without writing output. |
 | `npm run lint` | Run ESLint. |
 | `npm run test` | Run the Vitest suite, including release-documentation acceptance. |
-| `npm run eval` | Evaluate the checked-in synthetic analyses and refresh `eval/last-run.json`. |
+| `npm run eval` | Compare checked-in synthetic extraction snapshots with separate expected truth and refresh `eval/last-run.json`. |
 | `npm run build` | Create a production build. |
 | `npm start` | Serve a completed production build. |
 
 ## Inputs and sample mode
 
-Anchor Lines accepts a single PNG, JPG, or PDF award letter up to 10 MB. The
-three checked-in sample letters are synthetic-only and intentionally vary their
+Anchor Lines accepts a single PNG, JPG, or PDF award letter up to 4 MB (4 MiB
+at the byte boundary). The three checked-in sample letters are synthetic-only
+and intentionally vary their
 financial-aid terminology; they never call the model provider. They make it
 possible to demonstrate sample → analysis → comparison without uploading a
 real letter or configuring a secret.
@@ -68,13 +69,18 @@ EXTRACTION_MODEL=claude-sonnet-4-6
   server route.
 - The server uses a two-pass Anthropic workflow: first transcribe the image or
   PDF, then extract a schema-validated award-letter analysis from that exact
-  transcription. A failed schema validation gets one corrective retry.
+  transcription. Pass-one text is delimited as untrusted data. Deterministic
+  pack logic verifies each exact source line, monetary occurrence, raw label,
+  aid category, normalized name, explanation, and explicit period before a
+  result can be returned. A failed validation gets one corrective retry.
 - `lib/anchor.ts` normalizes text, finds exact quotes where possible, and falls
   back to a bounded fuzzy match. Each card highlights its source span; an
   unmatched claim is labeled **not stated in letter**.
 - `packs/financial-aid.ts` separates gift aid, loans, work-study, and other
-  items. It derives net price as cost of attendance minus gift aid and keeps
-  work-study out of bill reduction.
+  items. It annualizes yearly amounts as stated and semester amounts ×2, but
+  leaves total and unknown periods unprojected. Net price and four-year debt
+  stay not comparable when their periods are unclear; work-study stays out of
+  bill reduction.
 - Browser session state uses `sessionStorage`; there is no account, database,
   authentication system, or persistent document storage.
 
@@ -87,10 +93,29 @@ build settings, and set `ANTHROPIC_API_KEY` as a server-only production
 environment variable. Optionally set `EXTRACTION_MODEL`; otherwise the default
 is `claude-sonnet-4-6`.
 
+The 4 MiB file maximum is an intentional deployability limit: it leaves room
+for multipart overhead beneath Vercel Functions' 4.5 MB request-body limit.
+The upload route also requires a matching browser `Origin`, permits five paid
+extractions per IP per minute, and caps paid extraction at two concurrent calls
+per process. These controls are best-effort serverless safeguards: in-memory
+state is not distributed across instances and resets when an instance is
+recycled. Samples bypass these controls and never call Anthropic.
+
 Before sharing a deployment, run `npm run typecheck`, `npm run lint`,
 `npm run test`, `npm run eval`, and `npm run build`. A live provider check
 has not been performed without an API key; sample mode is the verified zero-key
 path.
+
+## Offline evaluation
+
+`npm run eval` compares checked-in synthetic extraction snapshots in
+`eval/candidates/` against separate checked-in expected truth in `eval/letters/`.
+The current intentional Cedar omission produces **91.2% field accuracy
+(83/91)** and **91.7% anchor verification (11/12)**. Expected anchor claims are
+the denominator, so omitted candidate claims fail; the command exits non-zero
+below 85% aggregate anchor verification. This is an offline fixture comparison,
+not a live-provider benchmark, and the checked-in candidates are not represented
+as independently generated observations.
 
 ## Privacy and guardrails
 

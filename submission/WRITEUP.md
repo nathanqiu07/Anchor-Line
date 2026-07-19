@@ -25,15 +25,21 @@ product says **not stated in letter** instead of pretending certainty.
 The normalization layer handles terminology such as “Direct Unsub” and older
 Stafford labels before comparison. It also makes the true-cost comparison
 explicit: net price is COA minus gift aid, work-study is not treated as bill
-reduction, and loans are shown as projected four-year debt rather than blended
-with grants. A missing COA stays a red `cost hidden` result.
+reduction, and annual or semester loans get a defensible projected four-year
+debt rather than being blended with grants. Total and unknown periods stay
+unprojected and visibly not comparable. A missing COA stays a red `cost hidden`
+result.
 
 ## How it works
 
 The app uses a two-pass extraction architecture. Pass one transcribes the
 image or PDF. Pass two asks the model to produce a strict, schema-validated
 analysis from that exact transcription, including verbatim source quotes. A
-failed validation receives one corrective retry. The client then runs its own
+failed validation receives one corrective retry. The transcription is
+explicitly delimited as untrusted data. Deterministic pack rules require exact
+one-line quotes and complete dollar-occurrence coverage, bind raw labels to
+their own quotes, reject category disagreement, replace recognized names and
+explanations, and derive only source-stated periods. The client then runs its own
 anchored matching: lowercase/collapse whitespace/punctuation normalization,
 exact substring matching, and a bounded fuzzy fallback for OCR noise.
 
@@ -42,13 +48,21 @@ Anthropic's vision API, and deterministic synthetic fixtures. Client-side
 comparison math and financial-aid guardrails remain deterministic instead of
 being delegated to the model.
 
-## Measured sample evaluation
+Live uploads are limited to PNG, JPG, or PDF files up to **4 MB** so multipart
+requests remain deployable under the Vercel Functions body limit. Same-origin,
+per-IP rate, and in-process concurrency controls run before paid provider calls;
+synthetic samples remain key-free and unmetered.
 
-The checked-in synthetic evaluation in `eval/last-run.json` reports **100.0%**
-field accuracy (**91/91** checked fields) and **100.0%** anchor verification
-(**12/12** verified anchors). These are measured results on three synthetic
-fixtures, not a claim about real-world letter accuracy. The evaluation exits
-non-zero if aggregate anchor verification falls below 85%.
+## Measured offline sample evaluation
+
+The offline comparison in `eval/last-run.json` measures checked-in synthetic
+extraction snapshots against separate checked-in expected truth. Its intentional
+Cedar omission reports **91.2%** field accuracy (**83/91** checked fields) and
+**91.7%** anchor verification (**11/12** expected anchors). These candidates are
+checked-in fixture artifacts, not independently generated live-provider output,
+and the result is not a claim about real-world letter accuracy. Omissions count
+as failures, and the evaluation exits non-zero if aggregate anchor verification
+falls below 85%.
 
 ## Privacy and guardrails
 

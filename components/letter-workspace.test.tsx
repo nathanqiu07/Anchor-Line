@@ -104,8 +104,35 @@ describe("ClaimCard", () => {
     expect(html).toContain("You repay this, with interest.");
     expect(html).toContain("Est. 4-yr total");
     expect(html).toContain("$22,000");
+    expect(html).toContain("Per academic year");
     expect(html).not.toContain("not stated in letter");
   });
+
+  test.each([
+    ["semester", "Per semester", "$44,000", "Est. 4-yr total"],
+    ["total", "Stated total", null, "Est. 4-yr total"],
+    ["unknown", "Period unclear", null, "Est. 4-yr total"],
+  ] as const)(
+    "renders a %s-period loan without inventing an unsupported projection",
+    (period, periodCopy, projectedAmount, projectionLabel) => {
+      const html = renderToStaticMarkup(
+        <ClaimCard
+          item={{ ...item, category: "loan", amount: 5_500, period }}
+          anchor={{ start: 0, end: 10, score: 1 }}
+          active={false}
+          onActivate={() => undefined}
+        />,
+      );
+
+      expect(html).toContain(periodCopy);
+      if (projectedAmount) {
+        expect(html).toContain(projectedAmount);
+        expect(html).toContain(projectionLabel);
+      } else {
+        expect(html).not.toContain(projectionLabel);
+      }
+    },
+  );
 });
 
 describe("LetterWorkspace", () => {

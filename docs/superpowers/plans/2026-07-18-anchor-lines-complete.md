@@ -13,9 +13,9 @@
 - Tagline: “Plain language you can check.”
 - Categories are exactly `gift_aid | loan | work_study | other`.
 - Unmatched claims visibly mean and say “not stated in letter”.
-- Net price is `COA − Σ gift_aid`; projected four-year debt is `Σ loans × 4`.
+- Net price is `COA − Σ annualized gift_aid`; projected four-year debt is `Σ annualized loans × 4`. Year amounts stay as stated, semester amounts are ×2, and total/unknown periods are not comparable.
 - Anthropic model comes from `EXTRACTION_MODEL`, defaulting to `claude-sonnet-4-6`; the server-only key is `ANTHROPIC_API_KEY`.
-- Accept PNG, JPG, and PDF up to 10 MB; no database, auth, accounts, or tracked real letters.
+- Accept PNG, JPG, and PDF up to 4 MiB (the deployable alternative under Vercel's 4.5 MB function-body limit); no database, auth, accounts, or tracked real letters.
 - Fuzzy quote matching uses sliding windows ±20% quote length and requires similarity ≥0.85.
 - `npm run typecheck`, `npm run lint`, `npm run test`, `npm run eval`, and `npm run build` must pass.
 
@@ -52,7 +52,7 @@
 - `extractLetter(input: LetterInput, client?: AnthropicClient): Promise<LetterAnalysis>`
 - `POST(request: Request): Promise<Response>` accepts multipart field `file` or JSON `{ sampleId }`.
 
-- [ ] Write tests for exact prompt invariants, validation retry success, second validation failure, supported/unsupported MIME types, 10 MB enforcement, missing key messaging, and sample extraction without an API key.
+- [ ] Write tests for exact prompt invariants, validation retry success, second validation failure, supported/unsupported MIME types, 4 MiB enforcement, missing key messaging, and sample extraction without an API key.
 - [ ] Run the targeted tests and confirm the expected missing-feature failures.
 - [ ] Implement the transcription call, extraction call at temperature 0, JSON parsing and Zod validation, one corrective retry, PDF document handling, upload validation, and synthetic-sample shortcut.
 - [ ] Run the targeted tests and verify a fixture request returns valid `LetterAnalysis` while malformed requests return specific 4xx responses.

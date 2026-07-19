@@ -66,5 +66,5 @@ export const LetterAnalysisSchema: z.ZodType<LetterAnalysis> = z
   })
   .strict();
 
-// Derived client-side only:
-// net_price = COA - sum(gift_aid); four_year_debt = sum(loans) * 4.
+// Derived client-side only when periods are comparable:
+// semester amounts are annualized ×2; total/unknown periods stay unprojected.

@@ -905,6 +905,14 @@ button {
   line-height: 1.55;
 }
 
+.claim-card__period {
+  color: var(--amber);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .claim-card__projection {
   display: flex;
   align-items: center;
@@ -1197,6 +1205,31 @@ button {
 .comparison-cell--danger strong,
 .comparison-cell--danger span {
   display: block;
+}
+
+.comparison-table .comparison-cell--unclear {
+  background: rgba(201, 143, 51, 0.08);
+  color: var(--amber);
+}
+
+.comparison-cell--unclear strong,
+.comparison-cell--unclear span {
+  display: block;
+}
+
+.comparison-cell--unclear strong {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.comparison-cell--unclear span {
+  margin-top: 5px;
+  color: var(--muted);
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.35;
 }
 
 .comparison-cell--danger strong {

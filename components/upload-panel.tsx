@@ -5,9 +5,11 @@ import { useState, type ChangeEvent, type DragEvent } from "react";
 
 import { saveAnalysis, type AnalysisSource, type StoredAnalysis } from "../lib/client-store";
 import { LetterAnalysisSchema, type LetterAnalysis } from "../lib/schema";
-
-const MAX_FILE_BYTES = 10 * 1024 * 1024;
-const acceptedTypes = new Set(["image/png", "image/jpeg", "application/pdf"]);
+import {
+  isAcceptedUploadType,
+  MAX_UPLOAD_BYTES,
+  MAX_UPLOAD_MIB,
+} from "../lib/upload-contract";
 
 export const NON_LETTER_MESSAGE = "This doesn't look like an award letter";
 
@@ -33,8 +35,10 @@ const samples = [
 ] as const;
 
 export function validateUpload(file: File): string | null {
-  if (!acceptedTypes.has(file.type)) return "Choose a PNG, JPG, or PDF award letter.";
-  if (file.size > MAX_FILE_BYTES) return "Choose a file that is 10 MB or smaller.";
+  if (!isAcceptedUploadType(file.type)) return "Choose a PNG, JPG, or PDF award letter.";
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return `Choose a file that is ${MAX_UPLOAD_MIB} MB or smaller.`;
+  }
   return null;
 }
 
@@ -163,7 +167,7 @@ export function UploadPanel() {
               />
               {busyLabel ? "Reading letter…" : "Choose a letter"}
             </label>
-            <span className="upload-meta">PNG, JPG, or PDF · 10 MB max</span>
+            <span className="upload-meta">PNG, JPG, or PDF · {MAX_UPLOAD_MIB} MB max</span>
           </div>
         </div>
         <div className="upload-panel__mark" aria-hidden="true">
