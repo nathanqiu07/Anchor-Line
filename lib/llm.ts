@@ -138,12 +138,13 @@ function assertProvenance(analysis: LetterAnalysis, transcription: string): Lett
   }
 
   for (const claim of claims) {
+    const quoteAmounts = claim.sourceQuote ? dollarAmounts(claim.sourceQuote) : [];
     if (
-      claim.amount !== null &&
-      (!claim.sourceQuote || !dollarAmounts(claim.sourceQuote).includes(claim.amount))
+      (claim.amount === null && quoteAmounts.length > 0) ||
+      (claim.amount !== null && !quoteAmounts.includes(claim.amount))
     ) {
       throw provenanceError(
-        `${claim.label} amount must appear in its own source_quote`,
+        `${claim.label} amount must match a dollar amount in its own source_quote`,
       );
     }
   }

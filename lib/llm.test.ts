@@ -264,4 +264,59 @@ describe("two-pass extraction prompts", () => {
       ),
     ).resolves.toEqual(analysis);
   });
+
+  test("rejects dollar-line claims whose every amount is null", async () => {
+    const nullAmounts = {
+      ...analysis,
+      cost_of_attendance: {
+        ...analysis.cost_of_attendance,
+        amount: null,
+      },
+      line_items: analysis.line_items.map((item) => ({ ...item, amount: null })),
+    };
+
+    await expect(
+      extractLetter(
+        { mimeType: "image/png", bytes: new Uint8Array([1]) },
+        fakeClient(
+          response(transcription),
+          response(JSON.stringify(nullAmounts)),
+          response(JSON.stringify(nullAmounts)),
+        ),
+      ),
+    ).rejects.toBeInstanceOf(ExtractionValidationError);
+  });
+
+  test("accepts a null amount when its source quote has no dollar amount", async () => {
+    const nonMonetaryTranscription =
+      "Cedar Ridge University\nFederal Work-Study amount will be determined";
+    const nonMonetaryAnalysis = {
+      school_name: "Cedar Ridge University",
+      award_year: null,
+      cost_of_attendance: { amount: null, source_quote: null },
+      line_items: [
+        {
+          raw_label: "Federal Work-Study",
+          category: "work_study",
+          normalized_name: "Federal Work-Study",
+          amount: null,
+          period: "unknown",
+          source_quote: "Federal Work-Study amount will be determined",
+          explanation: "An opportunity to earn wages.",
+        },
+      ],
+      transcription: nonMonetaryTranscription,
+      missing_info: [],
+    };
+
+    await expect(
+      extractLetter(
+        { mimeType: "image/png", bytes: new Uint8Array([1]) },
+        fakeClient(
+          response(nonMonetaryTranscription),
+          response(JSON.stringify(nonMonetaryAnalysis)),
+        ),
+      ),
+    ).resolves.toEqual(nonMonetaryAnalysis);
+  });
 });
