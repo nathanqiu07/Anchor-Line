@@ -1,0 +1,48 @@
+{
+  "school_name": "Cedar Ridge University",
+  "award_year": "2026-2027",
+  "cost_of_attendance": {
+    "amount": 42000,
+    "source_quote": "Estimated Cost of Attendance: $42,000"
+  },
+  "line_items": [
+    {
+      "raw_label": "Cedar Ridge Presidential Scholarship",
+      "category": "gift_aid",
+      "normalized_name": "Cedar Ridge Presidential Scholarship",
+      "amount": 16000,
+      "period": "year",
+      "source_quote": "Cedar Ridge Presidential Scholarship $16,000",
+      "explanation": "Scholarship gift aid does not need to be repaid, subject to the award terms."
+    },
+    {
+      "raw_label": "Federal Pell Grant",
+      "category": "gift_aid",
+      "normalized_name": "Federal Pell Grant",
+      "amount": 3200,
+      "period": "year",
+      "source_quote": "Federal Pell Grant $3,200",
+      "explanation": "Federal grant aid does not need to be repaid, subject to eligibility."
+    },
+    {
+      "raw_label": "Direct Unsub",
+      "category": "loan",
+      "normalized_name": "Federal Direct Unsubsidized Loan",
+      "amount": 5500,
+      "period": "year",
+      "source_quote": "Direct Unsub $5,500",
+      "explanation": "You repay this federal loan, and interest accrues while you are in school."
+    },
+    {
+      "raw_label": "Federal Work-Study",
+      "category": "work_study",
+      "normalized_name": "Federal Work-Study",
+      "amount": 2500,
+      "period": "year",
+      "source_quote": "Federal Work-Study $2,500",
+      "explanation": "This is an opportunity to earn wages through work, not a reduction of your bill."
+    }
+  ],
+  "transcription": "Cedar Ridge University\nFinancial Aid Offer · 2026–2027 · Student: Avery Linden\nEstimated annual cost\nEstimated Cost of Attendance: $42,000\nYour offered aid\nCedar Ridge Presidential Scholarship $16,000\nFederal Pell Grant $3,200\nDirect Unsub $5,500\nFederal Work-Study $2,500\nAmounts are offered for the academic year. Review eligibility and renewal terms with Financial Aid.",
+  "missing_info": []
+}

@@ -8,11 +8,11 @@
   all checks green.
 
 ### M1 — Synthetic fixtures
-- [ ] Generate 3 synthetic award letters as HTML → render to PNG (script in
+- [x] Generate 3 synthetic award letters as HTML → render to PNG (script in
       `eval/make-fixtures.ts`). Vary terminology deliberately: one says
       "Direct Unsub", one "Unsubsidized Stafford Loan DL", one omits COA.
       Fake names/schools only.
-- [ ] Hand-write expected JSON for each into `eval/letters/`.
+- [x] Hand-write expected JSON for each into `eval/letters/`.
 - **Done when:** 3 image+JSON pairs exist; images look like plausible letters.
 
 ### M2 — Transcription + extraction API
@@ -23,15 +23,15 @@
 - **Done when:** `curl` with fixture #1 returns valid `LetterAnalysis`.
 
 ### M3 — Anchor matcher
-- [ ] `lib/anchor.ts`: normalize (lowercase, collapse whitespace, strip
+- [x] `lib/anchor.ts`: normalize (lowercase, collapse whitespace, strip
       punctuation) → exact substring → sliding-window Levenshtein fallback
       (threshold ≥0.85 similarity). Returns char offsets into transcription
       or `null`.
-- [ ] Unit tests: exact, OCR-noise ("$5,5OO"), reordered, absent.
+- [x] Unit tests: exact, OCR-noise ("$5,5OO"), reordered, absent.
 - **Done when:** tests pass; fixture claims anchor at ≥90%.
 
 ### M4 — Eval harness
-- [ ] `eval/run-eval.ts`: for each fixture — extraction field accuracy vs
+- [x] `eval/run-eval.ts`: for each fixture — extraction field accuracy vs
       expected JSON + anchor verification rate. Prints table, writes
       `eval/last-run.json`. Exit non-zero if anchor rate <85%.
 - **Done when:** `npm run eval` prints a real table on all fixtures.
@@ -79,3 +79,5 @@ Checks passed: typecheck, lint, test, eval, production build; dev landing page r
 npm install reported 2 moderate transitive vulnerabilities; no breaking audit fix was applied.
 2026-07-18 - Added the exact `LetterAnalysis` and `LineItem` contract with strict Zod validators and three unit tests.
 Checks passed: typecheck, lint, test.
+2026-07-18 - Completed M1, M3, and M4 with three rendered synthetic-only award letters, deterministic expected analyses, index-mapped source anchors, and the evaluation harness.
+Checks passed: make-fixtures, targeted tests, eval (100.0% aggregate anchor verification), typecheck, lint, and test.

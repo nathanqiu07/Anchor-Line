@@ -1,0 +1,39 @@
+{
+  "school_name": "Juniper Technical Institute",
+  "award_year": "2026-2027",
+  "cost_of_attendance": {
+    "amount": null,
+    "source_quote": null
+  },
+  "line_items": [
+    {
+      "raw_label": "Juniper Opportunity Grant",
+      "category": "gift_aid",
+      "normalized_name": "Juniper Opportunity Grant",
+      "amount": 7000,
+      "period": "year",
+      "source_quote": "Juniper Opportunity Grant $7,000",
+      "explanation": "Grant gift aid does not need to be repaid, subject to the award terms."
+    },
+    {
+      "raw_label": "Direct Subsidized Loan",
+      "category": "loan",
+      "normalized_name": "Federal Direct Subsidized Loan",
+      "amount": 3500,
+      "period": "year",
+      "source_quote": "Direct Subsidized Loan $3,500",
+      "explanation": "You repay this federal loan; for eligible students, the government pays interest during certain in-school periods."
+    },
+    {
+      "raw_label": "Campus Employment Program",
+      "category": "work_study",
+      "normalized_name": "Campus Employment Program",
+      "amount": 1800,
+      "period": "year",
+      "source_quote": "Campus Employment Program $1,800",
+      "explanation": "This is an opportunity to earn wages through employment, not a reduction of your bill."
+    }
+  ],
+  "transcription": "Juniper Technical Institute\nAward Summary · 2026–2027 · Student: Rowan Keel\nOffer details\nJuniper Opportunity Grant $7,000\nDirect Subsidized Loan $3,500\nCampus Employment Program $1,800\nThis notice does not state a cost of attendance. Contact Student Funding for a complete student budget.\nCampus Employment Program funds are earned through approved employment.",
+  "missing_info": ["Cost of attendance was not stated in this letter."]
+}

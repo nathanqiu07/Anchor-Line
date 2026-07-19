@@ -1,0 +1,39 @@
+{
+  "school_name": "Morrow Bay College",
+  "award_year": "2026-2027",
+  "cost_of_attendance": {
+    "amount": 48500,
+    "source_quote": "Estimated Cost of Attendance: $48,500"
+  },
+  "line_items": [
+    {
+      "raw_label": "Morrow Bay Merit Award",
+      "category": "gift_aid",
+      "normalized_name": "Morrow Bay Merit Award",
+      "amount": 12000,
+      "period": "year",
+      "source_quote": "Morrow Bay Merit Award $12,000",
+      "explanation": "Merit award gift aid does not need to be repaid, subject to renewal terms."
+    },
+    {
+      "raw_label": "Unsubsidized Stafford Loan DL",
+      "category": "loan",
+      "normalized_name": "Federal Direct Unsubsidized Loan",
+      "amount": 6500,
+      "period": "year",
+      "source_quote": "Unsubsidized Stafford Loan DL $6,500",
+      "explanation": "You repay this federal unsubsidized loan, and interest accrues while you are in school."
+    },
+    {
+      "raw_label": "Parent PLUS Loan",
+      "category": "loan",
+      "normalized_name": "Federal Direct Parent PLUS Loan",
+      "amount": 10000,
+      "period": "year",
+      "source_quote": "Parent PLUS Loan $10,000",
+      "explanation": "This federal loan is borrowed and repaid by a parent, not the student."
+    }
+  ],
+  "transcription": "Morrow Bay College\n2026–2027 Aid Notification · Student: Morgan Vale\nAnnual student budget\nEstimated Cost of Attendance: $48,500\nFinancial aid offered\nMorrow Bay Merit Award $12,000\nUnsubsidized Stafford Loan DL $6,500\nParent PLUS Loan $10,000\nLoan offers may be accepted, reduced, or declined. Parent borrowing requires a separate parent application.",
+  "missing_info": []
+}

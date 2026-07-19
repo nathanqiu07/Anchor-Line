@@ -1,0 +1,40 @@
+{
+  "generatedAt": "2026-07-19T05:59:42.879Z",
+  "results": [
+    {
+      "fixture": "cedar-ridge",
+      "fieldAccuracy": 1,
+      "matchedFields": 35,
+      "totalFields": 35,
+      "anchorVerification": 1,
+      "verifiedAnchors": 5,
+      "totalAnchors": 5
+    },
+    {
+      "fixture": "juniper-tech",
+      "fieldAccuracy": 1,
+      "matchedFields": 28,
+      "totalFields": 28,
+      "anchorVerification": 1,
+      "verifiedAnchors": 3,
+      "totalAnchors": 3
+    },
+    {
+      "fixture": "morrow-bay",
+      "fieldAccuracy": 1,
+      "matchedFields": 28,
+      "totalFields": 28,
+      "anchorVerification": 1,
+      "verifiedAnchors": 4,
+      "totalAnchors": 4
+    }
+  ],
+  "summary": {
+    "fieldAccuracy": 1,
+    "matchedFields": 91,
+    "totalFields": 91,
+    "anchorVerification": 1,
+    "verifiedAnchors": 12,
+    "totalAnchors": 12
+  }
+}
