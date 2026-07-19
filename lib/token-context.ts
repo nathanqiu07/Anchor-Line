@@ -58,6 +58,16 @@ export function hasRepaymentLanguage(tokens: string[]): boolean {
   return hasAnyToken(tokens, repaymentTokens);
 }
 
+/** Detects a negation anywhere before a repayment word in one clause. */
+export function hasNegatedRepayment(tokens: string[]): boolean {
+  let sawNegation = false;
+  for (const token of tokens) {
+    if (negationTokens.has(token)) sawNegation = true;
+    if (sawNegation && repaymentTokens.has(token)) return true;
+  }
+  return false;
+}
+
 /** Recognizes an actual balance/repayment obligation, not generic repayment prose. */
 export function hasDueBalanceOrRepayment(tokens: string[]): boolean {
   const subjectIndexes = tokens.flatMap((token, index) =>

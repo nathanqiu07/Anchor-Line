@@ -315,6 +315,21 @@ describe("financial-aid pack", () => {
     });
   });
 
+  test.each([
+    ["Federal Pell Grant", "Federal Pell Grant does not need to be repaid $3,200"],
+    ["Merit Scholarship", "Merit Scholarship (does not need to be repaid) $5,000"],
+    ["Northstar Grant", "Northstar Grant $4,000 — you will never repay this gift aid"],
+    ["Tuition Grant", "Tuition Grant $2,000, no repayment required"],
+  ])(
+    "keeps gift aid recognized when repayment language is negated",
+    (rawLabel, sourceQuote) => {
+      expect(classifyAidItem(rawLabel, sourceQuote)).toMatchObject({
+        category: "gift_aid",
+        recognized: true,
+      });
+    },
+  );
+
   test("annualizes semester gift aid and loans exactly twice", () => {
     const semester = {
       ...analysis,

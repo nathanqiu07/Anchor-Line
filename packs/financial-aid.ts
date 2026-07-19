@@ -3,6 +3,7 @@ import {
   clauseTokens,
   hasDueBalanceOrRepayment,
   hasNegatedAwardStatus,
+  hasNegatedRepayment,
   hasRepaymentLanguage,
   hasTokenSequence,
   hasTokenStem,
@@ -135,7 +136,9 @@ function hasAdverseAidContext(
       hasNegatedAwardStatus(tokens) ||
       hasTokenStem(tokens, explicitAdverseStems) ||
       hasDueBalanceOrRepayment(tokens) ||
-      (category === "gift_aid" && hasRepaymentLanguage(tokens)),
+      (category === "gift_aid" &&
+        hasRepaymentLanguage(tokens) &&
+        !hasNegatedRepayment(tokens)),
   );
 }
 
