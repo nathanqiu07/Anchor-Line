@@ -93,20 +93,12 @@ function provenanceError(message: string): Error {
   return new Error(`Provenance validation failed: ${message}`);
 }
 
-function quoteRanges(transcription: string, quote: string): Array<[number, number]> {
-  const ranges: Array<[number, number]> = [];
-  let start = transcription.indexOf(quote);
-  while (start !== -1) {
-    ranges.push([start, start + quote.length]);
-    start = transcription.indexOf(quote, start + quote.length);
-  }
-  return ranges;
-}
+const dollarPattern = /\$\s*\d[\d,]*(?:\.\d{1,2})?/g;
 
-function dollarLine(transcription: string, index: number): string {
-  const start = transcription.lastIndexOf("\n", index) + 1;
-  const end = transcription.indexOf("\n", index);
-  return transcription.slice(start, end === -1 ? undefined : end);
+function dollarAmounts(text: string): number[] {
+  return [...text.matchAll(dollarPattern)].map((match) =>
+    Number(match[0].replace(/[$,\s]/g, "")),
+  );
 }
 
 function assertProvenance(analysis: LetterAnalysis, transcription: string): LetterAnalysis {
@@ -122,10 +114,22 @@ function assertProvenance(analysis: LetterAnalysis, transcription: string): Lett
     throw provenanceError("every stated source_quote must be non-empty");
   }
 
-  const quotes = [
-    analysis.cost_of_attendance.source_quote,
-    ...analysis.line_items.map((item) => item.source_quote),
-  ].filter((quote): quote is string => quote !== null);
+  const claims = [
+    {
+      amount: analysis.cost_of_attendance.amount,
+      sourceQuote: analysis.cost_of_attendance.source_quote,
+      label: "cost_of_attendance",
+    },
+    ...analysis.line_items.map((item) => ({
+      amount: item.amount,
+      sourceQuote: item.source_quote,
+      label: item.raw_label,
+    })),
+  ];
+
+  const quotes = claims
+    .map((claim) => claim.sourceQuote)
+    .filter((quote): quote is string => quote !== null);
 
   for (const quote of quotes) {
     if (!transcription.includes(quote)) {
@@ -133,17 +137,43 @@ function assertProvenance(analysis: LetterAnalysis, transcription: string): Lett
     }
   }
 
-  const coveredRanges = quotes.flatMap((quote) => quoteRanges(transcription, quote));
-  const dollarPattern = /\$\d[\d,]*(?:\.\d{2})?/g;
-  for (const match of transcription.matchAll(dollarPattern)) {
-    const index = match.index ?? -1;
-    const covered = coveredRanges.some(
-      ([start, end]) => start <= index && end >= index + match[0].length,
-    );
-    if (!covered) {
+  for (const claim of claims) {
+    if (
+      claim.amount !== null &&
+      (!claim.sourceQuote || !dollarAmounts(claim.sourceQuote).includes(claim.amount))
+    ) {
       throw provenanceError(
-        `dollar-bearing line must have a source_quote: ${dollarLine(transcription, index)}`,
+        `${claim.label} amount must appear in its own source_quote`,
       );
+    }
+  }
+
+  const dollarLines = transcription
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && dollarAmounts(line).length > 0);
+  const mappedClaimIndexes = new Set<number>();
+
+  for (const line of dollarLines) {
+    const matchingClaimIndexes = claims.flatMap((claim, index) =>
+      claim.sourceQuote === line ? [index] : [],
+    );
+    if (matchingClaimIndexes.length !== 1) {
+      throw provenanceError(
+        `dollar-bearing line must equal one distinct source_quote: ${line}`,
+      );
+    }
+
+    const claimIndex = matchingClaimIndexes[0];
+    if (mappedClaimIndexes.has(claimIndex)) {
+      throw provenanceError(`source_quote cannot satisfy multiple dollar lines: ${line}`);
+    }
+    mappedClaimIndexes.add(claimIndex);
+  }
+
+  for (const [index, claim] of claims.entries()) {
+    if (claim.sourceQuote && dollarAmounts(claim.sourceQuote).length > 0 && !mappedClaimIndexes.has(index)) {
+      throw provenanceError(`monetary source_quote must map to one dollar-bearing line: ${claim.sourceQuote}`);
     }
   }
 

@@ -215,4 +215,53 @@ describe("two-pass extraction prompts", () => {
     ).resolves.toEqual(analysis);
     expect(calls).toHaveLength(3);
   });
+
+  test("rejects one whole-transcription COA quote in place of classified dollar lines", async () => {
+    const broadCoa = {
+      ...analysis,
+      cost_of_attendance: { amount: 42_000, source_quote: transcription },
+      line_items: [],
+    };
+
+    await expect(
+      extractLetter(
+        { mimeType: "image/png", bytes: new Uint8Array([1]) },
+        fakeClient(
+          response(transcription),
+          response(JSON.stringify(broadCoa)),
+          response(JSON.stringify(broadCoa)),
+        ),
+      ),
+    ).rejects.toBeInstanceOf(ExtractionValidationError);
+  });
+
+  test("rejects a claim whose amount is absent from its own quote", async () => {
+    const wrongAmount = {
+      ...analysis,
+      line_items: [
+        { ...analysis.line_items[0], amount: 6_000 },
+        analysis.line_items[1],
+      ],
+    };
+
+    await expect(
+      extractLetter(
+        { mimeType: "image/png", bytes: new Uint8Array([1]) },
+        fakeClient(
+          response(transcription),
+          response(JSON.stringify(wrongAmount)),
+          response(JSON.stringify(wrongAmount)),
+        ),
+      ),
+    ).rejects.toBeInstanceOf(ExtractionValidationError);
+  });
+
+  test("accepts one exact source quote for each dollar-bearing line", async () => {
+    await expect(
+      extractLetter(
+        { mimeType: "image/png", bytes: new Uint8Array([1]) },
+        fakeClient(response(transcription), response(JSON.stringify(analysis))),
+      ),
+    ).resolves.toEqual(analysis);
+  });
 });
