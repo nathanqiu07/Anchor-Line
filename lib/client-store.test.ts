@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { LetterAnalysis } from "./schema";
 import {
@@ -69,6 +69,10 @@ describe("client analysis store", () => {
     storage = new MemoryStorage();
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   test("saves, lists, loads, and removes a typed analysis", () => {
     saveAnalysis(saved, storage);
 
@@ -84,5 +88,70 @@ describe("client analysis store", () => {
 
     expect(listAnalyses(storage)).toEqual([]);
     expect(storage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  test("revokes the prior blob preview when replacing an analysis", () => {
+    const revokeObjectURL = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    const upload: StoredAnalysis = {
+      ...saved,
+      id: "replace-upload",
+      source: {
+        kind: "upload",
+        label: "first.png",
+        mediaUrl: "blob:first-preview",
+        mediaType: "image/png",
+      },
+    };
+
+    saveAnalysis(upload, storage);
+    saveAnalysis(
+      {
+        ...upload,
+        source: { ...upload.source, label: "second.png", mediaUrl: "blob:second-preview" },
+      },
+      storage,
+    );
+
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:first-preview");
+    removeAnalysis(upload.id, storage);
+  });
+
+  test("revokes the active blob preview when removing an analysis", () => {
+    const revokeObjectURL = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    const upload: StoredAnalysis = {
+      ...saved,
+      id: "remove-upload",
+      source: {
+        kind: "upload",
+        label: "remove.png",
+        mediaUrl: "blob:remove-preview",
+        mediaType: "image/png",
+      },
+    };
+
+    saveAnalysis(upload, storage);
+    removeAnalysis(upload.id, storage);
+
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:remove-preview");
+  });
+
+  test("revokes transient blob previews when malformed storage is cleared", () => {
+    const revokeObjectURL = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    const upload: StoredAnalysis = {
+      ...saved,
+      id: "malformed-upload",
+      source: {
+        kind: "upload",
+        label: "malformed.png",
+        mediaUrl: "blob:malformed-preview",
+        mediaType: "image/png",
+      },
+    };
+    saveAnalysis(upload, storage);
+    storage.setItem(STORAGE_KEY, "{ no longer valid json");
+
+    expect(listAnalyses(storage)).toEqual([]);
+
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:malformed-preview");
   });
 });

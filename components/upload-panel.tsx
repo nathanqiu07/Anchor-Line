@@ -128,6 +128,7 @@ export function UploadPanel() {
   function onDrop(event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
     setDragging(false);
+    if (busyLabel) return;
     const file = event.dataTransfer.files[0];
     if (file) void analyzeUpload(file);
   }

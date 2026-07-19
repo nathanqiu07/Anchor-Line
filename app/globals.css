@@ -8,7 +8,7 @@
   --ivory: #f3eddf;
   --ivory-dim: #d7cfbe;
   --muted: #9e9584;
-  --faint: #736b5e;
+  --faint: #9e9584;
   --line: #343027;
   --line-strong: #4d4639;
   --amber: #e2a64a;
@@ -786,7 +786,7 @@ button {
   max-width: 180px;
   color: var(--faint);
   font-family: var(--mono);
-  font-size: 8px;
+  font-size: 11px;
   letter-spacing: 0.06em;
   line-height: 1.5;
   text-align: right;
@@ -927,7 +927,7 @@ button {
 .claim-card__source {
   color: var(--faint);
   font-family: var(--mono);
-  font-size: 8px;
+  font-size: 11px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -1053,7 +1053,12 @@ button {
 
 .saved-offer__actions a,
 .saved-offer__actions button {
-  padding: 5px;
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 10px;
   border: 0;
   background: transparent;
   color: var(--muted);

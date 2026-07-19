@@ -32,6 +32,25 @@ const StoredAnalysisSchema: z.ZodType<StoredAnalysis> = z.object({
 
 const transientUploadMedia = new Map<string, string>();
 
+function replaceTransientMedia(id: string, nextUrl?: string): void {
+  const currentUrl = transientUploadMedia.get(id);
+  if (
+    currentUrl &&
+    currentUrl !== nextUrl &&
+    currentUrl.startsWith("blob:") &&
+    typeof URL.revokeObjectURL === "function"
+  ) {
+    URL.revokeObjectURL(currentUrl);
+  }
+
+  if (nextUrl) transientUploadMedia.set(id, nextUrl);
+  else transientUploadMedia.delete(id);
+}
+
+function clearTransientMedia(): void {
+  for (const id of [...transientUploadMedia.keys()]) replaceTransientMedia(id);
+}
+
 function browserStorage(): Storage | null {
   return typeof window === "undefined" ? null : window.sessionStorage;
 }
@@ -50,13 +69,17 @@ function recoverEntries(storage: Storage): StoredAnalysis[] {
     });
 
     if (entries.length !== parsed.length) {
-      if (entries.length === 0) storage.removeItem(STORAGE_KEY);
+      if (entries.length === 0) {
+        storage.removeItem(STORAGE_KEY);
+        clearTransientMedia();
+      }
       else storage.setItem(STORAGE_KEY, JSON.stringify(entries));
     }
 
     return entries.map(withTransientMedia);
   } catch {
     storage.removeItem(STORAGE_KEY);
+    clearTransientMedia();
     return [];
   }
 }
@@ -68,9 +91,13 @@ function withTransientMedia(entry: StoredAnalysis): StoredAnalysis {
 }
 
 function serializableEntry(entry: StoredAnalysis): StoredAnalysis {
-  if (entry.source.kind !== "upload" || !entry.source.mediaUrl) return entry;
+  if (entry.source.kind !== "upload") {
+    replaceTransientMedia(entry.id);
+    return entry;
+  }
+  if (!entry.source.mediaUrl) return entry;
 
-  transientUploadMedia.set(entry.id, entry.source.mediaUrl);
+  replaceTransientMedia(entry.id, entry.source.mediaUrl);
   const source = { ...entry.source };
   delete source.mediaUrl;
   return { ...entry, source };
@@ -106,7 +133,7 @@ export function removeAnalysis(
 ): void {
   if (!storage) return;
   const remaining = recoverEntries(storage).filter((entry) => entry.id !== id);
-  transientUploadMedia.delete(id);
+  replaceTransientMedia(id);
   if (remaining.length === 0) storage.removeItem(STORAGE_KEY);
   else storage.setItem(STORAGE_KEY, JSON.stringify(remaining.map(serializableEntry)));
 }

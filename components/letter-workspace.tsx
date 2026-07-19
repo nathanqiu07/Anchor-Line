@@ -75,15 +75,23 @@ export function LetterWorkspace({ offer }: LetterWorkspaceProps) {
   );
   const sourceRefs = useRef<Record<string, HTMLElement | null>>({});
 
-  useEffect(() => {
-    if (!activeKey || sourceMode !== "transcription") return;
-    sourceRefs.current[activeKey]?.scrollIntoView({
+  function scrollToSource(key: string) {
+    sourceRefs.current[key]?.scrollIntoView({
       behavior: "smooth",
       block: "center",
     });
+  }
+
+  useEffect(() => {
+    if (!activeKey || sourceMode !== "transcription") return;
+    scrollToSource(activeKey);
   }, [activeKey, sourceMode]);
 
   function activate(key: string) {
+    if (activeKey === key && sourceMode === "transcription") {
+      scrollToSource(key);
+      return;
+    }
     setSourceMode("transcription");
     setActiveKey(key);
   }
@@ -125,8 +133,8 @@ export function LetterWorkspace({ offer }: LetterWorkspaceProps) {
           {sourceMode === "transcription" ? (
             <SourceTranscription
               text={analysis.transcription}
-              anchors={anchors}
               activeKey={activeKey}
+              activeMatch={activeKey ? (anchorByKey.get(activeKey) ?? null) : null}
               registerSourceRef={registerSourceRef}
             />
           ) : source.mediaType === "application/pdf" ? (
@@ -178,6 +186,7 @@ export function LetterWorkspace({ offer }: LetterWorkspaceProps) {
                 onFocus={() => activate("cost")}
                 onMouseEnter={() => activate("cost")}
                 aria-pressed={activeKey === "cost"}
+                aria-label="Show source for cost of attendance"
               >
                 <span className="claim-card__heading">
                   <span className="claim-card__label">Cost of attendance</span>
@@ -251,36 +260,30 @@ export function LetterWorkspace({ offer }: LetterWorkspaceProps) {
 
 function SourceTranscription({
   text,
-  anchors,
   activeKey,
+  activeMatch,
   registerSourceRef,
 }: {
   text: string;
-  anchors: AnchoredClaim[];
   activeKey: string | null;
+  activeMatch: AnchorMatch | null;
   registerSourceRef: (key: string, element: HTMLElement | null) => void;
 }) {
-  const ranges = anchors
-    .flatMap((anchor) => (anchor.match ? [{ key: anchor.key, ...anchor.match }] : []))
-    .sort((left, right) => left.start - right.start)
-    .filter((range, index, all) => index === 0 || range.start >= all[index - 1].end);
-  const content: React.ReactNode[] = [];
-  let cursor = 0;
-
-  for (const range of ranges) {
-    if (range.start > cursor) content.push(text.slice(cursor, range.start));
-    content.push(
-      <mark
-        className={`source-anchor${activeKey === range.key ? " source-anchor--active" : ""}`}
-        key={range.key}
-        ref={(element) => registerSourceRef(range.key, element)}
-      >
-        {text.slice(range.start, range.end)}
-      </mark>,
-    );
-    cursor = range.end;
+  if (!activeKey || !activeMatch) {
+    return <pre className="transcription">{text}</pre>;
   }
-  if (cursor < text.length) content.push(text.slice(cursor));
 
-  return <pre className="transcription">{content}</pre>;
+  return (
+    <pre className="transcription">
+      {text.slice(0, activeMatch.start)}
+      <mark
+        className="source-anchor source-anchor--active"
+        data-source-key={activeKey}
+        ref={(element) => registerSourceRef(activeKey, element)}
+      >
+        {text.slice(activeMatch.start, activeMatch.end)}
+      </mark>
+      {text.slice(activeMatch.end)}
+    </pre>
+  );
 }

@@ -1,5 +1,8 @@
+// @vitest-environment jsdom
+
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, test } from "vitest";
+import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
 import type { LineItem } from "../lib/schema";
 import type { StoredAnalysis } from "../lib/client-store";
@@ -16,6 +19,58 @@ const item: LineItem = {
   source_quote: "This sentence is absent from the source",
   explanation: "The letter does not explain what this award requires.",
 };
+
+const scrollIntoView = vi.fn();
+
+beforeAll(() => {
+  Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+    configurable: true,
+    value: scrollIntoView,
+  });
+});
+
+afterEach(() => {
+  cleanup();
+  scrollIntoView.mockClear();
+});
+
+function offerWith(
+  transcription: string,
+  lineItems: LineItem[],
+  costQuote: string | null = null,
+): StoredAnalysis {
+  return {
+    id: "overlap-offer",
+    createdAt: "2026-07-18T12:00:00.000Z",
+    source: { kind: "sample", label: "Overlap sample" },
+    analysis: {
+      school_name: "Overlap College",
+      award_year: "2026-2027",
+      cost_of_attendance: {
+        amount: costQuote ? 20_000 : null,
+        source_quote: costQuote,
+      },
+      line_items: lineItems,
+      transcription,
+      missing_info: [],
+    },
+  };
+}
+
+async function expectActivationTarget(
+  container: HTMLElement,
+  buttonName: string,
+  sourceKey: string,
+  quote: string,
+) {
+  scrollIntoView.mockClear();
+  fireEvent.click(screen.getByRole("button", { name: buttonName }));
+
+  const activeTarget = container.querySelector("mark.source-anchor--active");
+  expect(activeTarget?.getAttribute("data-source-key")).toBe(sourceKey);
+  expect(activeTarget?.textContent).toBe(quote);
+  await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1));
+}
 
 describe("ClaimCard", () => {
   test("labels an unmatched quote as not stated in letter", () => {
@@ -96,5 +151,115 @@ describe("LetterWorkspace", () => {
     expect(html).toContain("Gift aid");
     expect(html).toContain("Loans");
     expect(html).toContain("source-anchor");
+  });
+
+  test("keeps broad COA and nested item quotes in order with a target for every card", async () => {
+    const transcription = "Cost summary: Northstar Grant $10,000; Direct Loan $5,500; total $20,000.";
+    const grant = {
+      ...item,
+      raw_label: "Northstar Grant",
+      normalized_name: "Northstar Grant",
+      category: "gift_aid" as const,
+      source_quote: "Northstar Grant $10,000",
+      amount: 10_000,
+    };
+    const loan = {
+      ...item,
+      raw_label: "Direct Loan",
+      normalized_name: "Direct Loan",
+      category: "loan" as const,
+      source_quote: "Direct Loan $5,500",
+      amount: 5_500,
+    };
+    const { container } = render(
+      <LetterWorkspace offer={offerWith(transcription, [grant, loan], transcription)} />,
+    );
+
+    expect(container.querySelector(".transcription")?.textContent).toBe(transcription);
+    await expectActivationTarget(
+      container,
+      "Show source for cost of attendance",
+      "cost",
+      transcription.slice(0, -1),
+    );
+    await expectActivationTarget(
+      container,
+      "Show source for Northstar Grant",
+      "item-0",
+      grant.source_quote,
+    );
+    await expectActivationTarget(
+      container,
+      "Show source for Direct Loan",
+      "item-1",
+      loan.source_quote,
+    );
+  });
+
+  test("gives duplicate quote ranges distinct activation targets without duplicating text", async () => {
+    const transcription = "Shared Award $1,000 appears once.";
+    const first = {
+      ...item,
+      raw_label: "First interpretation",
+      normalized_name: "First interpretation",
+      source_quote: "Shared Award $1,000",
+      amount: 1_000,
+    };
+    const second = {
+      ...first,
+      raw_label: "Second interpretation",
+      normalized_name: "Second interpretation",
+    };
+    const { container } = render(
+      <LetterWorkspace offer={offerWith(transcription, [first, second])} />,
+    );
+
+    expect(container.querySelector(".transcription")?.textContent).toBe(transcription);
+    await expectActivationTarget(
+      container,
+      "Show source for First interpretation",
+      "item-0",
+      first.source_quote,
+    );
+    await expectActivationTarget(
+      container,
+      "Show source for Second interpretation",
+      "item-1",
+      second.source_quote,
+    );
+  });
+
+  test("renders partially overlapping ranges once and targets either selected claim", async () => {
+    const transcription = "ABCDEFGHIJ";
+    const first = {
+      ...item,
+      raw_label: "First range",
+      normalized_name: "First range",
+      source_quote: "ABCDE",
+      amount: null,
+    };
+    const second = {
+      ...first,
+      raw_label: "Second range",
+      normalized_name: "Second range",
+      source_quote: "DEFGH",
+    };
+    const { container } = render(
+      <LetterWorkspace offer={offerWith(transcription, [first, second])} />,
+    );
+
+    expect(container.querySelector(".transcription")?.textContent).toBe(transcription);
+    await expectActivationTarget(
+      container,
+      "Show source for First range",
+      "item-0",
+      first.source_quote,
+    );
+    await expectActivationTarget(
+      container,
+      "Show source for Second range",
+      "item-1",
+      second.source_quote,
+    );
   });
 });
