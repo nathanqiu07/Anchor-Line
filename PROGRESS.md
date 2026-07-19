@@ -37,26 +37,26 @@
 - **Done when:** `npm run eval` prints a real table on all fixtures.
 
 ### M5 — Anchored letter view (the demo centerpiece)
-- [ ] Split-pane: left = transcription (original image toggle), right =
+- [x] Split-pane: left = transcription (original image toggle), right =
       plain-language cards grouped gift aid / loans / work-study / costs.
-- [ ] Hover/tap a card → source span highlights + scrolls into view. Unmatched
+- [x] Hover/tap a card → source span highlights + scrolls into view. Unmatched
       → amber "not stated in letter" badge.
-- [ ] Every dollar figure card shows the pack's plain-English explanation
+- [x] Every dollar figure card shows the pack's plain-English explanation
       (e.g., loan card: "You repay this, with interest. Est. 4-yr total: $X.")
 - **Done when:** upload fixture → interact end-to-end; mobile-usable.
 
 ### M6 — Compare view + warnings
-- [ ] Table across 2+ letters: COA, gift aid, loans, net price (COA − gift
+- [x] Table across 2+ letters: COA, gift aid, loans, net price (COA − gift
       aid), projected 4-yr debt. Missing COA → red "cost hidden" cell.
-- [ ] Pack warnings: work-study ≠ bill reduction; loans grouped with grants;
+- [x] Pack warnings: work-study ≠ bill reduction; loans grouped with grants;
       Parent PLUS flagged as parent debt.
 - **Done when:** fixtures #1+#3 produce an honest comparison including the
   hidden-cost flag.
 
 ### M7 — Polish + deploy readiness
-- [ ] Landing: one-line pitch, "try sample letters" button, privacy note
+- [x] Landing: one-line pitch, "try sample letters" button, privacy note
       (letters processed in memory, not stored).
-- [ ] Loading/error states; graceful handling of a non-letter image
+- [x] Loading/error states; graceful handling of a non-letter image
       ("This doesn't look like an award letter").
 - [ ] `vercel.json` if needed; document env vars in README.
 - **Done when:** demo flows sample→analysis→compare with zero uploads.
@@ -83,3 +83,5 @@ Checks passed: typecheck, lint, test.
 Checks passed: make-fixtures, targeted tests, eval (100.0% aggregate anchor verification), typecheck, lint, and test.
 2026-07-18 - Completed M2 with two-pass Anthropic transcription/extraction, one schema-feedback retry, upload validation, and API-key-free synthetic sample responses.
 Checks passed: targeted extraction/API tests, typecheck, lint, test, and eval (100.0% aggregate anchor verification).
+2026-07-18 - Completed M5, M6, and the user-facing landing/loading portions of M7 with a typed session analysis store, responsive anchored letter workspace, honest multi-offer comparison, and accessible upload/sample states.
+Checks passed: targeted RED/GREEN tests (10/10), typecheck, lint, full tests (48/48), eval (100.0% aggregate anchor verification), production build, and HTTP smoke for landing/sample API/letter/compare routes. Interactive browser smoke was unavailable because the browser runtime exposed no usable browser backend.
