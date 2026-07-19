@@ -63,7 +63,7 @@ describe("release documentation", () => {
     }
 
     for (const phrase of [
-      "455",
+      "455 colleges",
       "136",
       "24",
       "loan",
@@ -86,8 +86,10 @@ describe("release documentation", () => {
     }
 
     expect(demoScript).toContain("3:00");
-    expect(demoScript).toContain("not stated in letter");
-    expect(demoScript).toContain(anchorRate);
+    expect(demoScript).toContain("Click **Juniper Technical Institute**");
+    expect(demoScript).toContain("activate its **Cost of attendance** card");
+    expect(demoScript).toContain("visible amber **not stated in letter** badge");
+    expect(demoScript).toContain(`${anchorRate} / ${anchorCount.replace("/", "-of-")}`);
     expect(demoScript).toContain("comparison");
     expect(demoScript).toContain("cost hidden");
 

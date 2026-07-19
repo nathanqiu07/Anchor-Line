@@ -3,8 +3,8 @@
 ## The problem
 
 College award letters turn a consequential decision into a terminology puzzle.
-In our documented audit of **455 college** financial-aid pages and letters, we
-found **136 terms** for aid concepts; **24** examples did not use the word
+Our documented audit covered **455 colleges**. We found **136 terms** for aid
+concepts; **24** examples did not use the word
 “loan.” More than **one-third** omitted a clear cost of attendance (COA).
 That makes it easy to read a package total as money off the bill even when it
 includes debt or future wages, and hard to compare two offers honestly.
