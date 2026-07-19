@@ -13,6 +13,7 @@
     "eval": "tsx eval/run-eval.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.112.3",
     "next": "16.2.10",
     "playwright-core": "^1.61.1",
     "react": "19.2.4",

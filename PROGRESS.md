@@ -16,10 +16,10 @@
 - **Done when:** 3 image+JSON pairs exist; images look like plausible letters.
 
 ### M2 — Transcription + extraction API
-- [ ] `lib/llm.ts`: image(s) in → (pass 1) full transcription → (pass 2)
+- [x] `lib/llm.ts`: image(s) in → (pass 1) full transcription → (pass 2)
       extraction with `source_quote`s, validated against zod schema; one
       retry on validation failure, then 422.
-- [ ] `app/api/extract/route.ts` wiring; 10MB upload cap; PNG/JPG/PDF pages.
+- [x] `app/api/extract/route.ts` wiring; 10MB upload cap; PNG/JPG/PDF pages.
 - **Done when:** `curl` with fixture #1 returns valid `LetterAnalysis`.
 
 ### M3 — Anchor matcher
@@ -81,3 +81,5 @@ npm install reported 2 moderate transitive vulnerabilities; no breaking audit fi
 Checks passed: typecheck, lint, test.
 2026-07-18 - Completed M1, M3, and M4 with three rendered synthetic-only award letters, deterministic expected analyses, index-mapped source anchors, and the evaluation harness.
 Checks passed: make-fixtures, targeted tests, eval (100.0% aggregate anchor verification), typecheck, lint, and test.
+2026-07-18 - Completed M2 with two-pass Anthropic transcription/extraction, one schema-feedback retry, upload validation, and API-key-free synthetic sample responses.
+Checks passed: targeted extraction/API tests, typecheck, lint, test, and eval (100.0% aggregate anchor verification).
