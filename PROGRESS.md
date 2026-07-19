@@ -3,7 +3,7 @@
 ### M0 — Scaffold
 - [x] `create-next-app` (TS, Tailwind, App Router), scripts for `typecheck`,
       `lint`, `test` (vitest), `eval`. README with 3-line setup.
-- [ ] `lib/schema.ts` exactly as §6, with zod validators + 3 unit tests.
+- [x] `lib/schema.ts` exactly as §6, with zod validators + 3 unit tests.
 - **Done when:** fresh clone → `npm i && npm run dev` renders landing page;
   all checks green.
 
@@ -77,3 +77,5 @@
 2026-07-18 - Completed M0 scaffold with Next.js, TypeScript, Tailwind, Vitest scripts, and a 3-line setup README.
 Checks passed: typecheck, lint, test, eval, production build; dev landing page returned HTTP 200.
 npm install reported 2 moderate transitive vulnerabilities; no breaking audit fix was applied.
+2026-07-18 - Added the exact `LetterAnalysis` and `LineItem` contract with strict Zod validators and three unit tests.
+Checks passed: typecheck, lint, test.
