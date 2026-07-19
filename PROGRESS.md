@@ -58,19 +58,27 @@
       (letters processed in memory, not stored).
 - [x] Loading/error states; graceful handling of a non-letter image
       ("This doesn't look like an award letter").
-- [ ] `vercel.json` if needed; document env vars in README.
+- [x] `vercel.json` if needed; document env vars in README. No `vercel.json`
+      was added because the default Vercel Next.js App Router handling supports
+      the server route without a custom rewrite or runtime override.
 - **Done when:** demo flows sample→analysis→compare with zero uploads.
 
 ### M8 — Devpost kit assets (drafts; humans finalize)
-- [ ] `submission/WRITEUP.md`: problem (with the stats in §1), solution,
+- [x] `submission/WRITEUP.md`: problem (with the stats in §1), solution,
       how anchoring works, eval numbers from `eval/last-run.json`, tech list.
-- [ ] `submission/DEMO_SCRIPT.md`: 3-minute beat-by-beat video script ending
+- [x] `submission/DEMO_SCRIPT.md`: 3-minute beat-by-beat video script ending
       on the "not stated in letter" badge + eval number.
 - **Done when:** both drafts exist and cite the real measured anchor rate.
 
 ## Deviations
 
 - 2026-07-18: Replaced create-next-app's Google-hosted Geist loader with system fonts so builds do not require network access.
+- 2026-07-19: documented deviation: no `vercel.json` was added because the
+  default Vercel configuration is compatible with this Next.js App Router
+  application and its server route.
+- 2026-07-19: documented deviation: no live Anthropic network test was run
+  without a secret. Sample mode is the zero-key verified path; live extraction
+  requires `ANTHROPIC_API_KEY`.
 
 ## Session notes
 
@@ -85,3 +93,5 @@ Checks passed: make-fixtures, targeted tests, eval (100.0% aggregate anchor veri
 Checks passed: targeted extraction/API tests, typecheck, lint, test, and eval (100.0% aggregate anchor verification).
 2026-07-18 - Completed M5, M6, and the user-facing landing/loading portions of M7 with a typed session analysis store, responsive anchored letter workspace, honest multi-offer comparison, and accessible upload/sample states.
 Checks passed: targeted RED/GREEN tests (10/10), typecheck, lint, full tests (48/48), eval (100.0% aggregate anchor verification), production build, and HTTP smoke for landing/sample API/letter/compare routes. Interactive browser smoke was unavailable because the browser runtime exposed no usable browser backend.
+2026-07-19 - Completed M7 deployment documentation and M8 draft submission assets. README now documents setup, commands, supported input, synthetic sample mode, architecture, environment variables, Vercel deployment, privacy, and not-financial-advice limits. The Devpost drafts cite the checked-in synthetic evaluation (91/91 fields and 12/12 anchors, both 100.0%).
+Acceptance evidence: release-documentation test, typecheck, lint, full tests, eval, and production build were run in this session. Sample mode is the zero-key verified path; live Anthropic extraction requires `ANTHROPIC_API_KEY` and was not network-tested without it. Human-owned deployment, registration, real-letter collection, video recording, and final submission remain in `HUMAN_TODO.md`.
