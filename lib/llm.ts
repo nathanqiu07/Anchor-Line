@@ -71,8 +71,7 @@ function textFrom(response: MessageResponse): string {
 }
 
 function parseJson(text: string): unknown {
-  const unfenced = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
-  return JSON.parse(unfenced);
+  return JSON.parse(text);
 }
 
 function validationFeedback(error: unknown): string {
@@ -87,6 +86,67 @@ function assertAwardLetter(analysis: LetterAnalysis): LetterAnalysis {
   ) {
     throw new NotAwardLetterError();
   }
+  return analysis;
+}
+
+function provenanceError(message: string): Error {
+  return new Error(`Provenance validation failed: ${message}`);
+}
+
+function quoteRanges(transcription: string, quote: string): Array<[number, number]> {
+  const ranges: Array<[number, number]> = [];
+  let start = transcription.indexOf(quote);
+  while (start !== -1) {
+    ranges.push([start, start + quote.length]);
+    start = transcription.indexOf(quote, start + quote.length);
+  }
+  return ranges;
+}
+
+function dollarLine(transcription: string, index: number): string {
+  const start = transcription.lastIndexOf("\n", index) + 1;
+  const end = transcription.indexOf("\n", index);
+  return transcription.slice(start, end === -1 ? undefined : end);
+}
+
+function assertProvenance(analysis: LetterAnalysis, transcription: string): LetterAnalysis {
+  if (analysis.transcription !== transcription) {
+    throw provenanceError("transcription must exactly match the pass-one transcription");
+  }
+
+  const hasEmptyLineQuote = analysis.line_items.some(
+    (item) => item.source_quote.length === 0,
+  );
+  const hasEmptyCoaQuote = analysis.cost_of_attendance.source_quote === "";
+  if (hasEmptyLineQuote || hasEmptyCoaQuote) {
+    throw provenanceError("every stated source_quote must be non-empty");
+  }
+
+  const quotes = [
+    analysis.cost_of_attendance.source_quote,
+    ...analysis.line_items.map((item) => item.source_quote),
+  ].filter((quote): quote is string => quote !== null);
+
+  for (const quote of quotes) {
+    if (!transcription.includes(quote)) {
+      throw provenanceError(`source_quote is not verbatim in the transcription: ${quote}`);
+    }
+  }
+
+  const coveredRanges = quotes.flatMap((quote) => quoteRanges(transcription, quote));
+  const dollarPattern = /\$\d[\d,]*(?:\.\d{2})?/g;
+  for (const match of transcription.matchAll(dollarPattern)) {
+    const index = match.index ?? -1;
+    const covered = coveredRanges.some(
+      ([start, end]) => start <= index && end >= index + match[0].length,
+    );
+    if (!covered) {
+      throw provenanceError(
+        `dollar-bearing line must have a source_quote: ${dollarLine(transcription, index)}`,
+      );
+    }
+  }
+
   return analysis;
 }
 
@@ -114,7 +174,7 @@ export async function extractLetter(
 
     try {
       const parsed = LetterAnalysisSchema.parse(parseJson(textFrom(extractionResponse)));
-      return assertAwardLetter(parsed);
+      return assertAwardLetter(assertProvenance(parsed, transcription));
     } catch (error) {
       if (error instanceof NotAwardLetterError) throw error;
       feedback = validationFeedback(error);

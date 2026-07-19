@@ -7,7 +7,10 @@ import {
 } from "./llm";
 import { EXTRACTION_PROMPT, TRANSCRIPTION_PROMPT } from "./prompts";
 
-const transcription = "Cedar Ridge University\nDirect Unsub $5,500";
+const transcription = `Cedar Ridge University
+Estimated Cost of Attendance: $42,000
+Direct Unsub $5,500
+Federal Work-Study $2,500`;
 const analysis = {
   school_name: "Cedar Ridge University",
   award_year: "2026-2027",
@@ -24,6 +27,15 @@ const analysis = {
       period: "year",
       source_quote: "Direct Unsub $5,500",
       explanation: "A loan you repay.",
+    },
+    {
+      raw_label: "Federal Work-Study",
+      category: "work_study",
+      normalized_name: "Federal Work-Study",
+      amount: 2_500,
+      period: "year",
+      source_quote: "Federal Work-Study $2,500",
+      explanation: "An opportunity to earn wages.",
     },
   ],
   transcription,
@@ -115,5 +127,92 @@ describe("two-pass extraction prompts", () => {
         fakeClient(response(transcription), response("not json"), response("still not json")),
       ),
     ).rejects.toBeInstanceOf(ExtractionValidationError);
+  });
+
+  test("retries when an extraction changes the pass-one transcription", async () => {
+    const calls: unknown[] = [];
+    const client: AnthropicMessagesClient = {
+      create: async (request) => {
+        calls.push(request);
+        return calls.length === 1
+          ? response(transcription)
+          : calls.length === 2
+            ? response(JSON.stringify({ ...analysis, transcription: "different letter" }))
+            : response(JSON.stringify(analysis));
+      },
+    };
+
+    await expect(
+      extractLetter({ mimeType: "image/png", bytes: new Uint8Array([1]) }, client),
+    ).resolves.toEqual(analysis);
+    expect(calls).toHaveLength(3);
+    expect(calls[2]).toMatchObject({ system: expect.stringContaining("transcription") });
+  });
+
+  test("throws after a second extraction uses a quote absent from pass one", async () => {
+    const quoteMismatch = {
+      ...analysis,
+      line_items: [
+        { ...analysis.line_items[0], source_quote: "Direct Unsub $5,600" },
+        analysis.line_items[1],
+      ],
+    };
+
+    await expect(
+      extractLetter(
+        { mimeType: "image/png", bytes: new Uint8Array([1]) },
+        fakeClient(
+          response(transcription),
+          response(JSON.stringify(quoteMismatch)),
+          response(JSON.stringify(quoteMismatch)),
+        ),
+      ),
+    ).rejects.toBeInstanceOf(ExtractionValidationError);
+  });
+
+  test("retries when a dollar-bearing transcription line is omitted", async () => {
+    const calls: unknown[] = [];
+    const omittedDollarLine = {
+      ...analysis,
+      line_items: [analysis.line_items[0]],
+    };
+    const client: AnthropicMessagesClient = {
+      create: async (request) => {
+        calls.push(request);
+        return calls.length === 1
+          ? response(transcription)
+          : calls.length === 2
+            ? response(JSON.stringify(omittedDollarLine))
+            : response(JSON.stringify(analysis));
+      },
+    };
+
+    await expect(
+      extractLetter({ mimeType: "image/png", bytes: new Uint8Array([1]) }, client),
+    ).resolves.toEqual(analysis);
+    expect(calls).toHaveLength(3);
+    expect(calls[2]).toMatchObject({ system: expect.stringContaining("$2,500") });
+  });
+
+  test("retries rather than accepting fenced JSON", async () => {
+    const calls: unknown[] = [];
+    const client: AnthropicMessagesClient = {
+      create: async (request) => {
+        calls.push(request);
+        return calls.length === 1
+          ? response(transcription)
+          : calls.length === 2
+            ? response(`\`\`\`json\n${JSON.stringify(analysis)}\n\`\`\``)
+            : response(JSON.stringify(analysis));
+      },
+    };
+
+    await expect(
+      extractLetter(
+        { mimeType: "image/png", bytes: new Uint8Array([1]) },
+        client,
+      ),
+    ).resolves.toEqual(analysis);
+    expect(calls).toHaveLength(3);
   });
 });
