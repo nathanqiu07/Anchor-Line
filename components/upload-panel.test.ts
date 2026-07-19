@@ -51,6 +51,15 @@ describe("upload panel helpers", () => {
     expect(container.textContent).not.toContain("10 MB max");
   });
 
+  test("discloses provider processing, byte retention, tab storage, and local samples", () => {
+    const { container } = render(createElement(UploadPanel));
+
+    expect(container.textContent).toContain("sent to Anthropic");
+    expect(container.textContent).toContain("does not persist the file bytes");
+    expect(container.textContent).toContain("this tab’s sessionStorage until the tab closes");
+    expect(container.textContent).toContain("Samples stay local and key-free");
+  });
+
   test("keeps the exact non-letter message", () => {
     expect(NON_LETTER_MESSAGE).toBe("This doesn't look like an award letter");
   });

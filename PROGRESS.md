@@ -35,7 +35,10 @@
 - [x] `eval/run-eval.ts`: independently reads checked-in candidate extraction
       snapshots and expected JSON, then reports field accuracy and expected-anchor
       verification. Prints a table, writes `eval/last-run.json`, and exits
-      non-zero if aggregate anchor verification is <85%.
+      non-zero if aggregate field accuracy or anchor verification is <85%, or
+      if there are no expected anchors. Candidate quotes must equal immutable
+      expected quotes and anchor in both expected and candidate transcriptions;
+      omissions and extras are penalized.
 - **Done when:** `npm run eval` prints a real table on all fixtures.
 
 ### M5 — Anchored letter view (the demo centerpiece)
@@ -50,8 +53,9 @@
 
 ### M6 — Compare view + warnings
 - [x] Table across 2+ letters: COA, gift aid, loans, net price (COA − gift
-      aid), projected 4-yr debt. Missing COA → red "cost hidden" cell; total or
-      unknown gift/loan periods → a visible not-comparable state.
+      aid), projected 4-yr debt. Missing COA → red "cost hidden" cell; semester
+      COA is annualized ×2, while total or unknown cost/aid periods → a visible
+      not-comparable state.
 - [x] Pack warnings: work-study ≠ bill reduction; loans grouped with grants;
       Parent PLUS flagged as parent debt.
 - **Done when:** fixtures #1+#3 produce an honest comparison including the
@@ -59,7 +63,8 @@
 
 ### M7 — Polish + deploy readiness
 - [x] Landing: one-line pitch, "try sample letters" button, privacy note
-      (letters processed in memory, not stored).
+      (uploads go to Anthropic; Anchor Lines does not persist bytes; analysis and
+      transcription remain in tab `sessionStorage`; samples are local/key-free).
 - [x] Loading/error states; graceful handling of a non-letter image
       ("This doesn't look like an award letter").
 - [x] `vercel.json` if needed; document env vars in README. No `vercel.json`
@@ -115,7 +120,7 @@ Anthropic completion handling, non-letter detection, the deployable upload
 contract, serverless abuse controls, period-aware comparison math, and honest
 independent fixture evaluation. The checked-in synthetic candidate comparison
 measures 83/91 fields (91.2%) and 11/12 expected anchors (91.7%); the intentional
-Cedar omission counts as a failure and the aggregate anchor gate passes.
+Cedar omission counts as a failure and both 85% aggregate gates pass.
 Controller interactive browser smoke: Cedar sample loaded; activating Direct
 Unsub marked the exact source text; Original rendered the letter image; Juniper
 loaded; Compare showed the red cost hidden state; and the 390×844 mobile check

@@ -2,7 +2,11 @@ import Anthropic from "@anthropic-ai/sdk";
 
 import { LetterAnalysisSchema, type LetterAnalysis } from "./schema";
 import { extractionPrompt, TRANSCRIPTION_PROMPT } from "./prompts";
-import { classifyAidItem, deriveAidPeriod } from "../packs/financial-aid";
+import {
+  classifyAidItem,
+  costOfAttendanceLabel,
+  deriveAidPeriod,
+} from "../packs/financial-aid";
 
 export interface LetterInput {
   mimeType: "image/png" | "image/jpeg" | "application/pdf";
@@ -89,11 +93,24 @@ function validationFeedback(error: unknown): string {
   return error instanceof Error ? error.message : "Invalid JSON output";
 }
 
-function assertAwardLetter(analysis: LetterAnalysis): LetterAnalysis {
+function assertAwardLetter(
+  analysis: LetterAnalysis,
+  transcription: string,
+): LetterAnalysis {
   const hasRecognizedAid = analysis.line_items.some(
     (item) => classifyAidItem(item.raw_label, item.source_quote).recognized,
   );
-  if (!hasRecognizedAid) {
+  const hasAwardContext =
+    /\b(?:financial\s+aid\s+(?:offer|award)|award\s+(?:offer|summary|notification|letter)|aid\s+notification|offered\s+aid|aid\s+offered|offer\s+details|your\s+offered\s+aid|we\s+(?:offer|award)|you\s+(?:are|have\s+been)\s+awarded|(?:aid|award)\s+granted)\b/i.test(
+      transcription,
+    ) ||
+    /\b(?:aid|award|grant|scholarship|loan|work[ -]?study)\b[^\r\n]{0,32}\b(?:offered|granted|awarded)\b/i.test(
+      transcription,
+    ) ||
+    /\b(?:offered|granted|awarded)\b[^\r\n]{0,32}\b(?:aid|award|grant|scholarship|loan|work[ -]?study)\b/i.test(
+      transcription,
+    );
+  if (!hasRecognizedAid || !hasAwardContext) {
     throw new NotAwardLetterError();
   }
   return analysis;
@@ -142,17 +159,20 @@ function labelOccurrences(text: string, label: string): number[] {
   return starts;
 }
 
-function amountBoundToLabel(item: LetterAnalysis["line_items"][number]): boolean {
-  if (item.amount === null) return true;
-  const amounts = dollarOccurrences(item.source_quote);
-  const labels = labelOccurrences(item.source_quote, item.raw_label);
+function amountBoundToTextLabel(
+  sourceQuote: string,
+  label: string,
+  amountValue: number,
+): boolean {
+  const amounts = dollarOccurrences(sourceQuote);
+  const labels = labelOccurrences(sourceQuote, label);
   if (amounts.length === 0 || labels.length === 0) return false;
 
   const distances = amounts.map((amount) => ({
     amount,
     distance: Math.min(
       ...labels.map((labelStart) => {
-        const labelEnd = labelStart + item.raw_label.length;
+        const labelEnd = labelStart + label.length;
         if (amount.end <= labelStart) return labelStart - amount.end;
         if (amount.start >= labelEnd) return amount.start - labelEnd;
         return 0;
@@ -161,7 +181,13 @@ function amountBoundToLabel(item: LetterAnalysis["line_items"][number]): boolean
   }));
   const minimumDistance = Math.min(...distances.map(({ distance }) => distance));
   const nearest = distances.filter(({ distance }) => distance === minimumDistance);
-  return nearest.length === 1 && nearest[0].amount.amount === item.amount;
+  return nearest.length === 1 && nearest[0].amount.amount === amountValue;
+}
+
+function amountBoundToLabel(item: LetterAnalysis["line_items"][number]): boolean {
+  return item.amount === null
+    ? true
+    : amountBoundToTextLabel(item.source_quote, item.raw_label, item.amount);
 }
 
 function assertProvenance(analysis: LetterAnalysis, transcription: string): LetterAnalysis {
@@ -175,6 +201,26 @@ function assertProvenance(analysis: LetterAnalysis, transcription: string): Lett
   const hasEmptyCoaQuote = analysis.cost_of_attendance.source_quote === "";
   if (hasEmptyLineQuote || hasEmptyCoaQuote) {
     throw provenanceError("every stated source_quote must be non-empty");
+  }
+
+  const coa = analysis.cost_of_attendance;
+  if ((coa.amount === null) !== (coa.source_quote === null)) {
+    throw provenanceError(
+      "cost_of_attendance amount and source_quote must be null together",
+    );
+  }
+  if (coa.amount !== null && coa.source_quote !== null) {
+    const label = costOfAttendanceLabel(coa.source_quote);
+    if (!label) {
+      throw provenanceError(
+        "cost_of_attendance source_quote must contain a recognized COA label",
+      );
+    }
+    if (!amountBoundToTextLabel(coa.source_quote, label, coa.amount)) {
+      throw provenanceError(
+        "cost_of_attendance amount must be owned by its recognized COA label",
+      );
+    }
   }
 
   const transcriptionLines = transcription.split(/\r?\n/);
@@ -335,7 +381,8 @@ export async function extractLetter(
         parseJson(textFrom(extractionResponse, "extraction")),
       );
       const proven = assertProvenance(parsed, transcription);
-      return assertAwardLetter(normalizeSemantics(proven, transcription));
+      const award = assertAwardLetter(proven, transcription);
+      return normalizeSemantics(award, transcription);
     } catch (error) {
       if (error instanceof NotAwardLetterError) throw error;
       feedback = validationFeedback(error);

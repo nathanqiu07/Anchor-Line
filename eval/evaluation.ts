@@ -50,7 +50,12 @@ function comparisonPairs(
     (expectedValue, index) => [actualBase[index], expectedValue] as [unknown, unknown],
   );
 
-  for (const [index, expectedItem] of expected.line_items.entries()) {
+  const lineItemCount = Math.max(
+    actual.line_items.length,
+    expected.line_items.length,
+  );
+  for (let index = 0; index < lineItemCount; index += 1) {
+    const expectedItem = expected.line_items[index];
     const actualValues = valuesForLineItem(actual.line_items[index]);
     const expectedValues = valuesForLineItem(expectedItem);
     pairs.push(
@@ -73,15 +78,33 @@ export function evaluateLetter(actual: LetterAnalysis, expected: LetterAnalysis)
   ).length;
   const expectedAnchorClaims = [
     ...(expected.cost_of_attendance.source_quote
-      ? [actual.cost_of_attendance.source_quote]
+      ? [{
+          expectedQuote: expected.cost_of_attendance.source_quote,
+          actualQuote: actual.cost_of_attendance.source_quote,
+        }]
       : []),
-    ...expected.line_items.map((_, index) => actual.line_items[index]?.source_quote),
+    ...expected.line_items.map((expectedItem, index) => ({
+      expectedQuote: expectedItem.source_quote,
+      actualQuote: actual.line_items[index]?.source_quote,
+    })),
   ];
   const verifiedAnchors = expectedAnchorClaims.filter(
-    (quote): quote is string =>
-      typeof quote === "string" && Boolean(anchorQuote(actual.transcription, quote)),
+    ({ expectedQuote, actualQuote }) =>
+      actualQuote === expectedQuote &&
+      Boolean(anchorQuote(expected.transcription, expectedQuote)) &&
+      Boolean(anchorQuote(actual.transcription, expectedQuote)),
   ).length;
-  const totalAnchors = expectedAnchorClaims.length;
+  const extraCoaClaim =
+    expected.cost_of_attendance.source_quote === null &&
+    actual.cost_of_attendance.source_quote !== null
+      ? 1
+      : 0;
+  const extraLineItemClaims = Math.max(
+    0,
+    actual.line_items.length - expected.line_items.length,
+  );
+  const totalAnchors =
+    expectedAnchorClaims.length + extraCoaClaim + extraLineItemClaims;
 
   return {
     fieldAccuracy: totalFields === 0 ? 1 : matchedFields / totalFields,
@@ -113,5 +136,19 @@ export function meetsAnchorThreshold(
   result: Pick<EvaluationResult, "anchorVerification" | "totalAnchors">,
   threshold = 0.85,
 ): boolean {
-  return result.totalAnchors === 0 || (result.anchorVerification ?? 0) >= threshold;
+  return result.totalAnchors > 0 && (result.anchorVerification ?? 0) >= threshold;
+}
+
+export function meetsEvaluationThresholds(
+  result: Pick<
+    EvaluationResult,
+    "anchorVerification" | "totalAnchors" | "fieldAccuracy"
+  >,
+  fieldThreshold = 0.85,
+  anchorThreshold = 0.85,
+): boolean {
+  return (
+    result.fieldAccuracy >= fieldThreshold &&
+    meetsAnchorThreshold(result, anchorThreshold)
+  );
 }

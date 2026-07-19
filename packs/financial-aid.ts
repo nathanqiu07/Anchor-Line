@@ -30,6 +30,9 @@ const explanations = {
 
 export interface OfferTotals {
   costOfAttendance: number | null;
+  costOfAttendancePeriod: LineItem["period"];
+  annualCostOfAttendance: number | null;
+  costOfAttendanceComparable: boolean;
   giftAid: number | null;
   loans: number | null;
   workStudy: number | null;
@@ -71,6 +74,21 @@ export const financialAidGlossary: Record<string, string> = {
 
 function searchable(value: string): string {
   return value.toLowerCase().replace(/[\u2010-\u2015]/g, "-").replace(/[^a-z0-9+]+/g, " ").trim();
+}
+
+const costOfAttendancePattern =
+  /\b(?:cost\s+of\s+attendance|student\s+budget|(?:annual|yearly|semester(?:ly)?)\s+(?:education\s+)?cost|total\s+(?:estimated\s+)?(?:education(?:al)?\s+cost|cost\s+of\s+education))\b/i;
+
+/** Returns the exact recognized COA label owned by a one-line source quote. */
+export function costOfAttendanceLabel(sourceQuote: string): string | null {
+  return sourceQuote.match(costOfAttendancePattern)?.[0] ?? null;
+}
+
+function hasAdverseAidContext(sourceQuote: string): boolean {
+  const text = searchable(sourceQuote);
+  return /\b(?:overpayment|repayment\s+(?:is\s+)?(?:due|required|owed)|repay(?:ment)?\s+due|balance\s+(?:owed|due)|amount\s+due|invoice|bill(?:ing|ed)?|charge(?:d|s)?|collection|denial|denied|ineligible|not\s+eligible|cancel(?:led|ed|lation)|rescind(?:ed|ing)?|rescission)\b/.test(
+    text,
+  );
 }
 
 function classifyText(text: string, rawLabel: string): AidClassification | null {
@@ -174,6 +192,15 @@ function classifyText(text: string, rawLabel: string): AidClassification | null 
 
 /** Classifies source-bound aid terminology without trusting model-authored semantics. */
 export function classifyAidItem(rawLabel: string, sourceQuote: string): AidClassification {
+  if (hasAdverseAidContext(sourceQuote)) {
+    return {
+      category: "other",
+      normalizedName: rawLabel,
+      explanation: explanations.other,
+      recognized: false,
+    };
+  }
+
   const fromLabel = classifyText(searchable(rawLabel), rawLabel);
   const monetaryOccurrences = sourceQuote.match(/\$\s*\d/g)?.length ?? 0;
   const fromQuote =
@@ -231,6 +258,27 @@ export function deriveAidPeriod(sourceQuote: string, transcription: string): Lin
   return global.size === 1 ? [...global][0] : "unknown";
 }
 
+/** Derives the COA basis from its exact quote and, when needed, its preceding heading. */
+export function deriveCostOfAttendancePeriod(
+  analysis: LetterAnalysis,
+): LineItem["period"] {
+  const sourceQuote = analysis.cost_of_attendance.source_quote;
+  if (!sourceQuote) return "unknown";
+
+  const local = explicitPeriods(sourceQuote, false);
+  if (local.size === 1) return [...local][0];
+  if (local.size > 1) return "unknown";
+
+  const lines = analysis.transcription.split(/\r?\n/);
+  const quoteIndexes = lines
+    .map((line, index) => (line === sourceQuote ? index : -1))
+    .filter((index) => index >= 0);
+  if (quoteIndexes.length !== 1 || quoteIndexes[0] === 0) return "unknown";
+
+  const adjacent = explicitPeriods(lines[quoteIndexes[0] - 1], false);
+  return adjacent.size === 1 ? [...adjacent][0] : "unknown";
+}
+
 interface CategoryPeriodTotal {
   annualAmount: number | null;
   statedTotal: number;
@@ -279,15 +327,28 @@ function totalByCategory(
 /** Returns only arithmetic derived from the award letter; no repayment estimates are inferred. */
 export function calculateOffer(analysis: LetterAnalysis): OfferTotals {
   const costOfAttendance = analysis.cost_of_attendance.amount;
+  const costOfAttendancePeriod = deriveCostOfAttendancePeriod(analysis);
+  const annualCostOfAttendance =
+    costOfAttendance === null
+      ? null
+      : costOfAttendancePeriod === "year"
+        ? costOfAttendance
+        : costOfAttendancePeriod === "semester"
+          ? costOfAttendance * 2
+          : null;
+  const costOfAttendanceComparable = annualCostOfAttendance !== null;
   const giftAid = totalByCategory(analysis, "gift_aid");
   const loans = totalByCategory(analysis, "loan");
   const workStudy = totalByCategory(analysis, "work_study");
   const otherAid = totalByCategory(analysis, "other");
-  const netPriceComparable = costOfAttendance !== null && giftAid.comparable;
+  const netPriceComparable = costOfAttendanceComparable && giftAid.comparable;
   const fourYearDebtComparable = loans.comparable;
 
   return {
     costOfAttendance,
+    costOfAttendancePeriod,
+    annualCostOfAttendance,
+    costOfAttendanceComparable,
     giftAid: giftAid.annualAmount,
     loans: loans.annualAmount,
     workStudy: workStudy.annualAmount,
@@ -301,7 +362,7 @@ export function calculateOffer(analysis: LetterAnalysis): OfferTotals {
     giftAidUnknownPeriodAmount: giftAid.unknownPeriodAmount,
     loanUnknownPeriodAmount: loans.unknownPeriodAmount,
     netPrice: netPriceComparable
-      ? costOfAttendance - (giftAid.annualAmount ?? 0)
+      ? annualCostOfAttendance - (giftAid.annualAmount ?? 0)
       : null,
     projectedFourYearDebt: fourYearDebtComparable
       ? (loans.annualAmount ?? 0) * 4

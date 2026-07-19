@@ -9,6 +9,7 @@ import {
 import { extractionPrompt, EXTRACTION_PROMPT, TRANSCRIPTION_PROMPT } from "./prompts";
 
 const transcription = `Cedar Ridge University
+Financial Aid Offer
 Estimated Cost of Attendance: $42,000
 Direct Unsub $5,500
 Federal Work-Study $2,500
@@ -67,6 +68,8 @@ describe("two-pass extraction prompts", () => {
     expect(EXTRACTION_PROMPT).toContain("no estimates");
     expect(EXTRACTION_PROMPT).toContain("classify each dollar line");
     expect(EXTRACTION_PROMPT).toContain("glossary");
+    expect(EXTRACTION_PROMPT).toContain("student budget");
+    expect(EXTRACTION_PROMPT).toContain("overpayment");
   });
 
   test("delimits pass-one transcription as untrusted data and ignores embedded instructions", () => {
@@ -281,6 +284,252 @@ describe("two-pass extraction prompts", () => {
     ).resolves.toEqual(analysis);
   });
 
+  test("rejects a Direct Loan amount claimed as cost of attendance", async () => {
+    const loanAsCoaTranscription = `Northstar College
+Financial Aid Offer
+Federal Pell Grant $3,200
+Direct Loan $5,500`;
+    const loanAsCoa = {
+      school_name: "Northstar College",
+      award_year: null,
+      cost_of_attendance: {
+        amount: 5_500,
+        source_quote: "Direct Loan $5,500",
+      },
+      line_items: [
+        {
+          raw_label: "Federal Pell Grant",
+          category: "gift_aid",
+          normalized_name: "Federal Pell Grant",
+          amount: 3_200,
+          period: "unknown",
+          source_quote: "Federal Pell Grant $3,200",
+          explanation: "Grant gift aid does not need to be repaid.",
+        },
+      ],
+      transcription: loanAsCoaTranscription,
+      missing_info: [],
+    };
+
+    await expect(
+      extractLetter(
+        { mimeType: "image/png", bytes: new Uint8Array([1]) },
+        fakeClient(
+          response(loanAsCoaTranscription),
+          response(JSON.stringify(loanAsCoa)),
+          response(JSON.stringify(loanAsCoa)),
+        ),
+      ),
+    ).rejects.toBeInstanceOf(ExtractionValidationError);
+  });
+
+  test("retries loan-as-COA and accepts complete corrected ownership", async () => {
+    const source = `Northstar College
+Financial Aid Offer
+Federal Pell Grant $3,200
+Direct Loan $5,500`;
+    const pell = {
+      raw_label: "Federal Pell Grant",
+      category: "gift_aid",
+      normalized_name: "Federal Pell Grant",
+      amount: 3_200,
+      period: "unknown",
+      source_quote: "Federal Pell Grant $3,200",
+      explanation: "Grant gift aid does not need to be repaid.",
+    };
+    const fake = {
+      school_name: "Northstar College",
+      award_year: null,
+      cost_of_attendance: { amount: 5_500, source_quote: "Direct Loan $5,500" },
+      line_items: [pell],
+      transcription: source,
+      missing_info: [],
+    };
+    const corrected = {
+      ...fake,
+      cost_of_attendance: { amount: null, source_quote: null },
+      line_items: [
+        pell,
+        {
+          raw_label: "Direct Loan",
+          category: "loan",
+          normalized_name: "Federal Direct Loan",
+          amount: 5_500,
+          period: "unknown",
+          source_quote: "Direct Loan $5,500",
+          explanation: "You repay this federal loan.",
+        },
+      ],
+    };
+    const calls: unknown[] = [];
+    const client: AnthropicMessagesClient = {
+      create: async (request) => {
+        calls.push(request);
+        return calls.length === 1
+          ? response(source)
+          : calls.length === 2
+            ? response(JSON.stringify(fake))
+            : response(JSON.stringify(corrected));
+      },
+    };
+
+    const result = await extractLetter(
+      { mimeType: "image/png", bytes: new Uint8Array([1]) },
+      client,
+    );
+
+    expect(calls).toHaveLength(3);
+    expect(calls[2]).toMatchObject({
+      system: expect.stringContaining("recognized COA label"),
+    });
+    expect(result).toMatchObject({
+      cost_of_attendance: { amount: null, source_quote: null },
+      line_items: [{ amount: 3_200 }, { amount: 5_500, category: "loan" }],
+    });
+  });
+
+  test("rejects an unlabeled amount claimed as cost of attendance", async () => {
+    const unlabeledTranscription = `Northstar College
+Financial Aid Offer
+Estimated amount $40,000
+Federal Pell Grant $3,200`;
+    const unlabeledCoa = {
+      school_name: "Northstar College",
+      award_year: null,
+      cost_of_attendance: {
+        amount: 40_000,
+        source_quote: "Estimated amount $40,000",
+      },
+      line_items: [
+        {
+          raw_label: "Federal Pell Grant",
+          category: "gift_aid",
+          normalized_name: "Federal Pell Grant",
+          amount: 3_200,
+          period: "unknown",
+          source_quote: "Federal Pell Grant $3,200",
+          explanation: "Grant gift aid does not need to be repaid.",
+        },
+      ],
+      transcription: unlabeledTranscription,
+      missing_info: [],
+    };
+
+    await expect(
+      extractLetter(
+        { mimeType: "image/png", bytes: new Uint8Array([1]) },
+        fakeClient(
+          response(unlabeledTranscription),
+          response(JSON.stringify(unlabeledCoa)),
+          response(JSON.stringify(unlabeledCoa)),
+        ),
+      ),
+    ).rejects.toBeInstanceOf(ExtractionValidationError);
+
+  });
+
+  test.each([
+    "Cost of Attendance $40,000",
+    "Student Budget $40,000",
+    "Annual Cost $40,000",
+    "Total Education Cost $40,000",
+  ])("accepts a recognized COA label: %s", async (coaQuote) => {
+    const coaTranscription = `Northstar College
+Financial Aid Offer
+${coaQuote}
+Federal Pell Grant $3,200`;
+    const valid = {
+      school_name: "Northstar College",
+      award_year: null,
+      cost_of_attendance: { amount: 40_000, source_quote: coaQuote },
+      line_items: [
+        {
+          raw_label: "Federal Pell Grant",
+          category: "gift_aid",
+          normalized_name: "Federal Pell Grant",
+          amount: 3_200,
+          period: "unknown",
+          source_quote: "Federal Pell Grant $3,200",
+          explanation: "Grant gift aid does not need to be repaid.",
+        },
+      ],
+      transcription: coaTranscription,
+      missing_info: [],
+    };
+
+    await expect(
+      extractLetter(
+        { mimeType: "image/png", bytes: new Uint8Array([1]) },
+        fakeClient(response(coaTranscription), response(JSON.stringify(valid))),
+      ),
+    ).resolves.toMatchObject({ cost_of_attendance: valid.cost_of_attendance });
+  });
+
+  test("requires COA amount and source quote to be null together", async () => {
+    const nullCoaTranscription = `Northstar College
+Financial Aid Offer
+Cost of Attendance not stated
+Federal Pell Grant $3,200`;
+    const invalid = {
+      school_name: "Northstar College",
+      award_year: null,
+      cost_of_attendance: {
+        amount: null,
+        source_quote: "Cost of Attendance not stated",
+      },
+      line_items: [
+        {
+          raw_label: "Federal Pell Grant",
+          category: "gift_aid",
+          normalized_name: "Federal Pell Grant",
+          amount: 3_200,
+          period: "unknown",
+          source_quote: "Federal Pell Grant $3,200",
+          explanation: "Grant gift aid does not need to be repaid.",
+        },
+      ],
+      transcription: nullCoaTranscription,
+      missing_info: [],
+    };
+
+    await expect(
+      extractLetter(
+        { mimeType: "image/png", bytes: new Uint8Array([1]) },
+        fakeClient(
+          response(nullCoaTranscription),
+          response(JSON.stringify(invalid)),
+          response(JSON.stringify(invalid)),
+        ),
+      ),
+    ).rejects.toBeInstanceOf(ExtractionValidationError);
+
+    const invalidMissingQuote = {
+      ...invalid,
+      cost_of_attendance: { amount: 40_000, source_quote: null },
+    };
+    await expect(
+      extractLetter(
+        { mimeType: "image/png", bytes: new Uint8Array([1]) },
+        fakeClient(
+          response(nullCoaTranscription),
+          response(JSON.stringify(invalidMissingQuote)),
+          response(JSON.stringify(invalidMissingQuote)),
+        ),
+      ),
+    ).rejects.toBeInstanceOf(ExtractionValidationError);
+
+    const valid = {
+      ...invalid,
+      cost_of_attendance: { amount: null, source_quote: null },
+    };
+    await expect(
+      extractLetter(
+        { mimeType: "image/png", bytes: new Uint8Array([1]) },
+        fakeClient(response(nullCoaTranscription), response(JSON.stringify(valid))),
+      ),
+    ).resolves.toMatchObject({ cost_of_attendance: valid.cost_of_attendance });
+  });
+
   test("rejects dollar-line claims whose every amount is null", async () => {
     const nullAmounts = {
       ...analysis,
@@ -305,7 +554,7 @@ describe("two-pass extraction prompts", () => {
 
   test("accepts a null amount when its source quote has no dollar amount", async () => {
     const nonMonetaryTranscription =
-      "Cedar Ridge University\nFederal Work-Study amount will be determined";
+      "Cedar Ridge University\nFinancial Aid Offer\nFederal Work-Study amount will be determined";
     const nonMonetaryAnalysis = {
       school_name: "Cedar Ridge University",
       award_year: null,
@@ -414,7 +663,7 @@ describe("two-pass extraction prompts", () => {
 
   test("rejects a two-dollar line when one monetary occurrence is omitted", async () => {
     const twoAmountTranscription =
-      "Northstar College\nSubsidized $3,500; Unsubsidized $2,000\nAll aid amounts are for the academic year.";
+      "Northstar College\nFinancial Aid Offer\nSubsidized $3,500; Unsubsidized $2,000\nAll aid amounts are for the academic year.";
     const oneClaim = {
       school_name: "Northstar College",
       award_year: null,
@@ -448,7 +697,7 @@ describe("two-pass extraction prompts", () => {
 
   test("accepts two claims that exactly cover a two-dollar line", async () => {
     const twoAmountTranscription =
-      "Northstar College\nsubsidized $3,500; unsubsidized $2,000\nAll aid amounts are for the academic year.";
+      "Northstar College\nFinancial Aid Offer\nsubsidized $3,500; unsubsidized $2,000\nAll aid amounts are for the academic year.";
     const twoClaims = {
       school_name: "Northstar College",
       award_year: null,
@@ -490,7 +739,7 @@ describe("two-pass extraction prompts", () => {
 
   test("rejects swapped amounts on a multi-item dollar line", async () => {
     const multiItemTranscription =
-      "Northstar College\nPell Grant $3,200; Direct Loan $5,500\nAll amounts are annual.";
+      "Northstar College\nFinancial Aid Offer\nPell Grant $3,200; Direct Loan $5,500\nAll amounts are annual.";
     const swapped = {
       school_name: "Northstar College",
       award_year: null,
@@ -601,10 +850,139 @@ describe("two-pass extraction prompts", () => {
     ).rejects.toEqual(new NotAwardLetterError());
   });
 
+  test.each([
+    ["Account Notice", "Federal Pell Grant overpayment to be repaid $500", "Federal Pell Grant", "gift_aid"],
+    ["Billing Statement", "Direct Loan balance due $5,500", "Direct Loan", "loan"],
+    ["Eligibility Notice", "Federal Pell Grant denied $3,200", "Federal Pell Grant", "gift_aid"],
+    ["Cancellation Notice", "Federal Pell Grant award cancelled $3,200", "Federal Pell Grant", "gift_aid"],
+  ])(
+    "rejects adverse aid language as a non-award letter: %s",
+    async (heading, sourceQuote, rawLabel, category) => {
+      const adverseTranscription = `Northstar College\n${heading}\n${sourceQuote}`;
+      const adverse = {
+        school_name: "Northstar College",
+        award_year: null,
+        cost_of_attendance: { amount: null, source_quote: null },
+        line_items: [
+          {
+            raw_label: rawLabel,
+            category,
+            normalized_name: rawLabel,
+            amount: Number(sourceQuote.match(/[\d,]+/)?.[0].replace(/,/g, "")),
+            period: "unknown",
+            source_quote: sourceQuote,
+            explanation: "Model-authored explanation.",
+          },
+        ],
+        transcription: adverseTranscription,
+        missing_info: [],
+      };
+
+      await expect(
+        extractLetter(
+          { mimeType: "image/png", bytes: new Uint8Array([1]) },
+          fakeClient(response(adverseTranscription), response(JSON.stringify(adverse))),
+        ),
+      ).rejects.toEqual(new NotAwardLetterError());
+    },
+  );
+
+  test("requires explicit award or offer context in addition to an aid token", async () => {
+    const contextlessTranscription = "Northstar College\nFederal Pell Grant $3,200";
+    const contextless = {
+      school_name: "Northstar College",
+      award_year: null,
+      cost_of_attendance: { amount: null, source_quote: null },
+      line_items: [
+        {
+          raw_label: "Federal Pell Grant",
+          category: "gift_aid",
+          normalized_name: "Federal Pell Grant",
+          amount: 3_200,
+          period: "unknown",
+          source_quote: "Federal Pell Grant $3,200",
+          explanation: "Grant gift aid does not need to be repaid.",
+        },
+      ],
+      transcription: contextlessTranscription,
+      missing_info: [],
+    };
+
+    await expect(
+      extractLetter(
+        { mimeType: "image/png", bytes: new Uint8Array([1]) },
+        fakeClient(response(contextlessTranscription), response(JSON.stringify(contextless))),
+      ),
+    ).rejects.toEqual(new NotAwardLetterError());
+  });
+
+  test("does not treat an unrelated use of offered as award context", async () => {
+    const unrelatedTranscription =
+      "Northstar College\nPreviously offered parking is unavailable\nFederal Pell Grant $3,200";
+    const unrelated = {
+      school_name: "Northstar College",
+      award_year: null,
+      cost_of_attendance: { amount: null, source_quote: null },
+      line_items: [
+        {
+          raw_label: "Federal Pell Grant",
+          category: "gift_aid",
+          normalized_name: "Federal Pell Grant",
+          amount: 3_200,
+          period: "unknown",
+          source_quote: "Federal Pell Grant $3,200",
+          explanation: "Grant gift aid does not need to be repaid.",
+        },
+      ],
+      transcription: unrelatedTranscription,
+      missing_info: [],
+    };
+
+    await expect(
+      extractLetter(
+        { mimeType: "image/png", bytes: new Uint8Array([1]) },
+        fakeClient(response(unrelatedTranscription), response(JSON.stringify(unrelated))),
+      ),
+    ).rejects.toEqual(new NotAwardLetterError());
+  });
+
+  test.each(["offered", "granted"])(
+    "accepts a recognized aid item explicitly %s in its source line",
+    async (verb) => {
+      const sourceQuote = `Federal Pell Grant ${verb} $3,200`;
+      const explicitTranscription = `Northstar College\n${sourceQuote}`;
+      const explicit = {
+        school_name: "Northstar College",
+        award_year: null,
+        cost_of_attendance: { amount: null, source_quote: null },
+        line_items: [
+          {
+            raw_label: "Federal Pell Grant",
+            category: "gift_aid",
+            normalized_name: "Federal Pell Grant",
+            amount: 3_200,
+            period: "unknown",
+            source_quote: sourceQuote,
+            explanation: "Grant gift aid does not need to be repaid.",
+          },
+        ],
+        transcription: explicitTranscription,
+        missing_info: [],
+      };
+
+      await expect(
+        extractLetter(
+          { mimeType: "image/png", bytes: new Uint8Array([1]) },
+          fakeClient(response(explicitTranscription), response(JSON.stringify(explicit))),
+        ),
+      ).resolves.toMatchObject({ line_items: [{ category: "gift_aid" }] });
+    },
+  );
+
   test("joins every text block at the Anthropic response boundary", async () => {
     const splitTranscription = {
       content: [
-        { type: "text", text: "Cedar Ridge University\nEstimated Cost of Attendance: $42,000\n" },
+        { type: "text", text: "Cedar Ridge University\nFinancial Aid Offer\nEstimated Cost of Attendance: $42,000\n" },
         { type: "text", text: "Direct Unsub $5,500\nFederal Work-Study $2,500\nAmounts are offered for the academic year." },
       ],
       stop_reason: "end_turn",

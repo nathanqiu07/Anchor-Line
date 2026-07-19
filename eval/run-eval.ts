@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { LetterAnalysisSchema, type LetterAnalysis } from "../lib/schema";
 import {
   evaluateLetter,
-  meetsAnchorThreshold,
+  meetsEvaluationThresholds,
   summarizeEvaluation,
   type EvaluationResult,
 } from "./evaluation";
@@ -59,14 +59,18 @@ async function main(): Promise<void> {
   console.log("Offline evaluation: checked-in synthetic extraction snapshots vs checked-in expected truth.");
   console.table(results.map((result) => ({ fixture: result.fixture, "field accuracy": percent(result.fieldAccuracy), "anchor verification": percent(result.anchorVerification), anchors: `${result.verifiedAnchors}/${result.totalAnchors}` })));
   console.table([{ fixture: "aggregate", "field accuracy": percent(summary.fieldAccuracy), "anchor verification": percent(summary.anchorVerification), anchors: `${summary.verifiedAnchors}/${summary.totalAnchors}` }]);
+  const passed = meetsEvaluationThresholds(summary);
+  console.log(
+    `Threshold gate: ${passed ? "PASS" : "FAIL"} (field accuracy >= 85.0% and anchor verification >= 85.0%; at least one expected anchor required).`,
+  );
   await writeFile(reportPath, `${JSON.stringify({
     generatedAt: new Date().toISOString(),
-    methodology: "Offline comparison of checked-in synthetic extraction snapshots against separate checked-in expected truth; not a live-provider benchmark.",
+    methodology: "Offline comparison of checked-in synthetic extraction snapshots against separate checked-in expected truth. Candidate anchor credit requires the exact expected quote in both expected and candidate transcriptions; extra and omitted claims are penalized. Passing requires at least 85% field accuracy and 85% anchor verification with at least one expected anchor. This is not a live-provider benchmark.",
     results,
     summary,
   }, null, 2)}\n`);
 
-  if (!meetsAnchorThreshold(summary)) process.exitCode = 1;
+  if (!passed) process.exitCode = 1;
 }
 
 main().catch((error: unknown) => {

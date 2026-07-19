@@ -23,8 +23,9 @@ export function CompareTable({ offers }: CompareTableProps) {
       <div className="comparison__scroll" tabIndex={0} aria-label="Offer comparison table">
         <table className="comparison-table">
           <caption>
-            Annual amounts use stated yearly values and semester values ×2. Total or
-            unclear periods are not annualized. Work-study is not subtracted from net price.
+            Annual comparisons use stated yearly values and semester values ×2 for both
+            cost and aid. Total or unclear periods are not annualized. Work-study is not
+            subtracted from net price.
           </caption>
           <thead>
             <tr>
@@ -45,8 +46,33 @@ export function CompareTable({ offers }: CompareTableProps) {
                     <strong>cost hidden</strong>
                     <span>COA is missing from this letter</span>
                   </td>
+                ) : totals.annualCostOfAttendance === null ? (
+                  <PeriodUnclearCell
+                    key={`${offer.id}-${index}`}
+                    statedTotal={
+                      totals.costOfAttendancePeriod === "total"
+                        ? (totals.costOfAttendance ?? 0)
+                        : 0
+                    }
+                    unknownPeriodAmount={
+                      totals.costOfAttendancePeriod === "unknown"
+                        ? (totals.costOfAttendance ?? 0)
+                        : 0
+                    }
+                    detail="Annual COA is not comparable"
+                  />
+                ) : totals.costOfAttendancePeriod === "semester" ? (
+                  <td key={`${offer.id}-${index}`}>
+                    <strong>{money.format(totals.annualCostOfAttendance)}</strong>
+                    <span>
+                      Annualized from {money.format(totals.costOfAttendance ?? 0)} per
+                      semester
+                    </span>
+                  </td>
                 ) : (
-                  <td key={`${offer.id}-${index}`}>{money.format(totals.costOfAttendance ?? 0)}</td>
+                  <td key={`${offer.id}-${index}`}>
+                    {money.format(totals.annualCostOfAttendance)}
+                  </td>
                 ),
               )}
             </ComparisonRow>

@@ -1,6 +1,7 @@
 import { ExtractionValidationError, NotAwardLetterError, extractLetter } from "../../../lib/llm";
-import { extractionGate } from "../../../lib/abuse-controls";
+import { clientIpKey, extractionGate } from "../../../lib/abuse-controls";
 import {
+  hasValidUploadSignature,
   isAcceptedUploadType,
   MAX_UPLOAD_BYTES,
   MAX_UPLOAD_MIB,
@@ -23,7 +24,10 @@ export async function POST(request: Request): Promise<Response> {
       body && typeof body === "object" && "sampleId" in body
         ? (body as { sampleId?: unknown }).sampleId
         : undefined;
-    if (typeof sampleId !== "string" || !(sampleId in samples)) {
+    if (
+      typeof sampleId !== "string" ||
+      !Object.prototype.hasOwnProperty.call(samples, sampleId)
+    ) {
       return error("Invalid sampleId", 400);
     }
     return Response.json(samples[sampleId as keyof typeof samples]);
@@ -41,13 +45,15 @@ export async function POST(request: Request): Promise<Response> {
   if (file.size > MAX_UPLOAD_BYTES) {
     return error(`File exceeds ${MAX_UPLOAD_MIB} MiB limit`, 413);
   }
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  if (!hasValidUploadSignature(file.type, bytes)) {
+    return error("File contents do not match the declared file type", 415);
+  }
   if (!process.env.ANTHROPIC_API_KEY) {
     return error("Extraction service is not configured", 503);
   }
 
-  const forwardedFor = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  const ip = forwardedFor || request.headers.get("x-real-ip") || "unknown";
-  const admission = extractionGate.enter(ip);
+  const admission = extractionGate.enter(clientIpKey(request.headers));
   if (!admission.allowed) {
     return admission.reason === "rate_limit"
       ? error("Too many extraction requests; try again shortly", 429)
@@ -57,7 +63,7 @@ export async function POST(request: Request): Promise<Response> {
   try {
     const analysis = await extractLetter({
       mimeType: file.type,
-      bytes: new Uint8Array(await file.arrayBuffer()),
+      bytes,
     });
     return Response.json(analysis);
   } catch (caught) {

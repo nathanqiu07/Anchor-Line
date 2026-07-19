@@ -6,6 +6,7 @@ import {
   calculateOffer,
   classifyAidItem,
   deriveAidPeriod,
+  deriveCostOfAttendancePeriod,
   financialAidGlossary,
   warningsFor,
 } from "./financial-aid";
@@ -55,7 +56,7 @@ const analysis: LetterAnalysis = {
       explanation: "",
     },
   ],
-  transcription: "Cost of Attendance $40,000",
+  transcription: "Annual student budget\nCost of Attendance $40,000",
   missing_info: [],
 };
 
@@ -63,6 +64,9 @@ describe("financial-aid pack", () => {
   test("calculates honest cost and debt totals", () => {
     expect(calculateOffer(analysis)).toEqual({
       costOfAttendance: 40_000,
+      costOfAttendancePeriod: "year",
+      annualCostOfAttendance: 40_000,
+      costOfAttendanceComparable: true,
       giftAid: 10_000,
       loans: 13_500,
       workStudy: 2_000,
@@ -142,6 +146,82 @@ describe("financial-aid pack", () => {
     expect(deriveAidPeriod("Northstar Grant $4,000", "Northstar Grant $4,000")).toBe("unknown");
   });
 
+  test("derives COA period from its quote or immediately adjacent heading", () => {
+    expect(
+      deriveCostOfAttendancePeriod({
+        ...analysis,
+        cost_of_attendance: {
+          amount: 20_000,
+          source_quote: "Semester Cost of Attendance $20,000",
+        },
+        transcription: "Semester Cost of Attendance $20,000",
+      }),
+    ).toBe("semester");
+    expect(deriveCostOfAttendancePeriod(analysis)).toBe("year");
+    expect(
+      deriveCostOfAttendancePeriod({
+        ...analysis,
+        cost_of_attendance: {
+          amount: 80_000,
+          source_quote: "Total program Cost of Attendance $80,000",
+        },
+        transcription: "Total program Cost of Attendance $80,000",
+      }),
+    ).toBe("total");
+    expect(
+      deriveCostOfAttendancePeriod({
+        ...analysis,
+        transcription: "Cost of Attendance $40,000",
+      }),
+    ).toBe("unknown");
+  });
+
+  test("annualizes semester COA and semester gift aid onto the same basis", () => {
+    const semesterCoa: LetterAnalysis = {
+      ...analysis,
+      cost_of_attendance: {
+        amount: 20_000,
+        source_quote: "Semester Cost of Attendance $20,000",
+      },
+      line_items: analysis.line_items.map((item) =>
+        item.category === "gift_aid"
+          ? { ...item, period: "semester" as const }
+          : item,
+      ),
+      transcription: "Semester Cost of Attendance $20,000",
+    };
+
+    expect(calculateOffer(semesterCoa)).toMatchObject({
+      costOfAttendance: 20_000,
+      costOfAttendancePeriod: "semester",
+      annualCostOfAttendance: 40_000,
+      costOfAttendanceComparable: true,
+      giftAid: 20_000,
+      netPrice: 20_000,
+      netPriceComparable: true,
+    });
+  });
+
+  test.each([
+    ["Total program Cost of Attendance $80,000", "total"],
+    ["Cost of Attendance $40,000", "unknown"],
+  ] as const)("does not compare %s on an unsupported COA basis", (sourceQuote, period) => {
+    const unsupported: LetterAnalysis = {
+      ...analysis,
+      cost_of_attendance: { amount: period === "total" ? 80_000 : 40_000, source_quote: sourceQuote },
+      transcription: sourceQuote,
+    };
+
+    expect(calculateOffer(unsupported)).toMatchObject({
+      costOfAttendancePeriod: period,
+      annualCostOfAttendance: null,
+      costOfAttendanceComparable: false,
+      netPrice: null,
+      netPriceComparable: false,
+      costHidden: false,
+    });
+  });
+
   test("does not let another claim on a multi-amount line classify an unknown label", () => {
     expect(
       classifyAidItem(
@@ -152,6 +232,28 @@ describe("financial-aid pack", () => {
       category: "other",
       normalizedName: "Campus Award",
       recognized: false,
+    });
+  });
+
+  test.each([
+    ["Federal Pell Grant", "Federal Pell Grant overpayment to be repaid $500"],
+    ["Direct Loan", "Direct Loan balance due $5,500"],
+    ["Federal Pell Grant", "Federal Pell Grant denied $3,200"],
+    ["Federal Pell Grant", "Federal Pell Grant award cancelled $3,200"],
+  ])("treats adverse aid context as unrecognized", (rawLabel, sourceQuote) => {
+    const result = classifyAidItem(rawLabel, sourceQuote);
+
+    expect(result).toMatchObject({ category: "other", recognized: false });
+    expect(result.explanation).toContain("not provide enough information");
+  });
+
+  test.each([
+    "Federal Pell Grant offered $3,200",
+    "Federal Pell Grant granted $3,200",
+  ])("recognizes non-adverse award context", (sourceQuote) => {
+    expect(classifyAidItem("Federal Pell Grant", sourceQuote)).toMatchObject({
+      category: "gift_aid",
+      recognized: true,
     });
   });
 

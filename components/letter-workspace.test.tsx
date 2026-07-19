@@ -178,6 +178,22 @@ describe("LetterWorkspace", () => {
     expect(html).toContain("Gift aid");
     expect(html).toContain("Loans");
     expect(html).toContain("source-anchor");
+    expect(html).toContain("Period unclear");
+    expect(html).not.toContain("annual estimate");
+  });
+
+  test("labels semester COA and its annualized comparison basis", () => {
+    const semester = offerWith(
+      "Semester Cost of Attendance $20,000",
+      [],
+      "Semester Cost of Attendance $20,000",
+    );
+
+    const html = renderToStaticMarkup(<LetterWorkspace offer={semester} />);
+
+    expect(html).toContain("$20,000");
+    expect(html).toContain("Per semester");
+    expect(html).toContain("$40,000 annualized");
   });
 
   test("keeps broad COA and nested item quotes in order with a target for every card", async () => {

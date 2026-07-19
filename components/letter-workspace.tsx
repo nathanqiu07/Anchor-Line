@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { anchorQuote, type AnchorMatch } from "../lib/anchor";
 import type { StoredAnalysis } from "../lib/client-store";
 import type { AidCategory } from "../lib/schema";
+import { calculateOffer } from "../packs/financial-aid";
 
 import { ClaimCard } from "./claim-card";
 
@@ -49,6 +50,7 @@ const money = new Intl.NumberFormat("en-US", {
 
 export function LetterWorkspace({ offer }: LetterWorkspaceProps) {
   const { analysis, source } = offer;
+  const totals = useMemo(() => calculateOffer(analysis), [analysis]);
   const anchors = useMemo<AnchoredClaim[]>(
     () => [
       {
@@ -196,9 +198,27 @@ export function LetterWorkspace({ offer }: LetterWorkspaceProps) {
                       : money.format(analysis.cost_of_attendance.amount)}
                   </span>
                 </span>
+                {analysis.cost_of_attendance.amount === null ? null : (
+                  <span className="claim-card__period">
+                    {totals.costOfAttendancePeriod === "year"
+                      ? "Per academic year"
+                      : totals.costOfAttendancePeriod === "semester"
+                        ? `Per semester · ${money.format(totals.annualCostOfAttendance ?? 0)} annualized`
+                        : totals.costOfAttendancePeriod === "total"
+                          ? "Stated total · not annualized"
+                          : "Period unclear · not comparable annually"}
+                  </span>
+                )}
                 <span className="claim-card__explanation">
-                  The school’s annual estimate for tuition, fees, living costs, and other
-                  education expenses. It is the baseline for comparing offers.
+                  {analysis.cost_of_attendance.amount === null
+                    ? "The letter does not state a cost-of-attendance amount."
+                    : totals.costOfAttendancePeriod === "year"
+                      ? "The school states this cost per academic year, so it can be used as the annual comparison baseline."
+                      : totals.costOfAttendancePeriod === "semester"
+                        ? "The school states this cost per semester. Two semesters are used for the annual comparison baseline."
+                        : totals.costOfAttendancePeriod === "total"
+                          ? "The school states a total cost without a supported annual basis, so it is not used for annual comparison."
+                          : "The letter does not state a clear cost period, so this amount is not used for annual comparison."}
                 </span>
                 <span className="claim-card__source">
                   {anchorByKey.get("cost") ? (

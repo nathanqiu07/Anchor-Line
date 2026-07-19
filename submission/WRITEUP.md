@@ -61,16 +61,21 @@ Cedar omission reports **91.2%** field accuracy (**83/91** checked fields) and
 **91.7%** anchor verification (**11/12** expected anchors). These candidates are
 checked-in fixture artifacts, not independently generated live-provider output,
 and the result is not a claim about real-world letter accuracy. Omissions count
-as failures, and the evaluation exits non-zero if aggregate anchor verification
-falls below 85%.
+as failures, extra claims expand the denominator, and anchor credit requires the
+candidate quote to equal the expected quote and anchor in both transcriptions.
+The evaluation exits non-zero if either aggregate field accuracy or aggregate
+anchor verification falls below 85%, and a run with no expected anchors cannot
+pass.
 
 ## Privacy and guardrails
 
-These privacy guardrails start with synthetic samples, which work without a provider key. For a live upload,
-`ANTHROPIC_API_KEY` stays server-only; the file is processed in memory and is
-not stored in a database or file store. Browser session data is cleared with
-the tab. The product is not financial advice: it explains what a letter says,
-flags missing information, and asks students to confirm decisions with the
+These privacy guardrails start with synthetic samples, which stay local and work
+without a provider key. For a live upload, `ANTHROPIC_API_KEY` stays server-only;
+the file is sent to Anthropic for processing, while Anchor Lines processes its
+bytes in memory and does not persist them in a database or file store. The
+resulting analysis and transcription remain in the tab's `sessionStorage` until
+the tab closes. The product is not financial advice: it explains what a letter
+says, flags missing information, and asks students to confirm decisions with the
 school's financial-aid office.
 
 ## What remains human-owned

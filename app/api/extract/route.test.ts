@@ -28,6 +28,22 @@ const validAnalysis = {
   missing_info: [],
 };
 
+const signatures = {
+  "image/png": [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a],
+  "image/jpeg": [0xff, 0xd8, 0xff],
+  "application/pdf": [...new TextEncoder().encode("%PDF-")],
+} as const;
+
+function validFile(
+  name = "letter.png",
+  type: keyof typeof signatures = "image/png",
+  size = signatures[type].length,
+): File {
+  const bytes = new Uint8Array(size);
+  bytes.set(signatures[type].slice(0, size));
+  return new File([bytes], name, { type });
+}
+
 function upload(
   file?: File,
   {
@@ -66,6 +82,23 @@ describe("POST /api/extract", () => {
     expect(extractLetter).not.toHaveBeenCalled();
   });
 
+  test.each(["__proto__", "constructor", "toString"])(
+    "rejects inherited sample id %s with a clean 400",
+    async (sampleId) => {
+      const response = await POST(
+        new Request("http://localhost/api/extract", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ sampleId }),
+        }),
+      );
+
+      expect(response.status).toBe(400);
+      await expect(response.json()).resolves.toEqual({ error: "Invalid sampleId" });
+      expect(extractLetter).not.toHaveBeenCalled();
+    },
+  );
+
   test("rejects a missing file", async () => {
     const response = await POST(upload());
     expect(response.status).toBe(400);
@@ -81,9 +114,7 @@ describe("POST /api/extract", () => {
   test("accepts exactly 4 MiB and rejects one byte over the shared limit", async () => {
     process.env.ANTHROPIC_API_KEY = "test-key";
     extractLetter.mockResolvedValue(validAnalysis);
-    const boundary = new File([new Uint8Array(4 * 1024 * 1024)], "boundary.png", {
-      type: "image/png",
-    });
+    const boundary = validFile("boundary.png", "image/png", 4 * 1024 * 1024);
     const accepted = await POST(upload(boundary, { ip: "198.51.100.2" }));
     expect(accepted.status).toBe(200);
 
@@ -96,7 +127,7 @@ describe("POST /api/extract", () => {
   test("rejects cross-origin and missing-origin browser uploads before paid work", async () => {
     process.env.ANTHROPIC_API_KEY = "test-key";
     extractLetter.mockResolvedValue(validAnalysis);
-    const file = new File(["image"], "letter.png", { type: "image/png" });
+    const file = validFile();
 
     for (const origin of ["https://evil.example", null]) {
       const response = await POST(upload(file, { origin, ip: `198.51.100.${origin ? 3 : 4}` }));
@@ -109,7 +140,7 @@ describe("POST /api/extract", () => {
   test("rate-limits paid extraction per IP without metering samples", async () => {
     process.env.ANTHROPIC_API_KEY = "test-key";
     extractLetter.mockResolvedValue(validAnalysis);
-    const file = new File(["image"], "letter.png", { type: "image/png" });
+    const file = validFile();
 
     for (let requestNumber = 0; requestNumber < 5; requestNumber += 1) {
       const response = await POST(upload(file, { ip: "203.0.113.50" }));
@@ -140,7 +171,7 @@ describe("POST /api/extract", () => {
     extractLetter.mockImplementation(
       () => new Promise((resolve) => releases.push(resolve)),
     );
-    const file = new File(["image"], "letter.png", { type: "image/png" });
+    const file = validFile();
 
     const first = POST(upload(file, { ip: "203.0.113.61" }));
     const second = POST(upload(file, { ip: "203.0.113.62" }));
@@ -162,7 +193,7 @@ describe("POST /api/extract", () => {
   });
 
   test("returns 503 when a valid upload has no API key", async () => {
-    const response = await POST(upload(new File(["image"], "letter.png", { type: "image/png" })));
+    const response = await POST(upload(validFile()));
     expect(response.status).toBe(503);
     await expect(response.json()).resolves.toEqual({ error: "Extraction service is not configured" });
   });
@@ -170,7 +201,7 @@ describe("POST /api/extract", () => {
   test("maps typed validation failures to 422", async () => {
     process.env.ANTHROPIC_API_KEY = "test-key";
     extractLetter.mockRejectedValueOnce(new ExtractionValidationError("invalid model output"));
-    const response = await POST(upload(new File(["image"], "letter.png", { type: "image/png" })));
+    const response = await POST(upload(validFile()));
 
     expect(response.status).toBe(422);
     await expect(response.json()).resolves.toEqual({ error: "Model output did not match the award-letter schema" });
@@ -179,7 +210,7 @@ describe("POST /api/extract", () => {
   test("surfaces a non-letter semantic error", async () => {
     process.env.ANTHROPIC_API_KEY = "test-key";
     extractLetter.mockRejectedValueOnce(new NotAwardLetterError());
-    const response = await POST(upload(new File(["image"], "letter.png", { type: "image/png" })));
+    const response = await POST(upload(validFile()));
 
     expect(response.status).toBe(422);
     await expect(response.json()).resolves.toEqual({ error: "This doesn't look like an award letter" });
@@ -188,9 +219,28 @@ describe("POST /api/extract", () => {
   test("returns the extracted upload analysis", async () => {
     process.env.ANTHROPIC_API_KEY = "test-key";
     extractLetter.mockResolvedValueOnce(validAnalysis);
-    const response = await POST(upload(new File(["image"], "letter.png", { type: "image/png" })));
+    const response = await POST(upload(validFile()));
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual(validAnalysis);
+  });
+
+  test.each([
+    ["letter.png", "image/png"],
+    ["letter.jpg", "image/jpeg"],
+    ["letter.pdf", "application/pdf"],
+  ] as const)("rejects bytes that do not match declared %s type", async (name, type) => {
+    process.env.ANTHROPIC_API_KEY = "test-key";
+    const mismatch = new File([new TextEncoder().encode("not-a-real-file")], name, {
+      type,
+    });
+
+    const response = await POST(upload(mismatch));
+
+    expect(response.status).toBe(415);
+    await expect(response.json()).resolves.toEqual({
+      error: "File contents do not match the declared file type",
+    });
+    expect(extractLetter).not.toHaveBeenCalled();
   });
 });

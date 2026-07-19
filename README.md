@@ -40,11 +40,14 @@ financial-aid terminology; they never call the model provider. They make it
 possible to demonstrate sample → analysis → comparison without uploading a
 real letter or configuring a secret.
 
-For a live letter, the browser sends the selected file to the server route. The
-file is validated for type and size, processed in memory, and not stored in a
-database or file store. The browser's session analysis is cleared when the tab
-is closed; uploaded-file previews are transient and are unavailable after a
-reload.
+For a live letter, the browser sends the selected file to the server route,
+which sends it to Anthropic for processing. The server validates MIME type,
+leading file-signature bytes, and size before any paid model call. Anchor Lines
+processes the file bytes in memory and does not persist them in a database or
+file store. The resulting analysis and transcription remain in that tab's
+`sessionStorage` until the tab closes; uploaded-file previews are transient and
+are unavailable after a reload. Synthetic samples stay local to the app and are
+key-free.
 
 ## Environment variables
 
@@ -77,10 +80,11 @@ EXTRACTION_MODEL=claude-sonnet-4-6
   back to a bounded fuzzy match. Each card highlights its source span; an
   unmatched claim is labeled **not stated in letter**.
 - `packs/financial-aid.ts` separates gift aid, loans, work-study, and other
-  items. It annualizes yearly amounts as stated and semester amounts ×2, but
-  leaves total and unknown periods unprojected. Net price and four-year debt
-  stay not comparable when their periods are unclear; work-study stays out of
-  bill reduction.
+  items. It derives the COA period without changing the extraction schema and
+  annualizes stated yearly amounts as-is and semester amounts ×2 for both cost
+  and aid. Total and unknown periods remain unprojected. Net price and four-year
+  debt stay not comparable when their periods are unclear; work-study stays out
+  of bill reduction.
 - Browser session state uses `sessionStorage`; there is no account, database,
   authentication system, or persistent document storage.
 
@@ -97,9 +101,13 @@ The 4 MiB file maximum is an intentional deployability limit: it leaves room
 for multipart overhead beneath Vercel Functions' 4.5 MB request-body limit.
 The upload route also requires a matching browser `Origin`, permits five paid
 extractions per IP per minute, and caps paid extraction at two concurrent calls
-per process. These controls are best-effort serverless safeguards: in-memory
-state is not distributed across instances and resets when an instance is
-recycled. Samples bypass these controls and never call Anthropic.
+per process. On Vercel, the rate-limit key uses one validated
+`x-vercel-forwarded-for` IP from Vercel's trusted request boundary; only when
+that header is absent does local/test execution use validated `x-real-ip` or
+`x-forwarded-for` fallback data. These controls are best-effort, per-process
+serverless safeguards: in-memory state is not distributed across instances and
+resets when an instance is recycled. Samples bypass these controls and never
+call Anthropic.
 
 Before sharing a deployment, run `npm run typecheck`, `npm run lint`,
 `npm run test`, `npm run eval`, and `npm run build`. A live provider check
@@ -113,9 +121,13 @@ path.
 The current intentional Cedar omission produces **91.2% field accuracy
 (83/91)** and **91.7% anchor verification (11/12)**. Expected anchor claims are
 the denominator, so omitted candidate claims fail; the command exits non-zero
-below 85% aggregate anchor verification. This is an offline fixture comparison,
-not a live-provider benchmark, and the checked-in candidates are not represented
-as independently generated observations.
+below either 85% aggregate field accuracy or 85% aggregate anchor verification,
+and an evaluation with no expected anchors cannot pass. Anchor credit requires
+the candidate quote to equal the immutable expected quote and anchor in both
+expected and candidate transcriptions; extra candidate claims expand the
+denominator. This is an offline fixture comparison, not a live-provider
+benchmark, and the checked-in candidates are not represented as independently
+generated observations.
 
 ## Privacy and guardrails
 

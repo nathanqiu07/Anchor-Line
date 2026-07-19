@@ -13,9 +13,10 @@ movement and the source highlight to be visible.
 | 1:45–2:15 | Comparison page with Cedar Ridge and Juniper | Open **Compare offers**. “The table separates cost of attendance, gift aid, loans, net price, and projected four-year debt. It does not subtract work-study from the bill.” Point to Juniper's red **cost hidden** cell. “Because this letter omits COA, Anchor Lines refuses to invent a net price.” |
 | 2:15–2:35 | Comparison warnings | Point to the loan and work-study warnings. “The comparison makes the hidden tradeoffs visible: loans are not grants, and work-study is not bill reduction.” |
 | 2:35–2:45 | Return to a letter analysis | Hover a card again so the highlighted source interaction is clearly visible. “Every stated dollar has a checkable source connection.” |
-| 2:45–3:00 | Juniper analysis, Cost of attendance card | Return to Juniper, activate its **Cost of attendance** card, and keep the visible amber **not stated in letter** badge in frame. “When the source cannot support a claim, the honest answer is ‘not stated in letter.’ Our offline checked-in synthetic snapshot comparison verified **91.7% / 11-of-12** expected anchors while counting an intentional omission as a failure.” |
+| 2:45–3:00 | Juniper analysis, Cost of attendance card | Return to Juniper, activate its **Cost of attendance** card, and keep the visible amber **not stated in letter** badge in frame. “When the source cannot support a claim, the honest answer is ‘not stated in letter.’ Our offline checked-in synthetic snapshot comparison measured **91.2% / 83-of-91** fields and **91.7% / 11-of-12** expected anchors while counting an intentional omission as a failure.” |
 
 End on Juniper's visible amber **not stated in letter** badge and the
-**91.7% / 11-of-12** measured offline synthetic anchor-verification rate. Do
+**91.2% / 83-of-91** measured offline field accuracy and **91.7% / 11-of-12**
+synthetic anchor verification. Do
 not imply that the checked-in snapshot result is a live-provider or real-letter
 accuracy claim.

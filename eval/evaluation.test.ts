@@ -5,6 +5,7 @@ import type { LetterAnalysis } from "../lib/schema";
 import {
   evaluateLetter,
   meetsAnchorThreshold,
+  meetsEvaluationThresholds,
   summarizeEvaluation,
 } from "./evaluation";
 
@@ -86,6 +87,83 @@ describe("deterministic fixture evaluation", () => {
     expect(meetsAnchorThreshold(result)).toBe(false);
   });
 
+  test("gives no anchor credit to self-consistent fabricated candidate evidence", () => {
+    const fabricated: LetterAnalysis = {
+      school_name: "Fabricated University",
+      award_year: "2030-2031",
+      cost_of_attendance: {
+        amount: 1,
+        source_quote: "Fabricated Cost of Attendance $1",
+      },
+      line_items: [
+        {
+          raw_label: "Fabricated Loan",
+          category: "loan",
+          normalized_name: "Fabricated Loan Name",
+          amount: 2,
+          period: "semester",
+          source_quote: "Fabricated Loan $2",
+          explanation: "Fabricated explanation.",
+        },
+      ],
+      transcription:
+        "Fabricated Cost of Attendance $1\nFabricated Loan $2",
+      missing_info: ["fabricated"],
+    };
+
+    const result = evaluateLetter(fabricated, expected);
+
+    expect(result).toMatchObject({
+      matchedFields: 1,
+      totalFields: 14,
+      fieldAccuracy: 1 / 14,
+      verifiedAnchors: 0,
+      totalAnchors: 2,
+      anchorVerification: 0,
+    });
+    expect(meetsEvaluationThresholds(result)).toBe(false);
+  });
+
+  test("penalizes extra candidate claims in field and anchor denominators", () => {
+    const extra: LetterAnalysis["line_items"][number] = {
+      raw_label: "Extra Loan",
+      category: "loan",
+      normalized_name: "Extra Loan",
+      amount: 500,
+      period: "year",
+      source_quote: "Extra Loan $500",
+      explanation: "Extra claim.",
+    };
+    const result = evaluateLetter(
+      {
+        ...expected,
+        line_items: [...expected.line_items, extra],
+        transcription: `${expected.transcription}\n${extra.source_quote}`,
+      },
+      expected,
+    );
+
+    expect(result).toMatchObject({
+      matchedFields: 12,
+      totalFields: 21,
+      verifiedAnchors: 2,
+      totalAnchors: 3,
+    });
+    expect(result.fieldAccuracy).toBeLessThan(0.85);
+    expect(result.anchorVerification).toBeCloseTo(2 / 3);
+  });
+
+  test("requires both field and anchor thresholds", () => {
+    const good = evaluateLetter(structuredClone(expected), expected);
+    const lowField = {
+      ...good,
+      fieldAccuracy: 0.84,
+    };
+
+    expect(meetsEvaluationThresholds(good)).toBe(true);
+    expect(meetsEvaluationThresholds(lowField)).toBe(false);
+  });
+
   test("reports N/A only when expected truth contains no anchor claims", () => {
     const noExpectedAnchors: LetterAnalysis = {
       ...expected,
@@ -96,6 +174,7 @@ describe("deterministic fixture evaluation", () => {
 
     expect(result.anchorVerification).toBeNull();
     expect(result.totalAnchors).toBe(0);
-    expect(meetsAnchorThreshold(result)).toBe(true);
+    expect(meetsAnchorThreshold(result)).toBe(false);
+    expect(meetsEvaluationThresholds(result)).toBe(false);
   });
 });

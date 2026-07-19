@@ -1,3 +1,5 @@
+import { isIP } from "node:net";
+
 export type AdmissionResult =
   | { allowed: true; release: () => void }
   | { allowed: false; reason: "rate_limit" | "concurrency" };
@@ -7,6 +9,27 @@ interface ExtractionGateOptions {
   windowMs: number;
   maxConcurrent: number;
   now?: () => number;
+}
+
+function validatedIp(value: string | null): string | null {
+  const token = value?.trim() ?? "";
+  return token.length > 0 && !token.includes(",") && isIP(token) > 0
+    ? token
+    : null;
+}
+
+/** Builds the rate-limit key from Vercel's trusted boundary, with local/test fallbacks. */
+export function clientIpKey(headers: Headers): string {
+  const vercelForwarded = headers.get("x-vercel-forwarded-for");
+  if (vercelForwarded !== null) {
+    return validatedIp(vercelForwarded) ?? "unknown";
+  }
+
+  const realIp = validatedIp(headers.get("x-real-ip"));
+  if (realIp) return realIp;
+
+  const forwardedToken = headers.get("x-forwarded-for")?.split(",", 1)[0] ?? null;
+  return validatedIp(forwardedToken) ?? "unknown";
 }
 
 /** Best-effort, per-process admission control for paid extraction calls. */

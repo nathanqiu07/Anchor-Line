@@ -219,7 +219,9 @@ export function UploadPanel() {
 
       <p className="privacy-note">
         <span aria-hidden="true">●</span>
-        Your letters are processed in memory and not stored. Closing this tab clears the analysis.
+        Uploads are sent to Anthropic for processing. Anchor Lines does not persist the file
+        bytes. The resulting analysis and transcription stay in this tab’s sessionStorage
+        until the tab closes. Samples stay local and key-free.
       </p>
     </div>
   );

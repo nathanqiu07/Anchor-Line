@@ -94,4 +94,48 @@ describe("CompareTable", () => {
     expect(html).toContain("Four-year debt is not comparable");
     expect(html).not.toContain("$48,000");
   });
+
+  test("annualizes semester COA and labels the stated basis", () => {
+    const semesterOffer: StoredAnalysis = {
+      ...offer,
+      id: "semester-coa",
+      analysis: {
+        ...hiddenCostAnalysis,
+        cost_of_attendance: {
+          amount: 20_000,
+          source_quote: "Semester Cost of Attendance $20,000",
+        },
+        transcription: "Semester Cost of Attendance $20,000",
+      },
+    };
+
+    const html = renderToStaticMarkup(<CompareTable offers={[semesterOffer]} />);
+
+    expect(html).toContain("$40,000");
+    expect(html).toContain("Annualized from $20,000 per semester");
+  });
+
+  test.each([
+    ["Total program Cost of Attendance $80,000", "$80,000 stated total"],
+    ["Cost of Attendance $40,000", "$40,000 with period not stated"],
+  ])("marks unsupported COA basis as not comparable", (sourceQuote, detail) => {
+    const unclearCoaOffer: StoredAnalysis = {
+      ...offer,
+      id: sourceQuote,
+      analysis: {
+        ...hiddenCostAnalysis,
+        cost_of_attendance: {
+          amount: sourceQuote.startsWith("Total") ? 80_000 : 40_000,
+          source_quote: sourceQuote,
+        },
+        transcription: sourceQuote,
+      },
+    };
+
+    const html = renderToStaticMarkup(<CompareTable offers={[unclearCoaOffer]} />);
+
+    expect(html).toContain("period unclear");
+    expect(html).toContain(detail);
+    expect(html).toContain("Annual COA is not comparable");
+  });
 });
