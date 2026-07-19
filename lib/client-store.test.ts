@@ -154,4 +154,31 @@ describe("client analysis store", () => {
 
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:malformed-preview");
   });
+
+  test("revokes only the corrupted upload preview during partial recovery", () => {
+    const revokeObjectURL = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    const corruptedUpload: StoredAnalysis = {
+      ...saved,
+      id: "corrupted-upload",
+      source: {
+        kind: "upload",
+        label: "corrupted.png",
+        mediaUrl: "blob:corrupted-preview",
+        mediaType: "image/png",
+      },
+    };
+    saveAnalysis(saved, storage);
+    saveAnalysis(corruptedUpload, storage);
+    const storedEntries = JSON.parse(storage.getItem(STORAGE_KEY)!) as Array<
+      Record<string, unknown>
+    >;
+    const storedUpload = storedEntries.find((entry) => entry.id === corruptedUpload.id);
+    if (!storedUpload) throw new Error("Expected stored upload fixture");
+    storedUpload.analysis = {};
+    storage.setItem(STORAGE_KEY, JSON.stringify(storedEntries));
+
+    expect(listAnalyses(storage)).toEqual([saved]);
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:corrupted-preview");
+    expect(JSON.parse(storage.getItem(STORAGE_KEY)!)).toHaveLength(1);
+  });
 });

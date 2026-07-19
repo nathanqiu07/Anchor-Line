@@ -51,6 +51,12 @@ function clearTransientMedia(): void {
   for (const id of [...transientUploadMedia.keys()]) replaceTransientMedia(id);
 }
 
+function clearTransientMediaExcept(survivingIds: Set<string>): void {
+  for (const id of [...transientUploadMedia.keys()]) {
+    if (!survivingIds.has(id)) replaceTransientMedia(id);
+  }
+}
+
 function browserStorage(): Storage | null {
   return typeof window === "undefined" ? null : window.sessionStorage;
 }
@@ -69,11 +75,10 @@ function recoverEntries(storage: Storage): StoredAnalysis[] {
     });
 
     if (entries.length !== parsed.length) {
+      clearTransientMediaExcept(new Set(entries.map((entry) => entry.id)));
       if (entries.length === 0) {
         storage.removeItem(STORAGE_KEY);
-        clearTransientMedia();
-      }
-      else storage.setItem(STORAGE_KEY, JSON.stringify(entries));
+      } else storage.setItem(STORAGE_KEY, JSON.stringify(entries));
     }
 
     return entries.map(withTransientMedia);
