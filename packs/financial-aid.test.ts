@@ -5,6 +5,7 @@ import type { LetterAnalysis } from "../lib/schema";
 import {
   calculateOffer,
   classifyAidItem,
+  costOfAttendanceLabel,
   deriveAidPeriod,
   deriveCostOfAttendancePeriod,
   financialAidGlossary,
@@ -108,6 +109,27 @@ describe("financial-aid pack", () => {
   test("includes plain-language definitions for varied loan terminology", () => {
     expect(financialAidGlossary["direct unsub"]).toContain("repay");
     expect(financialAidGlossary["unsubsidized stafford loan dl"]).toContain("interest");
+  });
+
+  test.each([
+    "Annual cost of Direct Loan $5,500",
+    "Annual Cost of Tuition $40,000",
+    "Yearly Cost $40,000",
+    "Semester Cost $20,000",
+    "Total Education Cost of Direct Loan $5,500",
+    "Student Budget: Tuition $12,000",
+    "Student Budget — Fees $2,000",
+    "Cost of Attendance: Housing Only $12,000",
+  ])("does not treat a component or bare period cost as COA", (sourceQuote) => {
+    expect(costOfAttendanceLabel(sourceQuote)).toBeNull();
+  });
+
+  test.each([
+    ["Annual Cost of Attendance $40,000", "Cost of Attendance"],
+    ["Student Budget $40,000", "Student Budget"],
+    ["Total Education Cost $40,000", "Total Education Cost"],
+  ])("keeps explicit full-budget COA semantics", (sourceQuote, label) => {
+    expect(costOfAttendanceLabel(sourceQuote)).toBe(label);
   });
 
   test.each([
@@ -240,11 +262,28 @@ describe("financial-aid pack", () => {
     ["Direct Loan", "Direct Loan balance due $5,500"],
     ["Federal Pell Grant", "Federal Pell Grant denied $3,200"],
     ["Federal Pell Grant", "Federal Pell Grant award cancelled $3,200"],
+    ["Federal Pell Grant", "Federal Pell Grant not offered $3,200"],
+    ["Federal Pell Grant", "Federal Pell Grant not awarded $3,200"],
+    ["Federal Pell Grant", "Federal Pell Grant never granted $3,200"],
+    ["Federal Pell Grant", "Federal Pell Grant will not be awarded $3,200"],
+    ["Federal Pell Grant", "Federal Pell Grant must be repaid $3,200"],
+    ["Federal Pell Grant", "Federal Pell Grant repayment is required $3,200"],
   ])("treats adverse aid context as unrecognized", (rawLabel, sourceQuote) => {
     const result = classifyAidItem(rawLabel, sourceQuote);
 
     expect(result).toMatchObject({ category: "other", recognized: false });
     expect(result.explanation).toContain("not provide enough information");
+  });
+
+  test.each([
+    "Direct Loan $5,500 — must be repaid with interest",
+    "Direct Loan $5,500 — you must repay this loan",
+    "Direct Loan repayment is required $5,500",
+  ])("keeps expected loan repayment semantics recognized", (sourceQuote) => {
+    expect(classifyAidItem("Direct Loan", sourceQuote)).toMatchObject({
+      category: "loan",
+      recognized: true,
+    });
   });
 
   test.each([

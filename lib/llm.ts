@@ -93,6 +93,41 @@ function validationFeedback(error: unknown): string {
   return error instanceof Error ? error.message : "Invalid JSON output";
 }
 
+function hasAdverseDocumentIntent(transcription: string): boolean {
+  const lines = transcription
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const firstMonetaryLine = lines.findIndex((line) => /\$\s*\d/.test(line));
+  const headingLimit = Math.min(
+    firstMonetaryLine === -1 ? lines.length : firstMonetaryLine,
+    8,
+  );
+
+  return lines
+    .slice(0, headingLimit)
+    .some((line) => {
+      const text = line
+        .toLowerCase()
+        .replace(/[\u2010-\u2015]/g, "-")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+      if (/\b(?:may|might|could|unless|if)\b/.test(text)) return false;
+      const financialSubject =
+        /\b(?:financial\s+aid|aid|award|pell\s+grant|grant|scholarship|loan)\b/.test(
+          text,
+        );
+      const adverseIntent =
+        /\b(?:cancellation|cancelled|canceled|denial|denied|rescission|rescinded|ineligibility|ineligible|overpayment|repayment)\b/.test(
+          text,
+        );
+      const headingLike =
+        /\b(?:notice|notification|letter|statement)\b/.test(text) ||
+        text.split(/\s+/).length <= 10;
+      return financialSubject && adverseIntent && headingLike;
+    });
+}
+
 function assertAwardLetter(
   analysis: LetterAnalysis,
   transcription: string,
@@ -101,7 +136,7 @@ function assertAwardLetter(
     (item) => classifyAidItem(item.raw_label, item.source_quote).recognized,
   );
   const hasAwardContext =
-    /\b(?:financial\s+aid\s+(?:offer|award)|award\s+(?:offer|summary|notification|letter)|aid\s+notification|offered\s+aid|aid\s+offered|offer\s+details|your\s+offered\s+aid|we\s+(?:offer|award)|you\s+(?:are|have\s+been)\s+awarded|(?:aid|award)\s+granted)\b/i.test(
+    /\b(?:financial\s+aid\s+(?:offer|award|package|summary)|award\s+(?:offer|summary|notification|letter)|aid\s+notification|offered\s+aid|aid\s+offered|offer\s+details|your\s+offered\s+aid|we\s+(?:offer|award)|you\s+(?:are|have\s+been)\s+awarded|(?:aid|award)\s+granted)\b/i.test(
       transcription,
     ) ||
     /\b(?:aid|award|grant|scholarship|loan|work[ -]?study)\b[^\r\n]{0,32}\b(?:offered|granted|awarded)\b/i.test(
@@ -110,7 +145,11 @@ function assertAwardLetter(
     /\b(?:offered|granted|awarded)\b[^\r\n]{0,32}\b(?:aid|award|grant|scholarship|loan|work[ -]?study)\b/i.test(
       transcription,
     );
-  if (!hasRecognizedAid || !hasAwardContext) {
+  if (
+    hasAdverseDocumentIntent(transcription) ||
+    !hasRecognizedAid ||
+    !hasAwardContext
+  ) {
     throw new NotAwardLetterError();
   }
   return analysis;
