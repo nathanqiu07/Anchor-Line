@@ -3,6 +3,12 @@ import Anthropic from "@anthropic-ai/sdk";
 import { LetterAnalysisSchema, type LetterAnalysis } from "./schema";
 import { extractionPrompt, TRANSCRIPTION_PROMPT } from "./prompts";
 import {
+  hasAnyToken,
+  hasDueBalanceOrRepayment,
+  hasTokenStem,
+  wordTokens,
+} from "./token-context";
+import {
   classifyAidItem,
   costOfAttendanceLabel,
   deriveAidPeriod,
@@ -93,39 +99,77 @@ function validationFeedback(error: unknown): string {
   return error instanceof Error ? error.message : "Invalid JSON output";
 }
 
-function hasAdverseDocumentIntent(transcription: string): boolean {
+const conditionalIntentTokens = new Set([
+  "may",
+  "might",
+  "could",
+  "unless",
+  "if",
+]);
+const noticeTokens = new Set(["notice", "notification", "letter", "statement"]);
+const financialSubjectTokens = new Set([
+  "aid",
+  "award",
+  "awards",
+  "grant",
+  "grants",
+  "scholarship",
+  "scholarships",
+  "loan",
+  "loans",
+]);
+const adverseIntentStems = [
+  "cancel",
+  "deni",
+  "resci",
+  "ineligib",
+  "overpay",
+] as const;
+const maxPreambleLines = 8;
+const maxAdjacentHeadingLines = 3;
+
+function preambleTokenWindows(transcription: string): string[][] {
   const lines = transcription
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
   const firstMonetaryLine = lines.findIndex((line) => /\$\s*\d/.test(line));
-  const headingLimit = Math.min(
+  const preambleEnd = Math.min(
     firstMonetaryLine === -1 ? lines.length : firstMonetaryLine,
-    8,
+    maxPreambleLines,
   );
+  const preamble = lines.slice(0, preambleEnd).map(wordTokens);
+  const windows: string[][] = [];
 
-  return lines
-    .slice(0, headingLimit)
-    .some((line) => {
-      const text = line
-        .toLowerCase()
-        .replace(/[\u2010-\u2015]/g, "-")
-        .replace(/[^a-z0-9]+/g, " ")
-        .trim();
-      if (/\b(?:may|might|could|unless|if)\b/.test(text)) return false;
-      const financialSubject =
-        /\b(?:financial\s+aid|aid|award|pell\s+grant|grant|scholarship|loan)\b/.test(
-          text,
-        );
-      const adverseIntent =
-        /\b(?:cancellation|cancelled|canceled|denial|denied|rescission|rescinded|ineligibility|ineligible|overpayment|repayment)\b/.test(
-          text,
-        );
-      const headingLike =
-        /\b(?:notice|notification|letter|statement)\b/.test(text) ||
-        text.split(/\s+/).length <= 10;
-      return financialSubject && adverseIntent && headingLike;
-    });
+  for (let start = 0; start < preamble.length; start += 1) {
+    let adjacent: string[] = [];
+    for (
+      let width = 0;
+      width < maxAdjacentHeadingLines && start + width < preamble.length;
+      width += 1
+    ) {
+      adjacent = [...adjacent, ...preamble[start + width]];
+      windows.push(adjacent);
+    }
+  }
+  return windows;
+}
+
+function hasAdverseDocumentIntent(transcription: string): boolean {
+  return preambleTokenWindows(transcription).some((tokens) => {
+    if (hasAnyToken(tokens, conditionalIntentTokens)) return false;
+
+    const hasFinancialSubject = hasAnyToken(tokens, financialSubjectTokens);
+    const hasExplicitAdverseIntent = hasTokenStem(tokens, adverseIntentStems);
+    const hasCollectionNotice =
+      hasTokenStem(tokens, ["collect"]) && hasAnyToken(tokens, noticeTokens);
+    return (
+      hasFinancialSubject &&
+      (hasExplicitAdverseIntent ||
+        hasDueBalanceOrRepayment(tokens) ||
+        hasCollectionNotice)
+    );
+  });
 }
 
 function assertAwardLetter(

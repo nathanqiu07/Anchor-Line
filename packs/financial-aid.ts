@@ -1,4 +1,13 @@
 import type { LetterAnalysis, LineItem } from "../lib/schema";
+import {
+  clauseTokens,
+  hasDueBalanceOrRepayment,
+  hasNegatedAwardStatus,
+  hasRepaymentLanguage,
+  hasTokenSequence,
+  hasTokenStem,
+  wordTokens,
+} from "../lib/token-context";
 
 export interface AidClassification {
   category: LineItem["category"];
@@ -77,61 +86,56 @@ function searchable(value: string): string {
 }
 
 const costOfAttendancePattern =
-  /\b(?:cost\s+of\s+attendance|student\s+budget|total\s+(?:estimated\s+)?(?:education(?:al)?\s+(?:cost|budget)|cost\s+of\s+education))\b/i;
+  /\b(?:(?:(?:estimated|annual|semester|total)\s+)?student\s+budget|cost\s+of\s+attendance|total\s+(?:estimated\s+)?(?:education(?:al)?\s+(?:cost|budget)|cost\s+of\s+education))\b/gi;
+const safeCostOfAttendanceConnectors = new Set(["is", "totaling"]);
 
-const aidComponentPattern =
-  /\b(?:loan|pell\s+grant|grant|scholarship|work\s*study|financial\s+aid|aid\s+amount)\b/;
-const costComponentPattern =
-  /\b(?:cost|budget)\s+(?:for|of)\s+(?:tuition|fees?|housing|room|board)\b|\b(?:tuition|fees?|housing|room|board)\s+(?:only|cost|budget)\b/;
+function amountImmediatelyFollowsLabel(afterLabel: string): boolean {
+  const amountStart = afterLabel.search(/\$\s*\d/);
+  if (amountStart === -1) return false;
+
+  const connector = wordTokens(afterLabel.slice(0, amountStart));
+  return (
+    connector.length === 0 ||
+    (connector.length === 1 && safeCostOfAttendanceConnectors.has(connector[0]))
+  );
+}
 
 /** Returns the exact recognized COA label owned by a one-line source quote. */
 export function costOfAttendanceLabel(sourceQuote: string): string | null {
-  const match = sourceQuote.match(costOfAttendancePattern);
-  if (!match) return null;
-
-  const afterLabel = sourceQuote.slice(
-    (match.index ?? 0) + match[0].length,
-  );
-  const namesComponentAfterLabel =
-    /^\s*(?:(?::|[-\u2010-\u2015])\s*)?(?:tuition|fees?|housing|room|board)\b/i.test(
-      afterLabel,
-    );
-
-  const context = searchable(sourceQuote).replace(
-    /\b(?:financial\s+)?aid\s+(?:offer|award|package|summary|notification)\b/g,
-    "",
-  );
-  if (
-    namesComponentAfterLabel ||
-    aidComponentPattern.test(context) ||
-    costComponentPattern.test(context)
-  ) {
-    return null;
+  for (const match of sourceQuote.matchAll(costOfAttendancePattern)) {
+    const afterLabel = sourceQuote.slice((match.index ?? 0) + match[0].length);
+    if (amountImmediatelyFollowsLabel(afterLabel)) return match[0];
   }
-  return match[0];
+  return null;
 }
 
-function hasAdverseAidContext(rawLabel: string, sourceQuote: string): boolean {
-  const text = searchable(sourceQuote);
-  const adverse =
-    /\b(?:overpayment|repayment\s+(?:is\s+)?(?:due|owed)|repay(?:ment)?\s+due|balance\s+(?:owed|due)|amount\s+due|invoice|bill(?:ing|ed)?|charge(?:d|s)?|collections?|denial|denied|ineligible|not\s+eligible|cancel(?:led|ed|lation)|rescind(?:ed|ing)?|rescission)\b/.test(
-      text,
-    ) ||
-    /\b(?:not|never)\s+(?:(?:being|be|currently|previously)\s+){0,2}(?:offered|awarded|granted)\b/.test(
-      text,
-    );
-  if (adverse) return true;
+const explicitAdverseStems = [
+  "overpay",
+  "collect",
+  "cancel",
+  "deni",
+  "resci",
+  "ineligib",
+] as const;
 
-  const giftAidContext = searchable(`${rawLabel} ${sourceQuote}`);
-  const namesGiftAid =
-    /\b(?:pell\s+grant|grant|scholarship|fellowship|tuition\s+waiver|merit\s+award)\b/.test(
-      giftAidContext,
-    );
-  return (
-    namesGiftAid &&
-    /\b(?:(?:must|will|shall)\s+be\s+repaid|required\s+to\s+be\s+repaid|must\s+repay|repayment\s+(?:is\s+)?required)\b/.test(
-      text,
-    )
+function clausesOwnedByLabel(rawLabel: string, sourceQuote: string): string[][] {
+  const clauses = clauseTokens(sourceQuote);
+  const label = wordTokens(rawLabel);
+  const owned = clauses.filter((tokens) => hasTokenSequence(tokens, label));
+  return owned.length > 0 ? owned : clauses;
+}
+
+function hasAdverseAidContext(
+  category: AidClassification["category"],
+  rawLabel: string,
+  sourceQuote: string,
+): boolean {
+  return clausesOwnedByLabel(rawLabel, sourceQuote).some(
+    (tokens) =>
+      hasNegatedAwardStatus(tokens) ||
+      hasTokenStem(tokens, explicitAdverseStems) ||
+      hasDueBalanceOrRepayment(tokens) ||
+      (category === "gift_aid" && hasRepaymentLanguage(tokens)),
   );
 }
 
@@ -236,23 +240,21 @@ function classifyText(text: string, rawLabel: string): AidClassification | null 
 
 /** Classifies source-bound aid terminology without trusting model-authored semantics. */
 export function classifyAidItem(rawLabel: string, sourceQuote: string): AidClassification {
-  if (hasAdverseAidContext(rawLabel, sourceQuote)) {
-    return {
-      category: "other",
-      normalizedName: rawLabel,
-      explanation: explanations.other,
-      recognized: false,
-    };
-  }
-
   const fromLabel = classifyText(searchable(rawLabel), rawLabel);
   const monetaryOccurrences = sourceQuote.match(/\$\s*\d/g)?.length ?? 0;
-  const fromQuote =
+  const recognized =
     fromLabel ??
     (monetaryOccurrences <= 1
       ? classifyText(searchable(sourceQuote), rawLabel)
       : null);
-  return fromQuote ?? {
+  if (
+    recognized &&
+    !hasAdverseAidContext(recognized.category, rawLabel, sourceQuote)
+  ) {
+    return recognized;
+  }
+
+  return {
     category: "other",
     normalizedName: rawLabel,
     explanation: explanations.other,

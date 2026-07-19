@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-19T09:38:58.994Z",
+  "generatedAt": "2026-07-19T10:11:37.074Z",
   "methodology": "Offline comparison of checked-in synthetic extraction snapshots against separate checked-in expected truth. Candidate anchor credit requires the exact expected quote in both expected and candidate transcriptions; extra and omitted claims are penalized. Passing requires at least 85% field accuracy and 85% anchor verification with at least one expected anchor. This is not a live-provider benchmark.",
   "results": [
     {

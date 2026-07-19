@@ -412,6 +412,85 @@ Federal Pell Grant $3,200`;
     ).rejects.toBeInstanceOf(ExtractionValidationError);
   });
 
+  test.each([
+    "Student Budget: Books and Supplies $1,500",
+    "Student Budget (Tuition and Fees) $40,000",
+  ])("rejects a component amount claimed through a broad budget alias: %s", async (budgetLine) => {
+    const source = `Financial Aid Offer
+${budgetLine}
+Federal Pell Grant $3,200`;
+    const pellOnly = singleItemAnalysis(
+      source,
+      "Federal Pell Grant $3,200",
+      "Federal Pell Grant",
+      "gift_aid",
+      3_200,
+    );
+    const componentAsCoa = {
+      ...pellOnly,
+      cost_of_attendance: {
+        amount: Number(budgetLine.match(/\$([\d,]+)/)?.[1].replace(/,/g, "")),
+        source_quote: budgetLine,
+      },
+    };
+
+    await expect(
+      extractLetter(
+        { mimeType: "image/png", bytes: new Uint8Array([1]) },
+        fakeClient(
+          response(source),
+          response(JSON.stringify(componentAsCoa)),
+          response(JSON.stringify(pellOnly)),
+        ),
+      ),
+    ).rejects.toBeInstanceOf(ExtractionValidationError);
+  });
+
+  test("accepts a component budget amount when an other item owns it", async () => {
+    const budgetLine = "Student Budget: Books and Supplies $1,500";
+    const source = `Financial Aid Offer
+${budgetLine}
+Federal Pell Grant $3,200`;
+    const pellOnly = singleItemAnalysis(
+      source,
+      "Federal Pell Grant $3,200",
+      "Federal Pell Grant",
+      "gift_aid",
+      3_200,
+    );
+    const complete = {
+      ...pellOnly,
+      line_items: [
+        ...pellOnly.line_items,
+        {
+          raw_label: "Books and Supplies",
+          category: "other" as const,
+          normalized_name: "Books and Supplies",
+          amount: 1_500,
+          period: "unknown",
+          source_quote: budgetLine,
+          explanation: "Model-authored explanation.",
+        },
+      ],
+    };
+
+    await expect(
+      extractLetter(
+        { mimeType: "image/png", bytes: new Uint8Array([1]) },
+        fakeClient(response(source), response(JSON.stringify(complete))),
+      ),
+    ).resolves.toMatchObject({
+      cost_of_attendance: { amount: null, source_quote: null },
+      line_items: expect.arrayContaining([
+        expect.objectContaining({
+          raw_label: "Books and Supplies",
+          category: "other",
+          amount: 1_500,
+        }),
+      ]),
+    });
+  });
+
   test("retries loan-as-COA and accepts complete corrected ownership", async () => {
     const source = `Northstar College
 Financial Aid Offer
@@ -1014,6 +1093,26 @@ Federal Pell Grant $3,200`;
     ).rejects.toEqual(new NotAwardLetterError());
   });
 
+  test("rejects a wrapped financial-aid award cancellation heading", async () => {
+    const source = `Financial Aid Award
+Cancellation Notice
+Federal Pell Grant $3,200`;
+    const cancellation = singleItemAnalysis(
+      source,
+      "Federal Pell Grant $3,200",
+      "Federal Pell Grant",
+      "gift_aid",
+      3_200,
+    );
+
+    await expect(
+      extractLetter(
+        { mimeType: "image/png", bytes: new Uint8Array([1]) },
+        fakeClient(response(source), response(JSON.stringify(cancellation))),
+      ),
+    ).rejects.toEqual(new NotAwardLetterError());
+  });
+
   test("finds an adverse notice heading after non-monetary document metadata", async () => {
     const source = `Northstar College
 Student: Avery Example
@@ -1063,6 +1162,26 @@ Direct Loan $5,500 — must be repaid with interest`;
     const loan = singleItemAnalysis(
       source,
       "Direct Loan $5,500 — must be repaid with interest",
+      "Direct Loan",
+      "loan",
+      5_500,
+    );
+
+    await expect(
+      extractLetter(
+        { mimeType: "image/png", bytes: new Uint8Array([1]) },
+        fakeClient(response(source), response(JSON.stringify(loan))),
+      ),
+    ).resolves.toMatchObject({ line_items: [{ category: "loan" }] });
+  });
+
+  test("keeps generic loan repayment information in a positive package", async () => {
+    const source = `Financial Aid Package
+Loan Repayment Information
+Direct Loan $5,500`;
+    const loan = singleItemAnalysis(
+      source,
+      "Direct Loan $5,500",
       "Direct Loan",
       "loan",
       5_500,

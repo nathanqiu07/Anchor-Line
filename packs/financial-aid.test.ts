@@ -120,6 +120,8 @@ describe("financial-aid pack", () => {
     "Student Budget: Tuition $12,000",
     "Student Budget — Fees $2,000",
     "Cost of Attendance: Housing Only $12,000",
+    "Student Budget: Books and Supplies $1,500",
+    "Student Budget (Tuition and Fees) $40,000",
   ])("does not treat a component or bare period cost as COA", (sourceQuote) => {
     expect(costOfAttendanceLabel(sourceQuote)).toBeNull();
   });
@@ -128,6 +130,11 @@ describe("financial-aid pack", () => {
     ["Annual Cost of Attendance $40,000", "Cost of Attendance"],
     ["Student Budget $40,000", "Student Budget"],
     ["Total Education Cost $40,000", "Total Education Cost"],
+    ["Estimated Cost of Attendance: $42,000", "Cost of Attendance"],
+    ["Annual student budget $48,500", "Annual student budget"],
+    ["Student Budget: $42,000", "Student Budget"],
+    ["Student Budget is $42,000", "Student Budget"],
+    ["Total student budget totaling $42,000", "Total student budget"],
   ])("keeps explicit full-budget COA semantics", (sourceQuote, label) => {
     expect(costOfAttendanceLabel(sourceQuote)).toBe(label);
   });
@@ -266,6 +273,12 @@ describe("financial-aid pack", () => {
     ["Federal Pell Grant", "Federal Pell Grant not awarded $3,200"],
     ["Federal Pell Grant", "Federal Pell Grant never granted $3,200"],
     ["Federal Pell Grant", "Federal Pell Grant will not be awarded $3,200"],
+    ["Federal Pell Grant", "Federal Pell Grant has not been awarded $3,200"],
+    ["Federal Pell Grant", "No Federal Pell Grant was awarded $3,200"],
+    ["Federal Pell Grant", "Federal Pell Grant without approval $3,200"],
+    ["Federal Pell Grant", "Federal Pell Grant is not eligible $3,200"],
+    ["Direct Loan", "Direct Loan repayment is due $5,500"],
+    ["Direct Loan", "Direct Loan in collection $5,500"],
     ["Federal Pell Grant", "Federal Pell Grant must be repaid $3,200"],
     ["Federal Pell Grant", "Federal Pell Grant repayment is required $3,200"],
   ])("treats adverse aid context as unrecognized", (rawLabel, sourceQuote) => {
@@ -279,6 +292,8 @@ describe("financial-aid pack", () => {
     "Direct Loan $5,500 — must be repaid with interest",
     "Direct Loan $5,500 — you must repay this loan",
     "Direct Loan repayment is required $5,500",
+    "Direct Loan repayment information $5,500",
+    "Direct Loan repayment is not due $5,500",
   ])("keeps expected loan repayment semantics recognized", (sourceQuote) => {
     expect(classifyAidItem("Direct Loan", sourceQuote)).toMatchObject({
       category: "loan",
@@ -289,6 +304,10 @@ describe("financial-aid pack", () => {
   test.each([
     "Federal Pell Grant offered $3,200",
     "Federal Pell Grant granted $3,200",
+    "Federal Pell Grant has been awarded $3,200",
+    "Federal Pell Grant was offered $3,200",
+    "Federal Pell Grant has been approved $3,200",
+    "Federal Pell Grant remains eligible $3,200",
   ])("recognizes non-adverse award context", (sourceQuote) => {
     expect(classifyAidItem("Federal Pell Grant", sourceQuote)).toMatchObject({
       category: "gift_aid",
