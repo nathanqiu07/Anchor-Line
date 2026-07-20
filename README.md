@@ -24,8 +24,6 @@ then open **Compare offers**. This is the verified zero-key demo path.
 | Command | Purpose |
 | --- | --- |
 | `npm run dev` | Start the local development server. |
-| `npm run typecheck` | Check TypeScript without writing output. |
-| `npm run lint` | Run ESLint. |
 | `npm run test` | Run the Vitest suite, including release-documentation acceptance. |
 | `npm run eval` | Compare checked-in synthetic extraction snapshots with separate expected truth and refresh `eval/last-run.json`. |
 | `npm run build` | Create a production build. |
@@ -109,8 +107,8 @@ serverless safeguards: in-memory state is not distributed across instances and
 resets when an instance is recycled. Samples bypass these controls and never
 call Anthropic.
 
-Before sharing a deployment, run `npm run typecheck`, `npm run lint`,
-`npm run test`, `npm run eval`, and `npm run build`. A live provider check
+Before sharing a deployment, run `npm run test`, `npm run eval`, and
+`npm run build`. A live provider check
 has not been performed without an API key; sample mode is the verified zero-key
 path.
 

@@ -43,8 +43,6 @@ describe("release documentation", () => {
     for (const phrase of [
       "npm install",
       "npm run dev",
-      "npm run typecheck",
-      "npm run lint",
       "npm run test",
       "npm run eval",
       "npm run build",
