@@ -10,8 +10,6 @@ export interface EvaluationResult {
   totalAnchors: number;
 }
 
-export type EvaluationSummary = EvaluationResult;
-
 function sameValue(left: unknown, right: unknown): boolean {
   return JSON.stringify(left) === JSON.stringify(right);
 }
@@ -116,7 +114,7 @@ export function evaluateLetter(actual: LetterAnalysis, expected: LetterAnalysis)
   };
 }
 
-export function summarizeEvaluation(results: EvaluationResult[]): EvaluationSummary {
+export function summarizeEvaluation(results: EvaluationResult[]): EvaluationResult {
   const matchedFields = results.reduce((total, result) => total + result.matchedFields, 0);
   const totalFields = results.reduce((total, result) => total + result.totalFields, 0);
   const verifiedAnchors = results.reduce((total, result) => total + result.verifiedAnchors, 0);
