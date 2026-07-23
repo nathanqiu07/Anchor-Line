@@ -670,6 +670,9 @@ button {
 }
 
 .analysis-pane {
+  display: flex;
+  max-height: calc(100vh - 155px);
+  flex-direction: column;
   background:
     linear-gradient(90deg, rgba(255,255,255,0.012), transparent 28%),
     var(--surface);
@@ -764,10 +767,42 @@ button {
   padding: 24px;
 }
 
+.source-image__frame {
+  position: relative;
+}
+
 .source-image img {
   width: 100%;
   height: auto;
   box-shadow: 0 16px 50px rgba(0, 0, 0, 0.45);
+}
+
+.source-image__highlight {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 7%;
+  min-height: 26px;
+  border-top: 2px solid var(--amber);
+  border-bottom: 2px solid var(--amber);
+  background: rgba(226, 166, 74, 0.22);
+  transform: translateY(-50%);
+  transition: top 220ms ease;
+  pointer-events: none;
+}
+
+.source-image__highlight-label {
+  position: absolute;
+  top: -11px;
+  left: 8px;
+  padding: 2px 6px;
+  background: var(--amber);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .source-pdf {
@@ -795,8 +830,11 @@ button {
 
 .analysis-groups {
   display: grid;
+  min-height: 0;
+  flex: 1;
   gap: 44px;
   padding: 28px;
+  overflow: auto;
 }
 
 .claim-group__heading {
@@ -1310,6 +1348,14 @@ button {
     max-height: 64vh;
     border-right: 0;
     border-bottom: 1px solid var(--line-strong);
+  }
+
+  .analysis-pane {
+    max-height: none;
+  }
+
+  .analysis-groups {
+    overflow: visible;
   }
 
   .letter-page__header,

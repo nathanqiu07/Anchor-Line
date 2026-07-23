@@ -20,18 +20,18 @@ const item: LineItem = {
   explanation: "The letter does not explain what this award requires.",
 };
 
-const scrollIntoView = vi.fn();
+const scrollTo = vi.fn();
 
 beforeAll(() => {
-  Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+  Object.defineProperty(HTMLElement.prototype, "scrollTo", {
     configurable: true,
-    value: scrollIntoView,
+    value: scrollTo,
   });
 });
 
 afterEach(() => {
   cleanup();
-  scrollIntoView.mockClear();
+  scrollTo.mockClear();
 });
 
 function offerWith(
@@ -63,13 +63,13 @@ async function expectActivationTarget(
   sourceKey: string,
   quote: string,
 ) {
-  scrollIntoView.mockClear();
+  scrollTo.mockClear();
   fireEvent.click(screen.getByRole("button", { name: buttonName }));
 
   const activeTarget = container.querySelector("mark.source-anchor--active");
   expect(activeTarget?.getAttribute("data-source-key")).toBe(sourceKey);
   expect(activeTarget?.textContent).toBe(quote);
-  await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1));
+  await waitFor(() => expect(scrollTo).toHaveBeenCalledTimes(1));
 }
 
 describe("ClaimCard", () => {

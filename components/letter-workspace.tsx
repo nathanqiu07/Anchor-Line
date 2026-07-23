@@ -75,31 +75,42 @@ export function LetterWorkspace({ offer }: LetterWorkspaceProps) {
   const [sourceMode, setSourceMode] = useState<"transcription" | "original">(
     "transcription",
   );
+  const activeMatch = activeKey ? (anchorByKey.get(activeKey) ?? null) : null;
+  const matchMidpointPercent = activeMatch
+    ? ((activeMatch.start + activeMatch.end) / 2 / Math.max(analysis.transcription.length, 1)) * 100
+    : null;
   const sourceRefs = useRef<Record<string, HTMLElement | null>>({});
 
-  function scrollToSource(key: string) {
-    sourceRefs.current[key]?.scrollIntoView({
-      behavior: "smooth",
-      block: "center",
-    });
+  function scrollToSource(mode: string, key: string) {
+    const element = sourceRefs.current[`${mode}:${key}`];
+    const container = element?.closest<HTMLElement>(".source-pane__body");
+    if (!element || !container) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const elementRect = element.getBoundingClientRect();
+    const offset =
+      elementRect.top -
+      containerRect.top -
+      container.clientHeight / 2 +
+      elementRect.height / 2;
+    container.scrollTo({ top: container.scrollTop + offset, behavior: "smooth" });
   }
 
   useEffect(() => {
-    if (!activeKey || sourceMode !== "transcription") return;
-    scrollToSource(activeKey);
+    if (!activeKey) return;
+    scrollToSource(sourceMode, activeKey);
   }, [activeKey, sourceMode]);
 
   function activate(key: string) {
-    if (activeKey === key && sourceMode === "transcription") {
-      scrollToSource(key);
+    if (activeKey === key) {
+      scrollToSource(sourceMode, key);
       return;
     }
-    setSourceMode("transcription");
     setActiveKey(key);
   }
 
-  function registerSourceRef(key: string, element: HTMLElement | null) {
-    sourceRefs.current[key] = element;
+  function registerSourceRef(mode: string, key: string, element: HTMLElement | null) {
+    sourceRefs.current[`${mode}:${key}`] = element;
   }
 
   return (
@@ -136,8 +147,8 @@ export function LetterWorkspace({ offer }: LetterWorkspaceProps) {
             <SourceTranscription
               text={analysis.transcription}
               activeKey={activeKey}
-              activeMatch={activeKey ? (anchorByKey.get(activeKey) ?? null) : null}
-              registerSourceRef={registerSourceRef}
+              activeMatch={activeMatch}
+              registerSourceRef={(key, element) => registerSourceRef("transcription", key, element)}
             />
           ) : source.mediaType === "application/pdf" ? (
             <iframe
@@ -147,15 +158,26 @@ export function LetterWorkspace({ offer }: LetterWorkspaceProps) {
             />
           ) : source.mediaUrl ? (
             <div className="source-image">
-              <Image
-                src={source.mediaUrl}
-                alt={`Original ${source.label}`}
-                width={900}
-                height={1150}
-                sizes="(max-width: 900px) 100vw, 50vw"
-                unoptimized
-                priority
-              />
+              <div className="source-image__frame">
+                <Image
+                  src={source.mediaUrl}
+                  alt={`Original ${source.label}`}
+                  width={900}
+                  height={1150}
+                  sizes="(max-width: 900px) 100vw, 50vw"
+                  unoptimized
+                  priority
+                />
+                {activeKey && matchMidpointPercent !== null ? (
+                  <div
+                    className="source-image__highlight"
+                    style={{ top: `${matchMidpointPercent}%` }}
+                    ref={(element) => registerSourceRef("original", activeKey, element)}
+                  >
+                    <span className="source-image__highlight-label">Approx. match</span>
+                  </div>
+                ) : null}
+              </div>
             </div>
           ) : (
             <p className="empty-note">Original preview is unavailable after a reload.</p>
