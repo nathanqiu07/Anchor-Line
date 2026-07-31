@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import type { LetterAnalysis } from "../lib/schema";
+import type { LetterAnalysis, LineItem } from "../lib/schema";
 
 import {
   calculateOffer,
@@ -8,6 +8,7 @@ import {
   costOfAttendanceLabel,
   deriveAidPeriod,
   deriveCostOfAttendancePeriod,
+  explainAidItem,
   financialAidGlossary,
   warningsFor,
 } from "./financial-aid";
@@ -104,6 +105,92 @@ describe("financial-aid pack", () => {
     expect(warningIds).toEqual(
       expect.arrayContaining(["work-study", "loans-not-grants", "parent-plus"]),
     );
+  });
+
+  test("warns that unclassifiable amounts are left out of the totals", () => {
+    const withUnclassified: LetterAnalysis = {
+      ...analysis,
+      line_items: [
+        ...analysis.line_items,
+        {
+          raw_label: "Departmental Book Stipend",
+          category: "other",
+          normalized_name: "Departmental Book Stipend",
+          amount: 900,
+          period: "semester",
+          source_quote: "Departmental Book Stipend $900 per semester",
+          explanation: "",
+        },
+      ],
+    };
+    const warning = warningsFor(withUnclassified).find(
+      (candidate) => candidate.id === "unclassified-aid",
+    );
+
+    expect(warning).toBeDefined();
+    expect(warning!.message).toContain("Departmental Book Stipend");
+    expect(warning!.message).toContain("net price");
+    // The amount really is excluded, which is what the warning exists to disclose.
+    expect(calculateOffer(withUnclassified).giftAid).toBe(
+      calculateOffer(analysis).giftAid,
+    );
+  });
+
+  test("stays quiet when every line is classified", () => {
+    expect(
+      warningsFor(analysis).map((warning) => warning.id),
+    ).not.toContain("unclassified-aid");
+  });
+
+  test("does not warn about an unclassified line that states no amount", () => {
+    const noAmount: LetterAnalysis = {
+      ...analysis,
+      line_items: [
+        ...analysis.line_items,
+        {
+          raw_label: "Tuition Exchange Benefit",
+          category: "other",
+          normalized_name: "Tuition Exchange Benefit",
+          amount: null,
+          period: "unknown",
+          source_quote: "Tuition Exchange Benefit — see enclosed terms",
+          explanation: "",
+        },
+      ],
+    };
+
+    expect(
+      warningsFor(noAmount).map((warning) => warning.id),
+    ).not.toContain("unclassified-aid");
+  });
+
+  test("matches glossary terms on word boundaries, not bare substrings", () => {
+    const immigrantServices: LineItem = {
+      raw_label: "Immigrant Services Award",
+      category: "other",
+      normalized_name: "Immigrant Services Award",
+      amount: 500,
+      period: "year",
+      source_quote: "Immigrant Services Award $500",
+      explanation: "Classifier-authored explanation.",
+    };
+
+    // "immigrant" contains "grant"; the glossary must not hijack the explanation.
+    expect(explainAidItem(immigrantServices)).toBe("Classifier-authored explanation.");
+  });
+
+  test("still applies a glossary term that appears as a whole word", () => {
+    const pell: LineItem = {
+      raw_label: "Federal Pell Grant",
+      category: "gift_aid",
+      normalized_name: "Federal Pell Grant",
+      amount: 3_200,
+      period: "year",
+      source_quote: "Federal Pell Grant $3,200",
+      explanation: "Fallback that should be overridden.",
+    };
+
+    expect(explainAidItem(pell)).toBe(financialAidGlossary.grant);
   });
 
   test("includes plain-language definitions for varied loan terminology", () => {

@@ -64,7 +64,7 @@ export interface OfferTotals {
 }
 
 export interface AidWarning {
-  id: "work-study" | "loans-not-grants" | "parent-plus";
+  id: "work-study" | "loans-not-grants" | "parent-plus" | "unclassified-aid";
   title: string;
   message: string;
 }
@@ -465,13 +465,32 @@ export function warningsFor(analysis: LetterAnalysis): AidWarning[] {
     });
   }
 
+  // Gift aid this pack cannot name is left uncategorized rather than guessed at, and
+  // uncategorized amounts stay out of gift-aid and net-price arithmetic. Saying so matters:
+  // an unflagged omission reads as a worse offer than the letter actually describes.
+  const unclassified = analysis.line_items.filter(
+    (item) => item.category === "other" && item.amount !== null,
+  );
+  if (unclassified.length > 0) {
+    warnings.push({
+      id: "unclassified-aid",
+      title: "Some lines are not counted in the totals",
+      message: `This letter lists ${unclassified.length === 1 ? "an amount" : `${unclassified.length} amounts`} Anchor Lines could not classify (${unclassified
+        .map((item) => item.raw_label)
+        .join(", ")}). ${unclassified.length === 1 ? "It is" : "They are"} excluded from gift aid and net price, so ask the financial-aid office what ${unclassified.length === 1 ? "it covers" : "they cover"}.`,
+    });
+  }
+
   return warnings;
 }
 
 export function explainAidItem(item: LineItem): string {
-  const label = `${item.raw_label} ${item.normalized_name}`.toLowerCase();
+  // Padding both sides turns a substring test into a word-boundary one. Without it
+  // "grant" matches inside "immigrant" and overrides the classifier's correct
+  // explanation with a wrong one, since this lookup wins over item.explanation.
+  const label = ` ${searchable(`${item.raw_label} ${item.normalized_name}`)} `;
   const glossaryEntry = Object.entries(financialAidGlossary).find(([term]) =>
-    label.includes(term),
+    label.includes(` ${searchable(term)} `),
   );
 
   return glossaryEntry?.[1] ?? item.explanation;

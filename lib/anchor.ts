@@ -35,24 +35,6 @@ function normalizeWithIndexMap(value: string): NormalizedText {
   return { text: characters.join(""), indexMap };
 }
 
-function levenshteinDistance(left: string, right: string): number {
-  const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
-
-  for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
-    const current = [leftIndex];
-    for (let rightIndex = 1; rightIndex <= right.length; rightIndex += 1) {
-      current[rightIndex] = Math.min(
-        current[rightIndex - 1] + 1,
-        previous[rightIndex] + 1,
-        previous[rightIndex - 1] + (left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1),
-      );
-    }
-    previous.splice(0, previous.length, ...current);
-  }
-
-  return previous[right.length];
-}
-
 function matchForRange(
   source: NormalizedText,
   start: number,
@@ -103,29 +85,56 @@ export function anchorQuote(
   let bestMatch: AnchorMatch | null = null;
   let bestLengthDifference = Number.POSITIVE_INFINITY;
 
+  const quoteLength = normalizedQuote.length;
+  // The most forgiving budget any candidate length in range could still earn.
+  const widestBudget = Math.floor(
+    (1 - threshold) * Math.max(maxLength, quoteLength),
+  );
+  const previous = new Array<number>(quoteLength + 1);
+  const current = new Array<number>(quoteLength + 1);
+
   for (let start = 0; start < source.text.length; start += 1) {
-    for (let length = minLength; length <= maxLength; length += 1) {
-      const end = start + length;
-      if (end > source.text.length) {
-        break;
+    const windowLength = Math.min(maxLength, source.text.length - start);
+    // Every later start is shorter still, so nothing beyond this point can reach minLength.
+    if (windowLength < minLength) break;
+
+    for (let index = 0; index <= quoteLength; index += 1) previous[index] = index;
+
+    for (let length = 1; length <= windowLength; length += 1) {
+      const sourceCharacter = source.text[start + length - 1];
+      current[0] = length;
+      let rowMinimum = length;
+      for (let index = 1; index <= quoteLength; index += 1) {
+        const value = Math.min(
+          current[index - 1] + 1,
+          previous[index] + 1,
+          previous[index - 1] +
+            (sourceCharacter === normalizedQuote[index - 1] ? 0 : 1),
+        );
+        current[index] = value;
+        if (value < rowMinimum) rowMinimum = value;
       }
 
-      const candidate = source.text.slice(start, end);
-      const distance = levenshteinDistance(candidate, normalizedQuote);
-      const score = 1 - distance / Math.max(candidate.length, normalizedQuote.length);
-      const lengthDifference = Math.abs(length - normalizedQuote.length);
-      if (
-        score < threshold ||
-        (bestMatch &&
-          (score < bestMatch.score ||
-            (score === bestMatch.score &&
-              lengthDifference >= bestLengthDifference)))
-      ) {
-        continue;
+      if (length >= minLength) {
+        const longest = Math.max(length, quoteLength);
+        const score = 1 - current[quoteLength] / longest;
+        const lengthDifference = Math.abs(length - quoteLength);
+        const beatsBest =
+          !bestMatch ||
+          score > bestMatch.score ||
+          (score === bestMatch.score && lengthDifference < bestLengthDifference);
+        if (score >= threshold && beatsBest) {
+          bestMatch = matchForRange(source, start, start + length, score);
+          bestLengthDifference = lengthDifference;
+        }
       }
 
-      bestMatch = matchForRange(source, start, end, score);
-      bestLengthDifference = lengthDifference;
+      // Row minimums never decrease as the table fills, so once one clears the widest
+      // budget no longer candidate from this start can qualify either.
+      if (rowMinimum > widestBudget) break;
+      for (let index = 0; index <= quoteLength; index += 1) {
+        previous[index] = current[index];
+      }
     }
   }
 
