@@ -207,4 +207,43 @@ describe("createGeminiClient", () => {
       }),
     ).rejects.toThrow(/cannot translate content block/);
   });
+  test("retries once when the model reports itself overloaded", async () => {
+    // 503 UNAVAILABLE is Gemini's "busy, try again" and was observed live.
+    const responses = [
+      new Response(JSON.stringify({ error: { code: 503, message: "high demand" } }), { status: 503 }),
+      geminiResponse([{ text: "Cedar Ridge University" }]),
+    ];
+    let calls = 0;
+    const fetchImplementation = (async () => responses[calls++]!) as unknown as typeof fetch;
+
+    const client = createGeminiClient("test-key", fetchImplementation);
+    await expect(client.create(imageRequest)).resolves.toMatchObject({
+      content: [{ type: "text", text: "Cedar Ridge University" }],
+    });
+    expect(calls).toBe(2);
+  });
+
+  test("gives up after one retry rather than hammering a scarce free tier", async () => {
+    let calls = 0;
+    const fetchImplementation = (async () => {
+      calls += 1;
+      return new Response(JSON.stringify({ error: { code: 503 } }), { status: 503 });
+    }) as unknown as typeof fetch;
+
+    const client = createGeminiClient("test-key", fetchImplementation);
+    await expect(client.create(imageRequest)).rejects.toThrow(/503/);
+    expect(calls).toBe(2);
+  });
+
+  test("does not retry a quota refusal, which a retry cannot fix", async () => {
+    let calls = 0;
+    const fetchImplementation = (async () => {
+      calls += 1;
+      return new Response(JSON.stringify({ error: { code: 429 } }), { status: 429 });
+    }) as unknown as typeof fetch;
+
+    const client = createGeminiClient("test-key", fetchImplementation);
+    await expect(client.create(imageRequest)).rejects.toBeInstanceOf(ExtractionQuotaError);
+    expect(calls).toBe(1);
+  });
 });

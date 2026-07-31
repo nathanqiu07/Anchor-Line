@@ -227,6 +227,98 @@ Departmental Book Stipend $900`;
     });
   });
 
+  test.each([
+    ["a minus before the dollar sign", "Prior-year account adjustment -$300", -300],
+    ["a minus after the dollar sign", "Prior-year account adjustment $-300", -300],
+    ["the accounting parenthesis convention", "Prior-year account adjustment ($300)", -300],
+  ])("binds a deduction written with %s", async (_label, quoteLine, expected) => {
+    const letter = `Northstar College
+Financial Aid Offer
+Federal Pell Grant $3,200
+${quoteLine}`;
+    const claimed = {
+      school_name: "Northstar College",
+      award_year: null,
+      cost_of_attendance: { amount: null, source_quote: null },
+      line_items: [
+        {
+          raw_label: "Federal Pell Grant",
+          category: "gift_aid",
+          normalized_name: "Federal Pell Grant",
+          amount: 3_200,
+          period: "unknown",
+          source_quote: "Federal Pell Grant $3,200",
+          explanation: "Model-authored explanation.",
+        },
+        {
+          raw_label: "Prior-year account adjustment",
+          category: "other",
+          normalized_name: "Prior-year account adjustment",
+          amount: expected,
+          period: "unknown",
+          source_quote: quoteLine,
+          explanation: "Model-authored explanation.",
+        },
+      ],
+      transcription: letter,
+      missing_info: [],
+    };
+
+    const result = await extractLetter(
+      { mimeType: "image/png", bytes: new Uint8Array([1]) },
+      fakeClient(response(letter), response(JSON.stringify(claimed))),
+    );
+
+    expect(result.line_items[1]).toMatchObject({ amount: expected });
+  });
+
+  test("rejects a deduction reported as a positive amount", async () => {
+    // Reading "-$300" as +300 turns a reduction into an award, so provenance must not
+    // accept it. The corrective retry is where the model gets to fix the sign.
+    const letter = `Northstar College
+Financial Aid Offer
+Federal Pell Grant $3,200
+Prior-year account adjustment -$300`;
+    const wrongSign = {
+      school_name: "Northstar College",
+      award_year: null,
+      cost_of_attendance: { amount: null, source_quote: null },
+      line_items: [
+        {
+          raw_label: "Federal Pell Grant",
+          category: "gift_aid",
+          normalized_name: "Federal Pell Grant",
+          amount: 3_200,
+          period: "unknown",
+          source_quote: "Federal Pell Grant $3,200",
+          explanation: "Model-authored explanation.",
+        },
+        {
+          raw_label: "Prior-year account adjustment",
+          category: "other",
+          normalized_name: "Prior-year account adjustment",
+          amount: 300,
+          period: "unknown",
+          source_quote: "Prior-year account adjustment -$300",
+          explanation: "Model-authored explanation.",
+        },
+      ],
+      transcription: letter,
+      missing_info: [],
+    };
+
+    await expect(
+      extractLetter(
+        { mimeType: "image/png", bytes: new Uint8Array([1]) },
+        fakeClient(
+          response(letter),
+          response(JSON.stringify(wrongSign)),
+          response(JSON.stringify(wrongSign)),
+        ),
+      ),
+    ).rejects.toBeInstanceOf(ExtractionValidationError);
+  });
+
   test("accepts an extraction wrapped in a bare code fence", async () => {
     await expect(
       extractLetter(

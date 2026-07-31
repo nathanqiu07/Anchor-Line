@@ -234,8 +234,14 @@ function provenanceError(message: string): Error {
  * so both count as monetary occurrences — a quote that only spells it out would otherwise be
  * unable to support any amount, and the letter's stated figure would be silently dropped.
  */
+/**
+ * Captures the sign as well as the figure. Letters write reductions as "-$300" and, on
+ * statement-style lines, as "($300)". Reading either as positive turns a deduction into an
+ * award: a "-$1,000" scholarship adjustment would add rather than subtract, overstating aid
+ * and understating what the student owes, which is the dangerous direction to be wrong in.
+ */
 const dollarPattern =
-  /\$\s*\d[\d,]*(?:\.\d{1,2})?|\b\d[\d,]*(?:\.\d{1,2})?\s+dollars?\b/gi;
+  /\(\s*\$\s*\d[\d,]*(?:\.\d{1,2})?\s*\)|-\s*\$\s*\d[\d,]*(?:\.\d{1,2})?|\$\s*-\s*\d[\d,]*(?:\.\d{1,2})?|\$\s*\d[\d,]*(?:\.\d{1,2})?|\b-?\d[\d,]*(?:\.\d{1,2})?\s+dollars?\b/gi;
 
 interface DollarOccurrence {
   amount: number;
@@ -243,9 +249,18 @@ interface DollarOccurrence {
   end: number;
 }
 
+function amountFromMatch(raw: string): number {
+  // Parentheses are the accounting convention for a negative figure.
+  const negative = raw.includes("-") || raw.trimStart().startsWith("(");
+  const magnitude = Number(
+    raw.replace(/dollars?/gi, "").replace(/[$,\s()-]/g, ""),
+  );
+  return negative ? -magnitude : magnitude;
+}
+
 function dollarOccurrences(text: string): DollarOccurrence[] {
   return [...text.matchAll(dollarPattern)].map((match) => ({
-    amount: Number(match[0].replace(/dollars?/gi, "").replace(/[$,\s]/g, "")),
+    amount: amountFromMatch(match[0]),
     start: match.index,
     end: match.index + match[0].length,
   }));

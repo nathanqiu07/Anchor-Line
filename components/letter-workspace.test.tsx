@@ -305,4 +305,35 @@ describe("LetterWorkspace", () => {
       second.source_quote,
     );
   });
+  test("selects the new letter's first claim when the workspace is reused", () => {
+    // Navigating between letters reuses this component instance, so an activeKey seeded
+    // only on first render keeps pointing at the previous letter's claim and nothing
+    // highlights until the reader clicks.
+    const firstLetter = offerWith("Alpha Grant $1,000\nBeta Loan $2,000", [
+      { ...item, raw_label: "Alpha Grant", normalized_name: "Alpha Grant",
+        category: "gift_aid", source_quote: "Alpha Grant $1,000" },
+      { ...item, raw_label: "Beta Loan", normalized_name: "Beta Loan",
+        category: "loan", source_quote: "Beta Loan $2,000" },
+    ]);
+    const secondLetter = {
+      ...offerWith("Gamma Grant $3,000", [
+        { ...item, raw_label: "Gamma Grant", normalized_name: "Gamma Grant",
+          category: "gift_aid", source_quote: "Gamma Grant $3,000" },
+      ]),
+      id: "second-offer",
+    };
+
+    const { container, rerender } = render(<LetterWorkspace offer={firstLetter} />);
+    fireEvent.click(screen.getByRole("button", { name: "Show source for Beta Loan" }));
+    expect(
+      container.querySelector("mark.source-anchor--active")?.getAttribute("data-source-key"),
+    ).toBe("item-1");
+
+    rerender(<LetterWorkspace offer={secondLetter} />);
+
+    // The second letter has no item-1; without a reset nothing would be highlighted.
+    expect(
+      container.querySelector("mark.source-anchor--active")?.getAttribute("data-source-key"),
+    ).toBe("item-0");
+  });
 });

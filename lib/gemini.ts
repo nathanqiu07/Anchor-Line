@@ -83,36 +83,56 @@ async function requestFailure(response: Response, model: string): Promise<Error>
   return new Error(`Gemini request failed (HTTP ${response.status}): ${detail}`);
 }
 
+/**
+ * Gemini answers a busy model with 503 UNAVAILABLE, which is explicitly transient — one
+ * observed live during testing. Failing the whole upload on a blip is worse for the reader
+ * than one extra request, but the free tier allows so few requests per day that this stays
+ * at a single retry rather than a general backoff ladder.
+ */
+const transientRetries = 1;
+const transientRetryDelayMs = 1_500;
+
+function delay(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
 export function createGeminiClient(
   apiKey: string,
   fetchImplementation: FetchImplementation = fetch,
 ): MessagesClient {
   return {
     async create(request: MessageRequest): Promise<MessageResponse> {
-      const response = await fetchImplementation(
-        `${GENERATE_CONTENT_ENDPOINT}/${encodeURIComponent(request.model)}:generateContent`,
-        {
-          method: "POST",
-          headers: {
-            "content-type": "application/json",
-            "x-goog-api-key": apiKey,
-          },
-          body: JSON.stringify({
-            systemInstruction: { parts: [{ text: request.system }] },
-            contents: request.messages.map((message) => ({
-              role: message.role,
-              parts: toParts(message.content),
-            })),
-            generationConfig: {
-              maxOutputTokens: request.max_tokens,
-              ...(request.temperature === undefined
-                ? {}
-                : { temperature: request.temperature }),
+      let response: Response | undefined;
+      for (let attempt = 0; attempt <= transientRetries; attempt += 1) {
+        response = await fetchImplementation(
+          `${GENERATE_CONTENT_ENDPOINT}/${encodeURIComponent(request.model)}:generateContent`,
+          {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              "x-goog-api-key": apiKey,
             },
-          }),
-        },
-      );
+            body: JSON.stringify({
+              systemInstruction: { parts: [{ text: request.system }] },
+              contents: request.messages.map((message) => ({
+                role: message.role,
+                parts: toParts(message.content),
+              })),
+              generationConfig: {
+                maxOutputTokens: request.max_tokens,
+                ...(request.temperature === undefined
+                  ? {}
+                  : { temperature: request.temperature }),
+              },
+            }),
+          },
+        );
 
+        if (response.status !== 503 || attempt === transientRetries) break;
+        await delay(transientRetryDelayMs);
+      }
+
+      if (!response) throw new Error("Gemini request was never attempted");
       if (!response.ok) throw await requestFailure(response, request.model);
 
       const body = (await response.json()) as GeminiResponseBody;

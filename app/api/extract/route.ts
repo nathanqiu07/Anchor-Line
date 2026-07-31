@@ -19,6 +19,13 @@ import offer3 from "../../../eval/letters/morrow-bay.json";
 
 const samples = { "offer-1": offer1, "offer-2": offer2, "offer-3": offer3 };
 
+/**
+ * Reasoning models are slow: one live text-layer extraction of a dense letter measured
+ * 85.7s. 60 is the ceiling every Vercel plan allows, so it is the safe default here; raise
+ * it toward 300 on a plan that permits it rather than leaving dense letters to time out.
+ */
+export const maxDuration = 60;
+
 function error(message: string, status: number): Response {
   return Response.json({ error: message }, { status });
 }

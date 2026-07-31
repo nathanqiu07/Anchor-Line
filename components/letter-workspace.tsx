@@ -72,6 +72,14 @@ export function LetterWorkspace({ offer }: LetterWorkspaceProps) {
   );
   const firstAnchored = anchors.find((anchor) => anchor.match)?.key ?? null;
   const [activeKey, setActiveKey] = useState<string | null>(firstAnchored);
+  // Routing between letters reuses this instance, and the initial state above only applies
+  // to the first one. Without re-seeding, activeKey still names a claim from the previous
+  // letter, so the new letter opens with nothing highlighted.
+  const [renderedAnalysis, setRenderedAnalysis] = useState(analysis);
+  if (renderedAnalysis !== analysis) {
+    setRenderedAnalysis(analysis);
+    setActiveKey(firstAnchored);
+  }
   const [sourceMode, setSourceMode] = useState<"transcription" | "original">(
     "transcription",
   );

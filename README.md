@@ -128,6 +128,13 @@ override. To deploy, import the repository into Vercel, use the default Next.js
 build settings, and set `GEMINI_API_KEY` as a server-only production environment
 variable. Optionally set `EXTRACTION_MODEL`; otherwise `gemini-3.6-flash` applies.
 
+Extraction latency is the sharpest deployment constraint. Reasoning models spend real time
+before emitting anything: a live text-layer extraction of a dense letter measured **85.7
+seconds** for its single call, while a short letter through the vision tier took 11.5. The
+route sets `maxDuration = 60` because that is the ceiling every Vercel plan allows, so a
+dense letter can still exceed it — raise the export toward 300 on a plan that permits it,
+or expect occasional timeouts. Sample mode is unaffected; it never calls the provider.
+
 The 4 MiB file maximum is an intentional deployability limit: it leaves room
 for multipart overhead beneath Vercel Functions' 4.5 MB request-body limit.
 The upload route also requires a matching browser `Origin`, permits two paid
