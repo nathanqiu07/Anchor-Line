@@ -2,21 +2,22 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 const { extractLetter } = vi.hoisted(() => ({ extractLetter: vi.fn() }));
 
-vi.mock("../../../lib/llm", () => ({
+// Only extractLetter is stubbed; the real error classes and provider detection are kept
+// so route mapping is tested against the types it actually receives in production.
+vi.mock("../../../lib/llm", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../lib/llm")>()),
   extractLetter,
-  ExtractionValidationError: class ExtractionValidationError extends Error {
-    constructor(message?: string) {
-      super(message);
-    }
-  },
-  NotAwardLetterError: class NotAwardLetterError extends Error {
-    constructor(message?: string) {
-      super(message);
-    }
-  },
 }));
 
-import { ExtractionValidationError, NotAwardLetterError } from "../../../lib/llm";
+import {
+  ExtractionQuotaError,
+  ExtractionValidationError,
+  NotAwardLetterError,
+} from "../../../lib/llm";
+import {
+  DEFAULT_MAX_EXTRACTIONS_PER_MINUTE,
+  extractionGate,
+} from "../../../lib/abuse-controls";
 import { POST } from "./route";
 
 const validAnalysis = {
@@ -65,7 +66,8 @@ function upload(
 describe("POST /api/extract", () => {
   beforeEach(() => {
     extractLetter.mockReset();
-    delete process.env.ANTHROPIC_API_KEY;
+    extractionGate.reset();
+    delete process.env.GEMINI_API_KEY;
   });
 
   test("returns a checked-in sample without an API key", async () => {
@@ -112,7 +114,7 @@ describe("POST /api/extract", () => {
   });
 
   test("accepts exactly 4 MiB and rejects one byte over the shared limit", async () => {
-    process.env.ANTHROPIC_API_KEY = "test-key";
+    process.env.GEMINI_API_KEY = "test-key";
     extractLetter.mockResolvedValue(validAnalysis);
     const boundary = validFile("boundary.png", "image/png", 4 * 1024 * 1024);
     const accepted = await POST(upload(boundary, { ip: "198.51.100.2" }));
@@ -125,7 +127,7 @@ describe("POST /api/extract", () => {
   });
 
   test("rejects cross-origin and missing-origin browser uploads before paid work", async () => {
-    process.env.ANTHROPIC_API_KEY = "test-key";
+    process.env.GEMINI_API_KEY = "test-key";
     extractLetter.mockResolvedValue(validAnalysis);
     const file = validFile();
 
@@ -138,11 +140,15 @@ describe("POST /api/extract", () => {
   });
 
   test("rate-limits paid extraction per IP without metering samples", async () => {
-    process.env.ANTHROPIC_API_KEY = "test-key";
+    process.env.GEMINI_API_KEY = "test-key";
     extractLetter.mockResolvedValue(validAnalysis);
     const file = validFile();
 
-    for (let requestNumber = 0; requestNumber < 5; requestNumber += 1) {
+    for (
+      let requestNumber = 0;
+      requestNumber < DEFAULT_MAX_EXTRACTIONS_PER_MINUTE;
+      requestNumber += 1
+    ) {
       const response = await POST(upload(file, { ip: "203.0.113.50" }));
       expect(response.status).toBe(200);
     }
@@ -152,7 +158,7 @@ describe("POST /api/extract", () => {
       error: "Too many extraction requests; try again shortly",
     });
 
-    delete process.env.ANTHROPIC_API_KEY;
+    delete process.env.GEMINI_API_KEY;
     for (let requestNumber = 0; requestNumber < 7; requestNumber += 1) {
       const sample = await POST(
         new Request("http://localhost/api/extract", {
@@ -166,7 +172,7 @@ describe("POST /api/extract", () => {
   });
 
   test("caps concurrent paid extractions and releases capacity afterward", async () => {
-    process.env.ANTHROPIC_API_KEY = "test-key";
+    process.env.GEMINI_API_KEY = "test-key";
     const releases: Array<(value: typeof validAnalysis) => void> = [];
     extractLetter.mockImplementation(
       () => new Promise((resolve) => releases.push(resolve)),
@@ -198,8 +204,28 @@ describe("POST /api/extract", () => {
     await expect(response.json()).resolves.toEqual({ error: "Extraction service is not configured" });
   });
 
+  test("accepts an upload once a Gemini key is configured", async () => {
+    process.env.GEMINI_API_KEY = "test-gemini-key";
+    extractLetter.mockResolvedValueOnce(validAnalysis);
+    const response = await POST(upload(validFile()));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual(validAnalysis);
+  });
+
+  test("maps provider quota exhaustion to 429 with a retry-later message", async () => {
+    process.env.GEMINI_API_KEY = "test-gemini-key";
+    extractLetter.mockRejectedValueOnce(new ExtractionQuotaError("quota gone"));
+    const response = await POST(upload(validFile()));
+
+    expect(response.status).toBe(429);
+    await expect(response.json()).resolves.toEqual({
+      error: "Free extraction limit reached for now; try again later",
+    });
+  });
+
   test("maps typed validation failures to 422", async () => {
-    process.env.ANTHROPIC_API_KEY = "test-key";
+    process.env.GEMINI_API_KEY = "test-key";
     extractLetter.mockRejectedValueOnce(new ExtractionValidationError("invalid model output"));
     const response = await POST(upload(validFile()));
 
@@ -208,7 +234,7 @@ describe("POST /api/extract", () => {
   });
 
   test("surfaces a non-letter semantic error", async () => {
-    process.env.ANTHROPIC_API_KEY = "test-key";
+    process.env.GEMINI_API_KEY = "test-key";
     extractLetter.mockRejectedValueOnce(new NotAwardLetterError());
     const response = await POST(upload(validFile()));
 
@@ -217,7 +243,7 @@ describe("POST /api/extract", () => {
   });
 
   test("returns the extracted upload analysis", async () => {
-    process.env.ANTHROPIC_API_KEY = "test-key";
+    process.env.GEMINI_API_KEY = "test-key";
     extractLetter.mockResolvedValueOnce(validAnalysis);
     const response = await POST(upload(validFile()));
 
@@ -230,7 +256,7 @@ describe("POST /api/extract", () => {
     ["letter.jpg", "image/jpeg"],
     ["letter.pdf", "application/pdf"],
   ] as const)("rejects bytes that do not match declared %s type", async (name, type) => {
-    process.env.ANTHROPIC_API_KEY = "test-key";
+    process.env.GEMINI_API_KEY = "test-key";
     const mismatch = new File([new TextEncoder().encode("not-a-real-file")], name, {
       type,
     });

@@ -42,6 +42,12 @@ export class InMemoryExtractionGate {
     this.now = options.now ?? Date.now;
   }
 
+  /** Drops accumulated windows and in-flight counts so suites sharing the module-level gate stay isolated. */
+  reset(): void {
+    this.requestsByIp.clear();
+    this.activeRequests = 0;
+  }
+
   enter(ip: string): AdmissionResult {
     const now = this.now();
     const cutoff = now - this.options.windowMs;
@@ -75,8 +81,27 @@ export class InMemoryExtractionGate {
   }
 }
 
+export const DEFAULT_MAX_EXTRACTIONS_PER_MINUTE = 2;
+export const DEFAULT_MAX_CONCURRENT_EXTRACTIONS = 2;
+
+function positiveIntegerFromEnv(name: string, fallback: number): number {
+  const parsed = Number(process.env[name]);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+/**
+ * Each extraction spends two provider calls, or three when the corrective retry fires,
+ * so the per-minute default stays well under a free-tier requests-per-minute ceiling.
+ * Both values are env-tunable because those ceilings change without notice.
+ */
 export const extractionGate = new InMemoryExtractionGate({
-  maxRequestsPerWindow: 5,
+  maxRequestsPerWindow: positiveIntegerFromEnv(
+    "EXTRACTION_MAX_PER_MINUTE",
+    DEFAULT_MAX_EXTRACTIONS_PER_MINUTE,
+  ),
   windowMs: 60_000,
-  maxConcurrent: 2,
+  maxConcurrent: positiveIntegerFromEnv(
+    "EXTRACTION_MAX_CONCURRENT",
+    DEFAULT_MAX_CONCURRENT_EXTRACTIONS,
+  ),
 });

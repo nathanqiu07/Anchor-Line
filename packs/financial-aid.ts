@@ -220,7 +220,8 @@ function classifyText(text: string, rawLabel: string): AidClassification | null 
     };
   }
 
-  if (/\bgrant\b|\btuition\s+waiver\b|\bfellowship\b/.test(text)) {
+  // Remission is the standard synonym for a waiver, common on legacy and employee benefits.
+  if (/\bgrant\b|\btuition\s+(?:waiver|remission)\b|\bfellowship\b/.test(text)) {
     return {
       category: "gift_aid",
       normalizedName: rawLabel,
@@ -229,7 +230,9 @@ function classifyText(text: string, rawLabel: string): AidClassification | null 
     };
   }
 
-  if (/\bmerit\s+award\b/.test(text)) {
+  // Schools rarely name these "Merit Award" outright — "Merit Distinction Award" and
+  // "Merit Achievement Award" are the common shapes, so the two words need not be adjacent.
+  if (/\bmerit\b[^\r\n]{0,32}\baward\b|\baward\b[^\r\n]{0,32}\bmerit\b/.test(text)) {
     return {
       category: "gift_aid",
       normalizedName: rawLabel,

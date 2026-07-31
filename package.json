@@ -10,14 +10,15 @@
     "lint": "eslint .",
     "test": "vitest run --passWithNoTests",
     "make-fixtures": "tsx eval/make-fixtures.ts",
-    "eval": "tsx eval/run-eval.ts"
+    "eval": "tsx eval/run-eval.ts",
+    "eval:live": "tsx --env-file-if-exists=.env.local eval/live-extract.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.112.3",
     "next": "^16.2.11",
     "playwright-core": "^1.61.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "unpdf": "^1.8.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {

@@ -330,6 +330,29 @@ describe("financial-aid pack", () => {
     },
   );
 
+  test.each([
+    ["Thornfield Merit Distinction Award", "Thornfield Merit Distinction Award $18,000 per academic year"],
+    ["Merit Achievement Award", "Merit Achievement Award $6,000"],
+    ["Merit Award", "Merit Award $2,500"],
+    ["Thornfield Legacy Tuition Remission", "Thornfield Legacy Tuition Remission $2,250 per semester"],
+    ["Employee Tuition Remission", "Employee Tuition Remission $4,000"],
+  ])(
+    "recognizes institutional gift aid that names neither a grant nor a scholarship",
+    (rawLabel, sourceQuote) => {
+      expect(classifyAidItem(rawLabel, sourceQuote)).toMatchObject({
+        category: "gift_aid",
+        recognized: true,
+      });
+    },
+  );
+
+  test.each([
+    ["Merit Review Fee", "Merit Review Fee $75"],
+    ["Award Notice", "Award Notice mailed on March 14"],
+  ])("does not treat unrelated merit or award wording as aid", (rawLabel, sourceQuote) => {
+    expect(classifyAidItem(rawLabel, sourceQuote)).toMatchObject({ recognized: false });
+  });
+
   test("annualizes semester gift aid and loans exactly twice", () => {
     const semester = {
       ...analysis,

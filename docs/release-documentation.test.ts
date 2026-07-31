@@ -51,13 +51,18 @@ describe("release documentation", () => {
       "PDF",
       "4 MB",
       "synthetic",
-      "ANTHROPIC_API_KEY",
+      "GEMINI_API_KEY",
       "server-only",
       "EXTRACTION_MODEL",
-      "claude-sonnet-4-6",
+      "gemini-3.6-flash",
+      "improve their models",
+      "text layer",
+      "isUsableTextLayer",
+      "one model call instead of two",
+      "EXTRACTION_MAX_PER_MINUTE",
       "Vercel",
       "processes the file bytes in memory",
-      "sends it to Anthropic",
+      "sends it to the configured model provider",
       "sessionStorage",
       "x-vercel-forwarded-for",
       "leading file-signature bytes",
@@ -79,9 +84,9 @@ describe("release documentation", () => {
       "anchored",
       "normalization",
       "true-cost",
-      "two-pass",
+      "two tiers",
       "Next.js",
-      "Anthropic",
+      "Gemini",
       "privacy",
       "guardrail",
       fieldRate,
@@ -109,9 +114,11 @@ describe("release documentation", () => {
     expect(progress).toContain("4 MiB");
     expect(progress).toContain("390×844");
 
-    expect(envExample).toContain("ANTHROPIC_API_KEY=your_anthropic_api_key_here");
-    expect(envExample).toContain("EXTRACTION_MODEL=claude-sonnet-4-6");
+    expect(envExample).toContain("GEMINI_API_KEY=your_gemini_api_key_here");
+    expect(envExample).toContain("EXTRACTION_MODEL=gemini-3.6-flash");
     expect(gitignore).toContain("!.env.example");
+    // .env.example is the one committed env file, so a real key here would ship in git.
+    expect(envExample).not.toMatch(/=\s*A[A-Za-z0-9]{6,}[-_A-Za-z0-9]{12,}/);
 
     for (const phrase of [
       "Collect 15",

@@ -1,4 +1,10 @@
-import { ExtractionValidationError, NotAwardLetterError, extractLetter } from "../../../lib/llm";
+import {
+  ExtractionQuotaError,
+  ExtractionValidationError,
+  NotAwardLetterError,
+  extractLetter,
+  isExtractionConfigured,
+} from "../../../lib/llm";
 import { clientIpKey, extractionGate } from "../../../lib/abuse-controls";
 import {
   hasValidUploadSignature,
@@ -49,7 +55,7 @@ export async function POST(request: Request): Promise<Response> {
   if (!hasValidUploadSignature(file.type, bytes)) {
     return error("File contents do not match the declared file type", 415);
   }
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!isExtractionConfigured()) {
     return error("Extraction service is not configured", 503);
   }
 
@@ -67,6 +73,12 @@ export async function POST(request: Request): Promise<Response> {
     });
     return Response.json(analysis);
   } catch (caught) {
+    if (caught instanceof ExtractionQuotaError) {
+      return error(
+        "Free extraction limit reached for now; try again later",
+        429,
+      );
+    }
     if (caught instanceof ExtractionValidationError) {
       return error("Model output did not match the award-letter schema", 422);
     }

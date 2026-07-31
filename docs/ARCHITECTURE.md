@@ -34,23 +34,24 @@ Server-side validation          upload-contract.ts
   │
   ▼
 Abuse gate                      abuse-controls.ts
-  Per-IP rate limit (5/min) + global concurrency cap (2) before any paid call
+  Per-IP rate limit (2/min) + global concurrency cap (2) before any paid call
   │
   ▼
-Pass 1 — Transcription           lib/llm.ts › extractLetter()
-  Claude vision call: transcribe the letter to plain text, verbatim,
-  preserving line breaks and dollar figures. No interpretation yet.
+Transcription                    lib/llm.ts › transcribe()
+  Tier 1 — digital PDF: read the existing text layer (pdf-text.ts, 0 calls).
+  Tier 2 — everything else: Gemini vision call, verbatim, preserving line
+  breaks and dollar figures. No interpretation yet.
   │
   ▼
-Pass 2 — Extraction              lib/llm.ts › extractLetter()
-  Claude call: read the pass-1 transcription (as untrusted delimited data,
+Extraction                       lib/llm.ts › extractLetter()
+  Gemini call: read the transcription (as untrusted delimited data,
   never as instructions) and return schema-validated JSON — cost of
   attendance, line items, categories, explanations.
   │
   ▼
 Provenance validation            lib/llm.ts › assertProvenance()
   Deterministic, non-LLM checks that every claim traces back to an exact
-  line in the pass-1 transcription. One corrective retry on failure.
+  line in the transcription. One corrective retry on failure.
   │
   ▼
 Award-letter gate                lib/llm.ts › assertAwardLetter()
@@ -69,25 +70,52 @@ Client anchoring + rendering     lib/anchor.ts, components/letter-workspace.tsx
   fuzzy match) so the UI can highlight it, independent of the server.
 ```
 
-## Two-pass extraction, and why not one pass
+## Separated transcription and extraction, and why not one pass
 
-`lib/llm.ts` calls the model twice per letter:
+`lib/llm.ts` always produces an exact transcription first, then extracts from it:
 
-1. **Transcription pass** (`TRANSCRIPTION_PROMPT`) — pure OCR-style
-   transcription of the image/PDF to plain text. No JSON, no interpretation,
+1. **Transcription** — plain text of the letter. No JSON, no interpretation,
    no schema. This text becomes the single source of truth everything else
    is checked against.
-2. **Extraction pass** (`extractionPrompt()`) — given *only* the pass-1
-   transcription (not the original image again), return schema-validated
+2. **Extraction pass** (`extractionPrompt()`) — given *only* the
+   transcription (not the original image), return schema-validated
    JSON: cost of attendance, line items, categories, periods, explanations.
 
 Splitting these matters because it decouples "what does the letter say" from
 "what does it mean." If extraction ran directly against the image, there
 would be no independent transcript to verify claims against — the model's
 JSON output would be the only record of what the letter said, and a
-hallucinated number would be unfalsifiable. With two passes, pass 2's output
-is checked mechanically against pass 1's text (see Provenance below), and a
-human (or the UI) can also read pass 1 directly and judge it independently.
+hallucinated number would be unfalsifiable. As it stands, the extraction output
+is checked mechanically against the transcription (see Provenance below), and a
+human (or the UI) can also read the transcription directly and judge it
+independently.
+
+### Where the transcription comes from: two tiers
+
+Only step 1 varies, and only for PDFs:
+
+- **Tier 1 — text layer (0 model calls).** A digital PDF already contains an exact
+  transcription. `lib/pdf-text.ts` reads it with `unpdf`; if it passes
+  `isUsableTextLayer`, it *is* the transcription and the vision call never happens.
+  The letter costs one model call total instead of two.
+- **Tier 2 — vision (1 model call).** Images, scanned PDFs, PDFs with no text
+  layer, and text layers that fail the gate get transcribed by the model using
+  `TRANSCRIPTION_PROMPT`.
+
+The gate is pure text, so rejecting a bad layer costs nothing. It requires all three:
+
+| Check | Catches | Mirrors |
+| --- | --- | --- |
+| No dollar-bearing line carries more than one amount | Collapsed multi-column tables | `assertProvenance`'s one-amount-per-label binding |
+| `hasAwardContext` matches | Statements, invoices, non-letters | `assertAwardLetter` |
+| At least two lines `classifyAidItem` recognizes | Truncated or mangled labels | `assertAwardLetter`'s `hasRecognizedAid` |
+
+Dollar-bearing lines that are *not* aid — cost-of-attendance components, deposits,
+hourly rates, multi-year projections — are ignored rather than required to classify;
+requiring them would fail almost every real letter and the tier would never fire.
+
+A text layer that passes the gate but still produces a bad extraction is not
+special-cased: it flows into the same corrective retry as any other transcription.
 
 ### Prompt-injection containment
 
@@ -270,7 +298,7 @@ Two things are required for this, both easy to get wrong:
 - **Sample mode never touches the model.** The three built-in synthetic
   letters are served directly from `eval/letters/*.json` by the same API
   route (`app/api/extract/route.ts`), keyed by `sampleId` — no
-  `ANTHROPIC_API_KEY`, no network call to Anthropic, no rate-limit
+  `GEMINI_API_KEY`, no network call to Gemini, no rate-limit
   consumption.
 
 ## Evaluation
@@ -291,7 +319,8 @@ can't inflate its score by over-claiming. Current numbers are recorded in
 | Layer | Choice | Why |
 | --- | --- | --- |
 | Framework | Next.js App Router (Turbopack) | Single deployable for UI + `/api/extract` server route, no separate backend |
-| Model | Anthropic Claude (`claude-sonnet-4-6` default, `EXTRACTION_MODEL` override) | Vision input (image + PDF) in the same Messages API used for structured extraction |
+| Model | Google Gemini (`gemini-3.6-flash` default, `EXTRACTION_MODEL` override) | Free tier needs no card; vision input (image + PDF) in the same endpoint used for structured extraction |
+| PDF text layer | `unpdf` (`lib/pdf-text.ts`) | Reads a digital PDF's existing text layer so the vision pass is skipped — one model call instead of two |
 | Validation | Zod (`lib/schema.ts`) + hand-written provenance checks (`lib/llm.ts`) | Schema validation catches shape errors; provenance checks catch *content* that's shaped correctly but unverifiable |
 | Client state | `sessionStorage` only | No accounts, no database — matches the privacy stance in README |
 | Tests | Vitest + Testing Library | 200+ unit/integration tests, run in CI-equivalent form via `npm run test` before any deploy |

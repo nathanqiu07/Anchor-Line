@@ -219,9 +219,10 @@ export function UploadPanel() {
 
       <p className="privacy-note">
         <span aria-hidden="true">●</span>
-        Uploads are sent to Anthropic for processing. Anchor Lines does not persist the file
-        bytes. The resulting analysis and transcription stay in this tab’s sessionStorage
-        until the tab closes. Samples stay local and key-free.
+        Uploads are sent to the configured model provider, Google Gemini, for processing. On
+        Gemini’s free tier, Google may use submitted content to improve their models. Anchor
+        Lines does not persist the file bytes. The resulting analysis and transcription stay
+        in this tab’s sessionStorage until the tab closes. Samples stay local and key-free.
       </p>
     </div>
   );

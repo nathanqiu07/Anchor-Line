@@ -54,7 +54,8 @@ describe("upload panel helpers", () => {
   test("discloses provider processing, byte retention, tab storage, and local samples", () => {
     const { container } = render(createElement(UploadPanel));
 
-    expect(container.textContent).toContain("sent to Anthropic");
+    expect(container.textContent).toContain("sent to the configured model provider");
+    expect(container.textContent).toContain("improve their models");
     expect(container.textContent).toContain("does not persist the file bytes");
     expect(container.textContent).toContain("this tab’s sessionStorage until the tab closes");
     expect(container.textContent).toContain("Samples stay local and key-free");

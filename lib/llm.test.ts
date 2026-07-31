@@ -3,8 +3,9 @@ import { describe, expect, test } from "vitest";
 import {
   ExtractionValidationError,
   extractLetter,
+  isUsableTextLayer,
   NotAwardLetterError,
-  type AnthropicMessagesClient,
+  type MessagesClient,
 } from "./llm";
 import { extractionPrompt, EXTRACTION_PROMPT, TRANSCRIPTION_PROMPT } from "./prompts";
 
@@ -49,7 +50,7 @@ function response(text: string, stopReason = "end_turn") {
   return { content: [{ type: "text", text }], stop_reason: stopReason };
 }
 
-function fakeClient(...responses: ReturnType<typeof response>[]): AnthropicMessagesClient {
+function fakeClient(...responses: ReturnType<typeof response>[]): MessagesClient {
   let next = 0;
   return {
     create: async () => responses[next++]!,
@@ -83,7 +84,7 @@ function singleItemAnalysis(
   };
 }
 
-describe("two-pass extraction prompts", () => {
+describe("extraction prompts and pipeline", () => {
   test("keeps transcription and extraction prompt invariants", () => {
     expect(TRANSCRIPTION_PROMPT).toBe(
       "Transcribe this financial aid award letter exactly, preserving line breaks and all dollar figures. Output plain text only.",
@@ -116,7 +117,7 @@ describe("two-pass extraction prompts", () => {
 
   test("transcribes before extracting at temperature zero", async () => {
     const calls: unknown[] = [];
-    const client: AnthropicMessagesClient = {
+    const client: MessagesClient = {
       create: async (request) => {
         calls.push(request);
         return calls.length === 1
@@ -138,6 +139,143 @@ describe("two-pass extraction prompts", () => {
     });
   });
 
+  const spelledOut = `Northstar College
+Financial Aid Offer
+Federal Pell Grant ....... 900 dollars per semester`;
+  const spelledOutQuote = "Federal Pell Grant ....... 900 dollars per semester";
+
+  test("binds an amount a letter spells out as words instead of using a dollar sign", async () => {
+    const spelledAnalysis = singleItemAnalysis(
+      spelledOut,
+      spelledOutQuote,
+      "Federal Pell Grant",
+      "gift_aid",
+      900,
+    );
+
+    await expect(
+      extractLetter(
+        { mimeType: "image/png", bytes: new Uint8Array([1]) },
+        fakeClient(response(spelledOut), response(JSON.stringify(spelledAnalysis))),
+      ),
+    ).resolves.toMatchObject({ line_items: [{ amount: 900 }] });
+  });
+
+  test("still requires a spelled-out amount to be covered by a claim", async () => {
+    const unclaimed = {
+      ...singleItemAnalysis(spelledOut, spelledOutQuote, "Federal Pell Grant", "gift_aid", 900),
+      line_items: [],
+    };
+
+    await expect(
+      extractLetter(
+        { mimeType: "image/png", bytes: new Uint8Array([1]) },
+        fakeClient(
+          response(spelledOut),
+          response(JSON.stringify(unclaimed)),
+          response(JSON.stringify(unclaimed)),
+        ),
+      ),
+    ).rejects.toBeInstanceOf(Error);
+  });
+
+  test("downgrades an unrecognized label to other instead of failing the letter", async () => {
+    const unfamiliar = `Northstar College
+Financial Aid Offer
+Federal Pell Grant $3,200
+Departmental Book Stipend $900`;
+    const claimed = {
+      school_name: "Northstar College",
+      award_year: null,
+      cost_of_attendance: { amount: null, source_quote: null },
+      line_items: [
+        {
+          raw_label: "Federal Pell Grant",
+          category: "gift_aid",
+          normalized_name: "Federal Pell Grant",
+          amount: 3_200,
+          period: "unknown",
+          source_quote: "Federal Pell Grant $3,200",
+          explanation: "Model-authored explanation.",
+        },
+        {
+          // The model's guess; the pack does not know this wording.
+          raw_label: "Departmental Book Stipend",
+          category: "gift_aid",
+          normalized_name: "Departmental Book Stipend",
+          amount: 900,
+          period: "unknown",
+          source_quote: "Departmental Book Stipend $900",
+          explanation: "Model-authored explanation.",
+        },
+      ],
+      transcription: unfamiliar,
+      missing_info: [],
+    };
+
+    const result = await extractLetter(
+      { mimeType: "image/png", bytes: new Uint8Array([1]) },
+      fakeClient(response(unfamiliar), response(JSON.stringify(claimed))),
+    );
+
+    expect(result.line_items[0]).toMatchObject({ category: "gift_aid" });
+    // Coerced, not accepted as the model's gift_aid — "other" claims nothing about repayment.
+    expect(result.line_items[1]).toMatchObject({
+      raw_label: "Departmental Book Stipend",
+      category: "other",
+      amount: 900,
+    });
+  });
+
+  test("accepts an extraction wrapped in a bare code fence", async () => {
+    await expect(
+      extractLetter(
+        { mimeType: "image/png", bytes: new Uint8Array([1]) },
+        fakeClient(
+          response(transcription),
+          response("```\n" + JSON.stringify(analysis) + "\n```"),
+        ),
+      ),
+    ).resolves.toEqual(analysis);
+  });
+
+  test("does not mistake a fence inside transcription text for the response wrapper", async () => {
+    // Only a fence that wraps the whole response is stripped; backticks inside the JSON
+    // payload itself must survive, or a letter quoting one would corrupt the parse.
+    const withBackticks = {
+      ...analysis,
+      missing_info: ["The letter mentions ``` in a footnote"],
+    };
+
+    await expect(
+      extractLetter(
+        { mimeType: "image/png", bytes: new Uint8Array([1]) },
+        fakeClient(response(transcription), response(JSON.stringify(withBackticks))),
+      ),
+    ).resolves.toMatchObject({
+      missing_info: ["The letter mentions ``` in a footnote"],
+    });
+  });
+
+  test("surfaces the specific reason on the corrective retry, not the generic message", async () => {
+    const prompts: string[] = [];
+    const client: MessagesClient = {
+      create: async (request) => {
+        prompts.push(request.system);
+        return prompts.length === 1
+          ? response(transcription)
+          : prompts.length === 2
+            ? response(JSON.stringify(analysis), "max_tokens")
+            : response(JSON.stringify(analysis));
+      },
+    };
+
+    await expect(
+      extractLetter({ mimeType: "image/png", bytes: new Uint8Array([1]) }, client),
+    ).resolves.toEqual(analysis);
+    expect(prompts[2]).toContain("stop_reason: max_tokens");
+  });
+
   test("returns a schema-validated extraction", async () => {
     await expect(
       extractLetter(
@@ -149,7 +287,7 @@ describe("two-pass extraction prompts", () => {
 
   test("retries extraction once with validation feedback", async () => {
     const calls: unknown[] = [];
-    const client: AnthropicMessagesClient = {
+    const client: MessagesClient = {
       create: async (request) => {
         calls.push(request);
         return calls.length === 1
@@ -178,7 +316,7 @@ describe("two-pass extraction prompts", () => {
 
   test("retries when an extraction changes the pass-one transcription", async () => {
     const calls: unknown[] = [];
-    const client: AnthropicMessagesClient = {
+    const client: MessagesClient = {
       create: async (request) => {
         calls.push(request);
         return calls.length === 1
@@ -223,7 +361,7 @@ describe("two-pass extraction prompts", () => {
       ...analysis,
       line_items: [analysis.line_items[0]],
     };
-    const client: AnthropicMessagesClient = {
+    const client: MessagesClient = {
       create: async (request) => {
         calls.push(request);
         return calls.length === 1
@@ -241,16 +379,16 @@ describe("two-pass extraction prompts", () => {
     expect(calls[2]).toMatchObject({ system: expect.stringContaining("$2,500") });
   });
 
-  test("retries rather than accepting fenced JSON", async () => {
+  test("accepts fenced JSON without spending the corrective retry", async () => {
+    // Gemini fences non-deterministically, so retrying a fence can hit a second fence and
+    // fail the letter outright. The retry is reserved for real validation failures.
     const calls: unknown[] = [];
-    const client: AnthropicMessagesClient = {
+    const client: MessagesClient = {
       create: async (request) => {
         calls.push(request);
         return calls.length === 1
           ? response(transcription)
-          : calls.length === 2
-            ? response(`\`\`\`json\n${JSON.stringify(analysis)}\n\`\`\``)
-            : response(JSON.stringify(analysis));
+          : response(`\`\`\`json\n${JSON.stringify(analysis)}\n\`\`\``);
       },
     };
 
@@ -260,7 +398,7 @@ describe("two-pass extraction prompts", () => {
         client,
       ),
     ).resolves.toEqual(analysis);
-    expect(calls).toHaveLength(3);
+    expect(calls).toHaveLength(2);
   });
 
   test("rejects one whole-transcription COA quote in place of classified dollar lines", async () => {
@@ -530,7 +668,7 @@ Direct Loan $5,500`;
       ],
     };
     const calls: unknown[] = [];
-    const client: AnthropicMessagesClient = {
+    const client: MessagesClient = {
       create: async (request) => {
         calls.push(request);
         return calls.length === 1
@@ -767,7 +905,7 @@ Federal Pell Grant $3,200`;
         analysis.line_items[1],
       ],
     };
-    const client: AnthropicMessagesClient = {
+    const client: MessagesClient = {
       create: async (request) => {
         calls.push(request);
         return calls.length === 1
@@ -1346,7 +1484,7 @@ Awards may be cancelled if enrollment changes.`;
 
   test("rejects a token-truncated extraction response before accepting a complete retry", async () => {
     const calls: unknown[] = [];
-    const client: AnthropicMessagesClient = {
+    const client: MessagesClient = {
       create: async (request) => {
         calls.push(request);
         return calls.length === 1
@@ -1361,5 +1499,174 @@ Awards may be cancelled if enrollment changes.`;
       extractLetter({ mimeType: "image/png", bytes: new Uint8Array([1]) }, client),
     ).resolves.toMatchObject({ school_name: "Cedar Ridge University" });
     expect(calls).toHaveLength(3);
+  });
+});
+
+/** Mirrors the shape unpdf returns for a digital letter: one claim per line, no blank lines. */
+const textLayer = `Thornfield State University
+Financial Aid Offer — Academic Year 2026-2027
+Estimated Cost of Attendance is $22,495 per semester.
+A one-time enrollment deposit of $450 is due May 1.
+Federal Pell Grant .............................. $3,698
+Federal Direct Subsidized Stafford Loan ......... $3,500 per year
+Federal Work-Study .............................. $2,800 maximum for the year
+Prior-year account adjustment ................... -$300`;
+
+describe("isUsableTextLayer", () => {
+  test("accepts a layer whose aid lines each carry one recognizable claim", () => {
+    expect(isUsableTextLayer(textLayer)).toBe(true);
+  });
+
+  test("ignores dollar lines that are not aid, such as cost and deposit lines", () => {
+    // The accepted layer above already contains a COA line, a deposit, and an adjustment;
+    // the gate must not require those to classify as recognized aid.
+    expect(textLayer).toContain("Cost of Attendance");
+    expect(textLayer).toContain("deposit of $450");
+    expect(isUsableTextLayer(textLayer)).toBe(true);
+  });
+
+  test("rejects a layer that collapsed two columns onto one line", () => {
+    const collapsed = textLayer.replace(
+      "Federal Pell Grant .............................. $3,698",
+      "Federal Pell Grant $3,698 Federal SEOG $1,200",
+    );
+
+    expect(isUsableTextLayer(collapsed)).toBe(false);
+  });
+
+  test("rejects a layer whose aid labels were truncated past recognition", () => {
+    const truncated = textLayer
+      .replace("Federal Pell Grant ..", "deral Pell Gr ..")
+      .replace("Federal Direct Subsidized Stafford Loan ..", "deral Direct Subsidized Sta ..")
+      .replace("Federal Work-Study ..", "deral Work-St ..");
+
+    expect(isUsableTextLayer(truncated)).toBe(false);
+  });
+
+  test("rejects a layer with only one recognizable aid line", () => {
+    const single = textLayer
+      .replace("Federal Direct Subsidized Stafford Loan ......... $3,500 per year", "")
+      .replace("Federal Work-Study .............................. $2,800 maximum for the year", "");
+
+    expect(isUsableTextLayer(single)).toBe(false);
+  });
+
+  test("rejects a layer that never reads as an award letter", () => {
+    const billing = textLayer
+      .replace("Financial Aid Offer — Academic Year 2026-2027", "Student Account Statement")
+      .replace("Federal Pell Grant", "Late Fee")
+      .replace("Federal Direct Subsidized Stafford Loan", "Parking Citation")
+      .replace("Federal Work-Study", "Library Fine");
+
+    expect(isUsableTextLayer(billing)).toBe(false);
+  });
+
+  test("rejects a layer with no dollar amounts at all", () => {
+    expect(isUsableTextLayer("Financial Aid Offer\nNo amounts were listed.")).toBe(false);
+  });
+});
+
+describe("extraction tiers", () => {
+  const pdf = { mimeType: "application/pdf", bytes: new Uint8Array([1]) } as const;
+  const png = { mimeType: "image/png", bytes: new Uint8Array([1]) } as const;
+
+  // Every dollar-bearing line has to be claimed for provenance to pass, so the tier
+  // fixture stays minimal; isUsableTextLayer is exercised against the richer layer above.
+  const tierTextLayer = `Thornfield State University
+Financial Aid Offer — Academic Year 2026-2027
+Federal Pell Grant $3,698
+Federal Work-Study $2,800`;
+  const tierAnalysis = {
+    school_name: "Thornfield State University",
+    award_year: "2026-2027",
+    cost_of_attendance: { amount: null, source_quote: null },
+    line_items: [
+      {
+        raw_label: "Federal Pell Grant",
+        category: "gift_aid",
+        normalized_name: "Federal Pell Grant",
+        amount: 3_698,
+        period: "unknown",
+        source_quote: "Federal Pell Grant $3,698",
+        explanation: "Model-authored explanation.",
+      },
+      {
+        raw_label: "Federal Work-Study",
+        category: "work_study",
+        normalized_name: "Federal Work-Study",
+        amount: 2_800,
+        period: "unknown",
+        source_quote: "Federal Work-Study $2,800",
+        explanation: "Model-authored explanation.",
+      },
+    ],
+    transcription: tierTextLayer,
+    missing_info: [],
+  };
+
+  test("skips the vision pass when a pdf text layer passes the gate", async () => {
+    const calls: unknown[] = [];
+    const client: MessagesClient = {
+      create: async (request) => {
+        calls.push(request);
+        return response(JSON.stringify(tierAnalysis));
+      },
+    };
+
+    await expect(
+      extractLetter(pdf, client, async () => tierTextLayer),
+    ).resolves.toMatchObject({ school_name: "Thornfield State University" });
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toMatchObject({ system: expect.stringContaining(tierTextLayer) });
+  });
+
+  test("falls through to vision when the pdf has no text layer", async () => {
+    const calls: unknown[] = [];
+    const client: MessagesClient = {
+      create: async (request) => {
+        calls.push(request);
+        return calls.length === 1
+          ? response(transcription)
+          : response(JSON.stringify(analysis));
+      },
+    };
+
+    await expect(extractLetter(pdf, client, async () => null)).resolves.toEqual(analysis);
+
+    expect(calls).toHaveLength(2);
+    expect(calls[0]).toMatchObject({ system: TRANSCRIPTION_PROMPT });
+  });
+
+  test("falls through to vision when the text layer fails the gate", async () => {
+    const calls: unknown[] = [];
+    const client: MessagesClient = {
+      create: async (request) => {
+        calls.push(request);
+        return calls.length === 1
+          ? response(transcription)
+          : response(JSON.stringify(analysis));
+      },
+    };
+
+    await expect(
+      extractLetter(pdf, client, async () => "Student Account Statement\nLate Fee $25"),
+    ).resolves.toEqual(analysis);
+
+    expect(calls).toHaveLength(2);
+  });
+
+  test("never reads a text layer for an image upload", async () => {
+    let readAttempts = 0;
+    const client = fakeClient(response(transcription), response(JSON.stringify(analysis)));
+
+    await expect(
+      extractLetter(png, client, async () => {
+        readAttempts += 1;
+        return textLayer;
+      }),
+    ).resolves.toEqual(analysis);
+
+    expect(readAttempts).toBe(0);
   });
 });

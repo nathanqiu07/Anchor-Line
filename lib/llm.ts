@@ -1,5 +1,3 @@
-import Anthropic from "@anthropic-ai/sdk";
-
 import { LetterAnalysisSchema, type LetterAnalysis } from "./schema";
 import { extractionPrompt, TRANSCRIPTION_PROMPT } from "./prompts";
 import {
@@ -13,30 +11,20 @@ import {
   costOfAttendanceLabel,
   deriveAidPeriod,
 } from "../packs/financial-aid";
+import { createGeminiClient } from "./gemini";
+import { extractPdfText } from "./pdf-text";
+import {
+  ExtractionQuotaError,
+  type MessageResponse,
+  type MessagesClient,
+} from "./provider";
+
+export type { MessagesClient } from "./provider";
+export { ExtractionQuotaError } from "./provider";
 
 export interface LetterInput {
   mimeType: "image/png" | "image/jpeg" | "application/pdf";
   bytes: Uint8Array;
-}
-
-interface MessageRequest {
-  model: string;
-  max_tokens: number;
-  temperature?: number;
-  system: string;
-  messages: Array<{
-    role: "user";
-    content: string | Array<Record<string, unknown>>;
-  }>;
-}
-
-interface MessageResponse {
-  content: Array<{ type: string; text?: string }>;
-  stop_reason: string | null;
-}
-
-export interface AnthropicMessagesClient {
-  create(request: MessageRequest): Promise<MessageResponse>;
 }
 
 export class ExtractionValidationError extends Error {
@@ -55,10 +43,30 @@ export class NotAwardLetterError extends Error {
   }
 }
 
-const model = () => process.env.EXTRACTION_MODEL || "claude-sonnet-4-6";
+// Google retires model ids for new keys without warning — 2.5-flash already 404s for them —
+// so this needs revisiting when a 403/404 names the model.
+const DEFAULT_MODEL = "gemini-3.6-flash";
 
-function defaultClient(): AnthropicMessagesClient {
-  return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }).messages as unknown as AnthropicMessagesClient;
+/** The route turns this into a 503 before it reads any bytes off the request. */
+export function isExtractionConfigured(): boolean {
+  return Boolean(process.env.GEMINI_API_KEY);
+}
+
+const model = () => process.env.EXTRACTION_MODEL || DEFAULT_MODEL;
+
+/**
+ * Gemini 3.x spends this budget on internal reasoning before it emits any answer, and
+ * gemini-3.6-flash rejects thinkingConfig.thinkingBudget: 0, so the cap has to cover both.
+ * One Thornfield-sized letter measured 4.3k–7.7k reasoning tokens against a ~2.6k answer;
+ * at the previous 8k cap reasoning consumed 7.7k and the response truncated to MAX_TOKENS.
+ * This is a ceiling, not a reservation — unused tokens are neither billed nor generated.
+ */
+const MAX_OUTPUT_TOKENS = 32_000;
+
+function defaultClient(): MessagesClient {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("GEMINI_API_KEY is not set; extraction cannot run");
+  return createGeminiClient(apiKey);
 }
 
 function attachment(input: LetterInput): Record<string, unknown> {
@@ -91,11 +99,24 @@ function textFrom(response: MessageResponse, stage: "transcription" | "extractio
   return text;
 }
 
+/**
+ * Gemini frequently wraps JSON in a markdown code fence despite being told to return JSON
+ * only, and does so non-deterministically — the same request succeeds bare on one call and
+ * fenced on the next. Stripping the fence here keeps that from burning the corrective retry.
+ */
+function stripCodeFence(text: string): string {
+  const fenced = text.trim().match(/^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```$/i);
+  return fenced ? fenced[1].trim() : text;
+}
+
 function parseJson(text: string): unknown {
-  return JSON.parse(text);
+  return JSON.parse(stripCodeFence(text));
 }
 
 function validationFeedback(error: unknown): string {
+  // This type's message is a fixed user-facing string; the actionable reason is in feedback,
+  // and the corrective retry is worthless without it.
+  if (error instanceof ExtractionValidationError) return error.feedback;
   return error instanceof Error ? error.message : "Invalid JSON output";
 }
 
@@ -172,6 +193,21 @@ function hasAdverseDocumentIntent(transcription: string): boolean {
   });
 }
 
+/** Shared with the text-layer gate, which has to reach this verdict before spending a call. */
+function hasAwardContext(text: string): boolean {
+  return (
+    /\b(?:financial\s+aid\s+(?:offer|award|package|summary)|award\s+(?:offer|summary|notification|letter)|aid\s+notification|offered\s+aid|aid\s+offered|offer\s+details|your\s+offered\s+aid|we\s+(?:offer|award)|you\s+(?:are|have\s+been)\s+awarded|(?:aid|award)\s+granted)\b/i.test(
+      text,
+    ) ||
+    /\b(?:aid|award|grant|scholarship|loan|work[ -]?study)\b[^\r\n]{0,32}\b(?:offered|granted|awarded)\b/i.test(
+      text,
+    ) ||
+    /\b(?:offered|granted|awarded)\b[^\r\n]{0,32}\b(?:aid|award|grant|scholarship|loan|work[ -]?study)\b/i.test(
+      text,
+    )
+  );
+}
+
 function assertAwardLetter(
   analysis: LetterAnalysis,
   transcription: string,
@@ -179,20 +215,10 @@ function assertAwardLetter(
   const hasRecognizedAid = analysis.line_items.some(
     (item) => classifyAidItem(item.raw_label, item.source_quote).recognized,
   );
-  const hasAwardContext =
-    /\b(?:financial\s+aid\s+(?:offer|award|package|summary)|award\s+(?:offer|summary|notification|letter)|aid\s+notification|offered\s+aid|aid\s+offered|offer\s+details|your\s+offered\s+aid|we\s+(?:offer|award)|you\s+(?:are|have\s+been)\s+awarded|(?:aid|award)\s+granted)\b/i.test(
-      transcription,
-    ) ||
-    /\b(?:aid|award|grant|scholarship|loan|work[ -]?study)\b[^\r\n]{0,32}\b(?:offered|granted|awarded)\b/i.test(
-      transcription,
-    ) ||
-    /\b(?:offered|granted|awarded)\b[^\r\n]{0,32}\b(?:aid|award|grant|scholarship|loan|work[ -]?study)\b/i.test(
-      transcription,
-    );
   if (
     hasAdverseDocumentIntent(transcription) ||
     !hasRecognizedAid ||
-    !hasAwardContext
+    !hasAwardContext(transcription)
   ) {
     throw new NotAwardLetterError();
   }
@@ -203,7 +229,13 @@ function provenanceError(message: string): Error {
   return new Error(`Provenance validation failed: ${message}`);
 }
 
-const dollarPattern = /\$\s*\d[\d,]*(?:\.\d{1,2})?/g;
+/**
+ * Letters state amounts either as "$900" or spelled out as "900 dollars". Both are evidence,
+ * so both count as monetary occurrences — a quote that only spells it out would otherwise be
+ * unable to support any amount, and the letter's stated figure would be silently dropped.
+ */
+const dollarPattern =
+  /\$\s*\d[\d,]*(?:\.\d{1,2})?|\b\d[\d,]*(?:\.\d{1,2})?\s+dollars?\b/gi;
 
 interface DollarOccurrence {
   amount: number;
@@ -213,7 +245,7 @@ interface DollarOccurrence {
 
 function dollarOccurrences(text: string): DollarOccurrence[] {
   return [...text.matchAll(dollarPattern)].map((match) => ({
-    amount: Number(match[0].replace(/[$,\s]/g, "")),
+    amount: Number(match[0].replace(/dollars?/gi, "").replace(/[$,\s]/g, "")),
     start: match.index,
     end: match.index + match[0].length,
   }));
@@ -416,7 +448,12 @@ function normalizeSemantics(
     ...analysis,
     line_items: analysis.line_items.map((item) => {
       const classification = classifyAidItem(item.raw_label, item.source_quote);
-      if (item.category !== classification.category) {
+      // A recognized term contradicting the model is a real disagreement between two
+      // informed opinions, so the corrective retry gets a chance to fix it. An unrecognized
+      // one only means the pack does not know this school's wording — downgrading that line
+      // to "other" is safe (it asserts nothing about repayment) and beats failing the whole
+      // letter over one unfamiliar label.
+      if (classification.recognized && item.category !== classification.category) {
         throw provenanceError(
           `${item.raw_label} category must be ${classification.category}, not ${item.category}`,
         );
@@ -424,6 +461,7 @@ function normalizeSemantics(
 
       return {
         ...item,
+        category: classification.category,
         normalized_name: classification.normalizedName,
         explanation: classification.explanation,
         period: deriveAidPeriod(item.source_quote, transcription),
@@ -432,23 +470,87 @@ function normalizeSemantics(
   };
 }
 
-export async function extractLetter(
+const minimumRecognizedAidLines = 2;
+
+/** A line stripped of its leader dots and monetary occurrences, which is what a model reads as the label. */
+function labelFromLine(line: string): string {
+  return line
+    .replace(dollarPattern, " ")
+    .replace(/\.{2,}/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Decides whether a PDF text layer can stand in for the vision transcription. Each check
+ * mirrors an invariant the pipeline enforces later, so a text layer that would fail
+ * provenance is rejected before it costs a model call rather than after.
+ */
+export function isUsableTextLayer(text: string): boolean {
+  const dollarLines = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => dollarAmounts(line).length > 0);
+
+  // Two amounts on one line means the extractor collapsed adjacent columns, which breaks
+  // the one-amount-per-label binding that assertProvenance requires.
+  if (dollarLines.some((line) => dollarAmounts(line).length > 1)) return false;
+  if (!hasAwardContext(text)) return false;
+
+  const recognized = dollarLines.filter(
+    (line) => classifyAidItem(labelFromLine(line), line).recognized,
+  );
+  return recognized.length >= minimumRecognizedAidLines;
+}
+
+async function visionTranscription(
   input: LetterInput,
-  client: AnthropicMessagesClient = defaultClient(),
-): Promise<LetterAnalysis> {
-  const transcriptionResponse = await client.create({
+  client: MessagesClient,
+): Promise<string> {
+  const response = await client.create({
     model: model(),
-    max_tokens: 8_000,
+    max_tokens: MAX_OUTPUT_TOKENS,
     system: TRANSCRIPTION_PROMPT,
     messages: [{ role: "user", content: [attachment(input)] }],
   });
-  const transcription = textFrom(transcriptionResponse, "transcription");
+  return textFrom(response, "transcription");
+}
+
+/**
+ * A usable PDF text layer is already an exact transcription, so it replaces the vision pass
+ * and the letter costs one model call instead of two. Images, scanned PDFs, and text layers
+ * that fail the gate all fall through to vision.
+ */
+async function transcribe(
+  input: LetterInput,
+  client: MessagesClient,
+  readPdfText: PdfTextReader,
+): Promise<string> {
+  if (input.mimeType !== "application/pdf") {
+    return visionTranscription(input, client);
+  }
+
+  const text = await readPdfText(input.bytes);
+  return text !== null && isUsableTextLayer(text)
+    ? text
+    : visionTranscription(input, client);
+}
+
+/** Injected the same way the messages client is, so tier selection is testable without a real PDF. */
+export type PdfTextReader = (bytes: Uint8Array) => Promise<string | null>;
+
+export async function extractLetter(
+  input: LetterInput,
+  client: MessagesClient = defaultClient(),
+  readPdfText: PdfTextReader = extractPdfText,
+): Promise<LetterAnalysis> {
+  const transcription = await transcribe(input, client, readPdfText);
   let feedback: string | undefined;
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const extractionResponse = await client.create({
       model: model(),
-      max_tokens: 8_000,
+      max_tokens: MAX_OUTPUT_TOKENS,
       temperature: 0,
       system: extractionPrompt(transcription, feedback),
       messages: [
@@ -468,6 +570,8 @@ export async function extractLetter(
       return normalizeSemantics(award, transcription);
     } catch (error) {
       if (error instanceof NotAwardLetterError) throw error;
+      // Retrying an exhausted quota cannot succeed and would waste a second call.
+      if (error instanceof ExtractionQuotaError) throw error;
       feedback = validationFeedback(error);
     }
   }
