@@ -193,6 +193,35 @@ describe("financial-aid pack", () => {
     expect(explainAidItem(pell)).toBe(financialAidGlossary.grant);
   });
 
+  const perYearLetter = "Financial Aid Offer\nAmounts are offered for the academic year.";
+
+  test.each([
+    ["Books and course materials $1,900 per term"],
+    ["Campus Grant $600 per quarter"],
+    ["Departmental Stipend $400 monthly"],
+    ["Housing credit $300 each payment period"],
+  ])(
+    "leaves a period this pack will not map unclear rather than annualizing it (%s)",
+    (sourceQuote) => {
+      // A term is not reliably half a year, so falling back to the letter's blanket
+      // "per academic year" would report a per-term figure as an annual one.
+      expect(deriveAidPeriod(sourceQuote, perYearLetter)).toBe("unknown");
+    },
+  );
+
+  test("prefers a period it can map over a disbursement cadence on the same line", () => {
+    expect(
+      deriveAidPeriod("Federal Work-Study $2,800 for the year, paid biweekly", perYearLetter),
+    ).toBe("year");
+  });
+
+  test.each([
+    ["Scholarship $5,000 subject to the award terms"],
+    ["Merit Award $5,000 subject to renewal terms"],
+  ])("does not treat award-terms prose as a period marker (%s)", (sourceQuote) => {
+    expect(deriveAidPeriod(sourceQuote, perYearLetter)).toBe("year");
+  });
+
   test("includes plain-language definitions for varied loan terminology", () => {
     expect(financialAidGlossary["direct unsub"]).toContain("repay");
     expect(financialAidGlossary["unsubsidized stafford loan dl"]).toContain("interest");

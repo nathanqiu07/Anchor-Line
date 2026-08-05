@@ -305,6 +305,31 @@ describe("LetterWorkspace", () => {
       second.source_quote,
     );
   });
+  test("shows cents when the letter states them, and hides them when it does not", () => {
+    // This card sits beside the quote it claims, so a stated $15.50 must not read $16.
+    const withCents = renderToStaticMarkup(
+      <ClaimCard
+        item={{ ...item, raw_label: "Hourly rate", amount: 15.5, period: "unknown" }}
+        anchor={null}
+        active={false}
+        onActivate={() => undefined}
+      />,
+    );
+    const whole = renderToStaticMarkup(
+      <ClaimCard
+        item={{ ...item, raw_label: "Pell Grant", amount: 3_200, period: "year" }}
+        anchor={null}
+        active={false}
+        onActivate={() => undefined}
+      />,
+    );
+
+    expect(withCents).toContain("$15.50");
+    expect(withCents).not.toContain("$16");
+    expect(whole).toContain("$3,200");
+    expect(whole).not.toContain("$3,200.00");
+  });
+
   test("selects the new letter's first claim when the workspace is reused", () => {
     // Navigating between letters reuses this component instance, so an activeKey seeded
     // only on first render keeps pointing at the previous letter's claim and nothing

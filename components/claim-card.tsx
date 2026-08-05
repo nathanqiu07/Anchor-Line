@@ -17,6 +17,20 @@ const money = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 0,
 });
 
+const moneyWithCents = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+});
+
+/**
+ * Whole amounts read better without ".00", but a stated $15.50 must not display as $16.
+ * This card sits next to the source it claims to quote, so rounding it away is exactly
+ * the mismatch a reader checking the letter would catch.
+ */
+function formatAmount(amount: number): string {
+  return Number.isInteger(amount) ? money.format(amount) : moneyWithCents.format(amount);
+}
+
 export function ClaimCard({ item, anchor, active, onActivate }: ClaimCardProps) {
   const explanation = explainAidItem(item);
   const annualizedAmount =
@@ -31,7 +45,7 @@ export function ClaimCard({ item, anchor, active, onActivate }: ClaimCardProps) 
     item.period === "year"
       ? "Per academic year"
       : item.period === "semester"
-        ? `Per semester${annualizedAmount === null ? "" : ` · ${money.format(annualizedAmount)} annualized`}`
+        ? `Per semester${annualizedAmount === null ? "" : ` · ${formatAmount(annualizedAmount)} annualized`}`
         : item.period === "total"
           ? "Stated total · not annualized"
           : "Period unclear · not annualized";
@@ -54,14 +68,14 @@ export function ClaimCard({ item, anchor, active, onActivate }: ClaimCardProps) 
               Amount not stated
             </span>
           ) : (
-            <span className="claim-card__amount">{money.format(item.amount)}</span>
+            <span className="claim-card__amount">{formatAmount(item.amount)}</span>
           )}
         </span>
         <span className="claim-card__period">{periodCopy}</span>
         <span className="claim-card__explanation">{explanation}</span>
         {item.category === "loan" && annualizedAmount !== null ? (
           <span className="claim-card__projection">
-            Est. 4-yr total <strong>{money.format(annualizedAmount * 4)}</strong>
+            Est. 4-yr total <strong>{formatAmount(annualizedAmount * 4)}</strong>
           </span>
         ) : null}
         <span className="claim-card__source">

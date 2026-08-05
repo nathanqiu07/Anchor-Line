@@ -234,14 +234,27 @@ function provenanceError(message: string): Error {
  * so both count as monetary occurrences — a quote that only spells it out would otherwise be
  * unable to support any amount, and the letter's stated figure would be silently dropped.
  */
+const dashes = "\\-\u2212\u2013\u2014";
+
 /**
  * Captures the sign as well as the figure. Letters write reductions as "-$300" and, on
  * statement-style lines, as "($300)". Reading either as positive turns a deduction into an
- * award: a "-$1,000" scholarship adjustment would add rather than subtract, overstating aid
- * and understating what the student owes, which is the dangerous direction to be wrong in.
+ * award, overstating aid and understating what the student owes.
+ *
+ * A dash only counts as a minus when it sits tight against the amount. Letters routinely
+ * use a spaced dash as a separator — "Federal Pell Grant - $3,200" — and reading that as
+ * negative would invert an ordinary grant, which is the same error in the other direction.
  */
-const dollarPattern =
-  /\(\s*\$\s*\d[\d,]*(?:\.\d{1,2})?\s*\)|-\s*\$\s*\d[\d,]*(?:\.\d{1,2})?|\$\s*-\s*\d[\d,]*(?:\.\d{1,2})?|\$\s*\d[\d,]*(?:\.\d{1,2})?|\b-?\d[\d,]*(?:\.\d{1,2})?\s+dollars?\b/gi;
+const dollarPattern = new RegExp(
+  [
+    `\\(\\s*\\$\\s*\\d[\\d,]*(?:\\.\\d{1,2})?\\s*\\)`,
+    `[${dashes}]\\$\\s*\\d[\\d,]*(?:\\.\\d{1,2})?`,
+    `\\$[${dashes}]\\s*\\d[\\d,]*(?:\\.\\d{1,2})?`,
+    `\\$\\s*\\d[\\d,]*(?:\\.\\d{1,2})?`,
+    `\\b[${dashes}]?\\d[\\d,]*(?:\\.\\d{1,2})?\\s+dollars?\\b`,
+  ].join("|"),
+  "gi",
+);
 
 interface DollarOccurrence {
   amount: number;
@@ -249,12 +262,13 @@ interface DollarOccurrence {
   end: number;
 }
 
+const signedMatch = new RegExp(`^[${dashes}]|[${dashes}]\\s*\\d|^\\(`);
+const strippable = new RegExp(`[$,\\s()${dashes}]`, "g");
+
 function amountFromMatch(raw: string): number {
   // Parentheses are the accounting convention for a negative figure.
-  const negative = raw.includes("-") || raw.trimStart().startsWith("(");
-  const magnitude = Number(
-    raw.replace(/dollars?/gi, "").replace(/[$,\s()-]/g, ""),
-  );
+  const negative = signedMatch.test(raw.trimStart());
+  const magnitude = Number(raw.replace(/dollars?/gi, "").replace(strippable, ""));
   return negative ? -magnitude : magnitude;
 }
 

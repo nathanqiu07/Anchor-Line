@@ -268,6 +268,19 @@ export function classifyAidItem(rawLabel: string, sourceQuote: string): AidClass
   };
 }
 
+/**
+ * Period wording this pack deliberately will not map. A term or quarter is not reliably
+ * half a year — quarter systems run three — and a monthly or per-payment figure is a
+ * disbursement cadence. "term" must stay singular and quantified, because "award terms"
+ * and "renewal terms" are ordinary prose on these letters.
+ */
+const unmappablePeriodPattern =
+  /\b(?:per|each|every|a)\s+(?:academic\s+)?(?:term|quarter|trimester|month|payment\s+period)\b|\b(?:quarterly|monthly|biweekly|bi\s*weekly)\b/;
+
+function hasUnmappablePeriod(text: string): boolean {
+  return unmappablePeriodPattern.test(searchable(text));
+}
+
 function explicitPeriods(text: string, global: boolean): Set<LineItem["period"]> {
   const periods = new Set<LineItem["period"]>();
   const sources = global
@@ -306,6 +319,10 @@ export function deriveAidPeriod(sourceQuote: string, transcription: string): Lin
   const local = explicitPeriods(sourceQuote, false);
   if (local.size === 1) return [...local][0];
   if (local.size > 1) return "unknown";
+  // The line states its own period in wording this pack will not map. Falling back to a
+  // letter-wide "amounts are per year" would annualize a per-term figure at face value, so
+  // the honest answer is that the period is unclear.
+  if (hasUnmappablePeriod(sourceQuote)) return "unknown";
   const global = explicitPeriods(transcription, true);
   return global.size === 1 ? [...global][0] : "unknown";
 }
@@ -320,6 +337,9 @@ export function deriveCostOfAttendancePeriod(
   const local = explicitPeriods(sourceQuote, false);
   if (local.size === 1) return [...local][0];
   if (local.size > 1) return "unknown";
+  // Same reasoning as deriveAidPeriod: a cost line that states its own unmappable period
+  // must not inherit one from the heading above it.
+  if (hasUnmappablePeriod(sourceQuote)) return "unknown";
 
   const lines = analysis.transcription.split(/\r?\n/);
   const quoteIndexes = lines
