@@ -8,7 +8,7 @@ export interface AnalysisSource {
   kind: "sample" | "upload";
   label: string;
   mediaUrl?: string;
-  mediaType?: "image/png" | "image/jpeg" | "application/pdf";
+  mediaType?: "image/png" | "application/pdf";
 }
 
 export interface StoredAnalysis {
@@ -25,7 +25,7 @@ const StoredAnalysisSchema: z.ZodType<StoredAnalysis> = z.object({
     kind: z.enum(["sample", "upload"]),
     label: z.string().min(1),
     mediaUrl: z.string().optional(),
-    mediaType: z.enum(["image/png", "image/jpeg", "application/pdf"]).optional(),
+    mediaType: z.enum(["image/png", "application/pdf"]).optional(),
   }),
   analysis: LetterAnalysisSchema,
 });

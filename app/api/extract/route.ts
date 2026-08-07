@@ -2,13 +2,14 @@ import {
   ExtractionQuotaError,
   ExtractionValidationError,
   NotAwardLetterError,
+  UnreadableLetterError,
   extractLetter,
   isExtractionConfigured,
 } from "../../../lib/llm";
 import { clientIpKey, extractionGate } from "../../../lib/abuse-controls";
 import {
   hasValidUploadSignature,
-  isAcceptedUploadType,
+  normalizedUploadType,
   MAX_UPLOAD_BYTES,
   MAX_UPLOAD_MIB,
 } from "../../../lib/upload-contract";
@@ -54,12 +55,13 @@ export async function POST(request: Request): Promise<Response> {
   const form = await request.formData().catch(() => null);
   const file = form?.get("file");
   if (!(file instanceof File)) return error("Missing file upload", 400);
-  if (!isAcceptedUploadType(file.type)) return error("Unsupported file type", 415);
+  const mimeType = normalizedUploadType(file.type);
+  if (!mimeType) return error("Unsupported file type", 415);
   if (file.size > MAX_UPLOAD_BYTES) {
     return error(`File exceeds ${MAX_UPLOAD_MIB} MiB limit`, 413);
   }
   const bytes = new Uint8Array(await file.arrayBuffer());
-  if (!hasValidUploadSignature(file.type, bytes)) {
+  if (!hasValidUploadSignature(mimeType, bytes)) {
     return error("File contents do not match the declared file type", 415);
   }
   if (!isExtractionConfigured()) {
@@ -74,10 +76,7 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   try {
-    const analysis = await extractLetter({
-      mimeType: file.type,
-      bytes,
-    });
+    const analysis = await extractLetter({ mimeType, bytes });
     return Response.json(analysis);
   } catch (caught) {
     if (caught instanceof ExtractionQuotaError) {
@@ -91,6 +90,14 @@ export async function POST(request: Request): Promise<Response> {
     }
     if (caught instanceof NotAwardLetterError) {
       return error("This doesn't look like an award letter", 422);
+    }
+    if (caught instanceof UnreadableLetterError) {
+      return error(
+        caught.kind === "pdf"
+          ? "This PDF has no readable text layer, so it is probably a scan. Copy the letter's text into a .txt file and check the figures before uploading."
+          : "This text file could not be read. Save it as plain UTF-8 text and try again.",
+        415,
+      );
     }
     throw caught;
   } finally {

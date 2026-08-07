@@ -13,6 +13,7 @@ import {
   ExtractionQuotaError,
   ExtractionValidationError,
   NotAwardLetterError,
+  UnreadableLetterError,
 } from "../../../lib/llm";
 import {
   DEFAULT_MAX_EXTRACTIONS_PER_MINUTE,
@@ -29,19 +30,22 @@ const validAnalysis = {
   missing_info: [],
 };
 
-const signatures = {
-  "image/png": [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a],
-  "image/jpeg": [0xff, 0xd8, 0xff],
-  "application/pdf": [...new TextEncoder().encode("%PDF-")],
-} as const;
+const letterText = `Example University
+Federal Pell Grant $3,200`;
+const pdfSignature = [...new TextEncoder().encode("%PDF-")];
 
+/** Defaults to a plain-text letter; pass "application/pdf" for a signature-valid PDF. */
 function validFile(
-  name = "letter.png",
-  type: keyof typeof signatures = "image/png",
-  size = signatures[type].length,
+  name = "letter.txt",
+  type: "text/plain" | "application/pdf" = "text/plain",
+  size?: number,
 ): File {
-  const bytes = new Uint8Array(size);
-  bytes.set(signatures[type].slice(0, size));
+  if (type === "text/plain") {
+    const body = size === undefined ? letterText : "a".repeat(size);
+    return new File([body], name, { type });
+  }
+  const bytes = new Uint8Array(size ?? pdfSignature.length);
+  bytes.set(pdfSignature.slice(0, bytes.length));
   return new File([bytes], name, { type });
 }
 
@@ -107,20 +111,32 @@ describe("POST /api/extract", () => {
     await expect(response.json()).resolves.toEqual({ error: "Missing file upload" });
   });
 
-  test("rejects unsupported MIME types", async () => {
-    const response = await POST(upload(new File(["text"], "letter.txt", { type: "text/plain" })));
+  test.each([
+    ["letter.png", "image/png"],
+    ["letter.jpg", "image/jpeg"],
+  ])("rejects %s, whose text would have to be guessed at", async (name, type) => {
+    const response = await POST(upload(new File(["bytes"], name, { type })));
     expect(response.status).toBe(415);
     await expect(response.json()).resolves.toEqual({ error: "Unsupported file type" });
+  });
+
+  test("accepts a charset-qualified text/plain upload", async () => {
+    process.env.GEMINI_API_KEY = "test-key";
+    extractLetter.mockResolvedValue(validAnalysis);
+    const file = new File([letterText], "letter.txt", { type: "text/plain; charset=utf-8" });
+
+    const response = await POST(upload(file, { ip: "198.51.100.7" }));
+    expect(response.status).toBe(200);
   });
 
   test("accepts exactly 4 MiB and rejects one byte over the shared limit", async () => {
     process.env.GEMINI_API_KEY = "test-key";
     extractLetter.mockResolvedValue(validAnalysis);
-    const boundary = validFile("boundary.png", "image/png", 4 * 1024 * 1024);
+    const boundary = validFile("boundary.pdf", "application/pdf", 4 * 1024 * 1024);
     const accepted = await POST(upload(boundary, { ip: "198.51.100.2" }));
     expect(accepted.status).toBe(200);
 
-    const tooLarge = new File([new Uint8Array(4 * 1024 * 1024 + 1)], "letter.png", { type: "image/png" });
+    const tooLarge = validFile("letter.pdf", "application/pdf", 4 * 1024 * 1024 + 1);
     const response = await POST(upload(tooLarge));
     expect(response.status).toBe(413);
     await expect(response.json()).resolves.toEqual({ error: "File exceeds 4 MiB limit" });
@@ -251,14 +267,10 @@ describe("POST /api/extract", () => {
     await expect(response.json()).resolves.toEqual(validAnalysis);
   });
 
-  test.each([
-    ["letter.png", "image/png"],
-    ["letter.jpg", "image/jpeg"],
-    ["letter.pdf", "application/pdf"],
-  ] as const)("rejects bytes that do not match declared %s type", async (name, type) => {
+  test("rejects bytes that do not match a declared PDF type", async () => {
     process.env.GEMINI_API_KEY = "test-key";
-    const mismatch = new File([new TextEncoder().encode("not-a-real-file")], name, {
-      type,
+    const mismatch = new File([new TextEncoder().encode("not-a-real-file")], "letter.pdf", {
+      type: "application/pdf",
     });
 
     const response = await POST(upload(mismatch));
@@ -268,5 +280,33 @@ describe("POST /api/extract", () => {
       error: "File contents do not match the declared file type",
     });
     expect(extractLetter).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    ["invalid UTF-8 sequences", [0xc3, 0x28, 0xa0, 0xa1]],
+    ["binary control bytes", [0x48, 0x69, 0x00, 0x01, 0x02]],
+  ])("rejects a text upload containing %s", async (_label, bytes) => {
+    process.env.GEMINI_API_KEY = "test-key";
+    const binary = new File([new Uint8Array(bytes)], "letter.txt", { type: "text/plain" });
+
+    const response = await POST(upload(binary));
+
+    expect(response.status).toBe(415);
+    await expect(response.json()).resolves.toEqual({
+      error: "File contents do not match the declared file type",
+    });
+    expect(extractLetter).not.toHaveBeenCalled();
+  });
+
+  test("tells a student what to do when a PDF turns out to be a scan", async () => {
+    process.env.GEMINI_API_KEY = "test-key";
+    extractLetter.mockRejectedValueOnce(new UnreadableLetterError("pdf"));
+
+    const response = await POST(upload(validFile("scan.pdf", "application/pdf")));
+
+    expect(response.status).toBe(415);
+    const body = (await response.json()) as { error: string };
+    expect(body.error).toContain("no readable text layer");
+    expect(body.error).toContain(".txt");
   });
 });

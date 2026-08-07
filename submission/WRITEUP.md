@@ -32,25 +32,33 @@ result.
 
 ## How it works
 
-The app extracts in two tiers. A digital PDF already carries an exact text layer, so
-Anchor Lines reads it directly and skips transcription entirely; images, scanned PDFs,
-and text layers that fail a zero-cost quality gate get transcribed by the vision model
-instead. Either way, the model is then asked to produce a strict, schema-validated
-analysis from that exact transcription, including verbatim source quotes. A
-failed validation receives one corrective retry. The transcription is
+No model ever reads the letter. A `.txt` upload is already its own transcription, and a
+digital PDF carries one in its text layer, which Anchor Lines reads deterministically with
+unpdf and then puts through a zero-cost quality gate. The model is asked only to produce a
+strict, schema-validated analysis from that exact text, including verbatim source quotes.
+A failed validation receives one corrective retry. The transcription is
 explicitly delimited as untrusted data. Deterministic pack rules require exact
 one-line quotes and complete dollar-occurrence coverage, bind raw labels to
 their own quotes, reject category disagreement, replace recognized names and
 explanations, and derive only source-stated periods. The client then runs its own
-anchored matching: lowercase/collapse whitespace/punctuation normalization,
-exact substring matching, and a bounded fuzzy fallback for OCR noise.
+anchored matching: lowercase/collapse whitespace/punctuation normalization and
+exact substring matching, with no fuzzy fallback.
 
-The tech stack is Next.js App Router, React, TypeScript, Zod, Vitest, Google
-Gemini's vision API, unpdf, and deterministic synthetic fixtures. Client-side
+That last point is the design's load-bearing decision. An earlier version accepted images,
+transcribed them by vision, and absorbed OCR noise with a bounded Levenshtein fallback —
+which meant a claim could be "anchored" to a line that did not quite say what the anchor
+implied. Restricting input to formats whose text is recoverable exactly removes the noise
+instead of compensating for it, so an unmatched quote is now a fabrication to reject rather
+than a misreading to rescue. A scanned PDF is refused outright, with a message asking the
+student to copy the text out and check the figures, because a plausible vision reading
+would sail through provenance checks that only ever compare it against itself.
+
+The tech stack is Next.js App Router, React, TypeScript, Zod, Vitest, the Google
+Gemini API, unpdf, and deterministic synthetic fixtures. Client-side
 comparison math and financial-aid guardrails remain deterministic instead of
 being delegated to the model.
 
-Live uploads are limited to PNG, JPG, or PDF files up to **4 MB** so multipart
+Live uploads are limited to plain-text and digital PDF files up to **4 MB** so multipart
 requests remain deployable under the Vercel Functions body limit. Same-origin,
 per-IP rate, and in-process concurrency controls run before paid provider calls;
 synthetic samples remain key-free and unmetered.

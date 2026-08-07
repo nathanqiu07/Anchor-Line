@@ -7,20 +7,26 @@ describe("anchorQuote", () => {
     const transcription = "Award summary: Direct Unsub $5,500 is offered.";
     const quote = "Direct Unsub $5,500";
 
-    expect(anchorQuote(transcription, quote)).toMatchObject({
+    expect(anchorQuote(transcription, quote)).toEqual({
       start: transcription.indexOf(quote),
       end: transcription.indexOf(quote) + quote.length,
-      score: 1,
     });
   });
 
-  test("finds an OCR-noisy dollar amount and preserves original offsets", () => {
-    const transcription = "Your Direct Unsub award is $5,5OO for 2026-27.";
-    const match = anchorQuote(transcription, "Direct Unsub award is $5,500");
+  test("refuses a near-miss amount instead of matching it approximately", () => {
+    // Every accepted format yields the letter's own characters, so a quote that differs by
+    // a character is a fabricated quote rather than a misread one.
+    expect(
+      anchorQuote("Your Direct Unsub award is $5,500 for 2026-27.", "Direct Unsub award is $5,600"),
+    ).toBeNull();
+  });
 
-    expect(match).not.toBeNull();
-    expect(transcription.slice(match!.start, match!.end)).toContain("$5,5OO");
-    expect(match!.score).toBeGreaterThanOrEqual(0.85);
+  test("still tolerates case and whitespace differences", () => {
+    const transcription = "Direct   Unsub    $5,500";
+    expect(anchorQuote(transcription, "direct unsub $5,500")).toEqual({
+      start: 0,
+      end: transcription.length,
+    });
   });
 
   test("rejects reordered words instead of treating them as a source quote", () => {

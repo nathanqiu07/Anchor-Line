@@ -126,3 +126,32 @@ Unsub marked the exact source text; Original rendered the letter image; Juniper
 loaded; Compare showed the red cost hidden state; and the 390×844 mobile check
 had no document overflow. Live Anthropic and Vercel deployment remain untested
 without credentials/deployment authority; video and submission remain human-owned.
+
+2026-08-07 - Removed OCR and narrowed input to formats whose text is recoverable
+exactly. Accepted uploads are now plain text and digital PDFs only. A `.txt` file is
+its own transcription; a PDF's text layer is read by unpdf and put through the existing
+`isUsableTextLayer` gate. Images are rejected at the client and route, and a scanned PDF
+— or a text layer that fails the gate — now raises `UnreadableLetterError` before any
+paid call instead of falling through to vision, with a message telling the student to
+copy the text into a `.txt` file. `visionTranscription`, `attachment`, and
+`TRANSCRIPTION_PROMPT` are gone, as is the Gemini adapter's inlineData translation, so a
+letter's bytes can no longer reach the provider even by mistake. Gemini itself stays: it
+is the only provider, not a vision add-on.
+
+`lib/anchor.ts` lost its bounded Levenshtein fallback and now requires an exact match
+after case/whitespace normalization — with the transcription being the letter's own
+characters, an unmatched quote is a fabrication rather than a misreading. The optimized
+sliding-window scan went with it, since it existed only to make fuzzy matching fast. The
+per-claim "Source match · N%" badge became "Found in letter", the score having been 1 by
+construction.
+
+Also fixed a live bug found by a new test: the route passed raw `file.type` into the
+signature check and `extractLetter`, so a browser-sent `text/plain; charset=utf-8` matched
+neither comparison and 415'd. `normalizedUploadType` now strips the charset once at the
+boundary.
+
+Empirical basis for keeping PDFs: `unpdf` extraction of the checked-in Thornfield fixture
+is byte-stable across runs, differs from the checked-in `.txt` only in leading whitespace
+and blank lines (both normalized away before anchoring), and produces 18 dollar-bearing
+lines each carrying exactly one amount — no column collapse, gate accepts. Suite is 278
+tests green.

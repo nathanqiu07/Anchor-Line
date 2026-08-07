@@ -8,7 +8,7 @@ import { extractPdfText } from "./pdf-text";
 /**
  * A synthetic award letter printed to PDF from HTML, so it carries a real text layer.
  * Tier one exists only because that layer arrives newline-separated; a dependency upgrade
- * that space-joins it instead would silently push every PDF back to the vision pass.
+ * that space-joins it instead would silently make every PDF unreadable.
  */
 const digitalLetter = join(process.cwd(), "lib", "fixtures", "digital-letter.pdf");
 
@@ -40,7 +40,7 @@ describe("extractPdfText", () => {
     expect(lines.every((line) => line.length > 0)).toBe(true);
   });
 
-  test("leaves the caller's bytes intact for the vision fallback", async () => {
+  test("leaves the caller's bytes intact for reuse", async () => {
     const bytes = await fixtureBytes();
     const originalLength = bytes.byteLength;
     await extractPdfText(bytes);

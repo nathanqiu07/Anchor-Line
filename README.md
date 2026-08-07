@@ -26,22 +26,36 @@ then open **Compare offers**. This is the verified zero-key demo path.
 | `npm run dev` | Start the local development server. |
 | `npm run test` | Run the Vitest suite, including release-documentation acceptance. |
 | `npm run eval` | Compare checked-in synthetic extraction snapshots with separate expected truth and refresh `eval/last-run.json`. |
-| `npm run eval:live -- <letter>` | Send one PNG, JPG, or PDF to the configured provider and print the extraction. Spends real quota; reads `.env.local`. |
+| `npm run eval:live -- <letter>` | Send one `.txt` or digital PDF to the configured provider and print the extraction. Spends real quota; reads `.env.local`. |
 | `npm run build` | Create a production build. |
 | `npm start` | Serve a completed production build. |
 
 ## Inputs and sample mode
 
-Anchor Lines accepts a single PNG, JPG, or PDF award letter up to 4 MB (4 MiB
-at the byte boundary). The three checked-in sample letters are synthetic-only
+Anchor Lines accepts a single plain-text (`.txt`) or digital PDF award letter up
+to 4 MB (4 MiB at the byte boundary).
+
+Those two formats are the ones whose text can be recovered exactly, and that is
+the whole admission rule. Every claim this tool makes is anchored to a source
+line, so an anchor is only worth something if the line is really what the letter
+says. A `.txt` file is its own transcription. A digital PDF carries one in its
+text layer, read deterministically by `unpdf` and then gated before it is
+trusted. An image, or a PDF that is just a scan wrapped in a container, carries
+no text at all — reading one would mean OCR, and an OCR guess is exactly what a
+claim must not be anchored to. Scans are refused with a message asking the
+student to copy the text into a `.txt` file and check the figures themselves.
+
+The three checked-in sample letters are synthetic-only
 and intentionally vary their
 financial-aid terminology; they never call the model provider. They make it
 possible to demonstrate sample → analysis → comparison without uploading a
 real letter or configuring a secret.
 
 For a live letter, the browser sends the selected file to the server route,
-which sends it to the configured model provider for processing. The server validates MIME type,
-leading file-signature bytes, and size before any paid model call. Anchor Lines
+which extracts its text locally and sends only that text to the configured model
+provider. The letter's bytes are never sent to the provider. The server validates
+MIME type and size, checks leading file-signature bytes for a PDF, and decodes a
+text upload as strict UTF-8 before any paid model call. Anchor Lines
 processes the file bytes in memory and does not persist them in a database or
 file store. The resulting analysis and transcription remain in that tab's
 `sessionStorage` until the tab closes; uploaded-file previews are transient and
@@ -70,13 +84,13 @@ GEMINI_API_KEY=your_key_here
 # EXTRACTION_MODEL=gemini-3.6-flash
 ```
 
-A letter costs one provider call when its PDF text layer is usable and two when it needs
-the vision pass, plus one more if the corrective retry fires.
+A letter costs one provider call, plus one more if the corrective retry fires. There is
+no transcription call: both accepted formats yield their text without a model.
 
 Free-tier Gemini limits are enforced per project, per model, per day, and they change
 without notice. A live run in July 2026 measured
 `GenerateRequestsPerDayPerProjectPerModel-FreeTier` at **20 requests per day** for
-`gemini-3.6-flash` — roughly 20 text-layer letters or 10 vision letters daily, not the
+`gemini-3.6-flash` — roughly 20 letters daily, not the
 hundreds an older reading of the docs suggested. Each model id has its own separate daily
 bucket, so exhausting one leaves the others untouched. Confirm your own ceilings at
 [AI Studio](https://aistudio.google.com/rate-limit) and set the two admission-control
@@ -95,10 +109,10 @@ or 404, the error names the model and tells you to set `EXTRACTION_MODEL`.
   pack logic verifies each exact source line, monetary occurrence, raw label,
   aid category, normalized name, explanation, and explicit period before a
   result can be returned. A failed validation gets one corrective retry.
-- The transcription comes from one of two tiers. A digital PDF already carries an exact
-  text layer, so `lib/pdf-text.ts` reads it with `unpdf` and the vision pass is skipped
-  entirely — one model call instead of two. Images, scanned PDFs, and text layers that
-  fail the gate in `isUsableTextLayer` fall through to the vision pass.
+- No model ever reads the letter. A `.txt` upload is already the transcription. A digital
+  PDF carries one in its text layer, which `lib/pdf-text.ts` reads with `unpdf`. A PDF with
+  no text layer, or one whose layer fails the gate in `isUsableTextLayer`, is refused with
+  `UnreadableLetterError` before any call is spent — it is not read by vision.
 - The gate is pure text and costs nothing: it rejects a layer whose dollar-bearing lines
   carry more than one amount (collapsed columns), that never reads as an award letter, or
   that yields fewer than two lines `classifyAidItem` recognizes (truncated labels). Each
@@ -106,11 +120,15 @@ or 404, the error names the model and tells you to set `EXTRACTION_MODEL`.
   before it spends a call rather than after.
 - `lib/provider.ts` defines the provider-agnostic message contract. `lib/gemini.ts`
   adapts it to Gemini's REST `generateContent` endpoint through `fetch`, with no vendor
-  SDK. A quota refusal surfaces as a distinct error so the corrective retry is not spent
+  SDK. It translates text parts only; attachment translation was removed with the vision
+  pass, so an image cannot reach the provider even by mistake. A quota refusal surfaces as a distinct error so the corrective retry is not spent
   on an exhausted quota.
-- `lib/anchor.ts` normalizes text, finds exact quotes where possible, and falls
-  back to a bounded fuzzy match. Each card highlights its source span; an
-  unmatched claim is labeled **not stated in letter**.
+- `lib/anchor.ts` normalizes case and whitespace, then requires an exact match. There is
+  no fuzzy fallback: since every accepted format yields the letter's own characters, a
+  quote that is not present verbatim is a fabricated quote rather than a misread one, and
+  approximating it would anchor a claim to a line that does not say what the claim says.
+  Each card highlights its source span; an unmatched claim is labeled
+  **not stated in letter**.
 - `packs/financial-aid.ts` separates gift aid, loans, work-study, and other
   items. It derives the COA period without changing the extraction schema and
   annualizes stated yearly amounts as-is and semester amounts ×2 for both cost
@@ -129,8 +147,8 @@ build settings, and set `GEMINI_API_KEY` as a server-only production environment
 variable. Optionally set `EXTRACTION_MODEL`; otherwise `gemini-3.6-flash` applies.
 
 Extraction latency is the sharpest deployment constraint. Reasoning models spend real time
-before emitting anything: a live text-layer extraction of a dense letter measured **85.7
-seconds** for its single call, while a short letter through the vision tier took 11.5. The
+before emitting anything: a live extraction of a dense letter measured **85.7
+seconds** for its single call. The
 route sets `maxDuration = 60` because that is the ceiling every Vercel plan allows, so a
 dense letter can still exceed it — raise the export toward 300 on a plan that permits it,
 or expect occasional timeouts. Sample mode is unaffected; it never calls the provider.
@@ -151,18 +169,16 @@ call the model provider.
 Before sharing a deployment, run `npm run test`, `npm run eval`, and
 `npm run build`. Sample mode remains the verified zero-key path.
 
-Both live tiers were exercised against the Gemini API in July 2026: a digital PDF through
-the text-layer tier in one call, and a PNG through the vision tier in two. To repeat it
-with your own key, run
+Live extraction was exercised against the Gemini API in July 2026 with a digital PDF, in
+one call. To repeat it with your own key, run
 
 ```
-npm run eval:live -- <letter.pdf>
-npm run eval:live -- public/samples/cedar-ridge.png --expect eval/letters/cedar-ridge.json
+npm run eval:live -- <letter.pdf> --expect <truth.json>
+npm run eval:live -- <letter.txt> --expect <truth.json>
 ```
 
-The `--expect` score is only directly meaningful for the text-layer tier. A vision run
-writes its own transcription, and anchor credit demands quotes byte-identical to the
-checked-in fixture, so its anchor figure reads low even when every amount is correct.
+Both accepted formats score comparably against `--expect`, because both anchor against the
+letter's own characters rather than a model's reading of them.
 
 ## Offline evaluation
 

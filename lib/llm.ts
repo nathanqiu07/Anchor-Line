@@ -1,5 +1,6 @@
 import { LetterAnalysisSchema, type LetterAnalysis } from "./schema";
-import { extractionPrompt, TRANSCRIPTION_PROMPT } from "./prompts";
+import { extractionPrompt } from "./prompts";
+import { decodeUploadText } from "./upload-contract";
 import {
   hasAnyToken,
   hasDueBalanceOrRepayment,
@@ -23,7 +24,7 @@ export type { MessagesClient } from "./provider";
 export { ExtractionQuotaError } from "./provider";
 
 export interface LetterInput {
-  mimeType: "image/png" | "image/jpeg" | "application/pdf";
+  mimeType: "text/plain" | "application/pdf";
   bytes: Uint8Array;
 }
 
@@ -40,6 +41,19 @@ export class NotAwardLetterError extends Error {
 
   constructor() {
     super("This doesn't look like an award letter");
+  }
+}
+
+/**
+ * The upload carries no text that can be recovered exactly, so there is nothing safe to
+ * anchor claims to. `kind` lets the route tell a student what to do about it, which differs
+ * between a scanned PDF (retype or copy the text out) and a corrupt text file.
+ */
+export class UnreadableLetterError extends Error {
+  readonly name = "UnreadableLetterError";
+
+  constructor(readonly kind: "pdf" | "text") {
+    super("This letter has no text that can be read exactly");
   }
 }
 
@@ -69,25 +83,10 @@ function defaultClient(): MessagesClient {
   return createGeminiClient(apiKey);
 }
 
-function attachment(input: LetterInput): Record<string, unknown> {
-  const data = Buffer.from(input.bytes).toString("base64");
-  if (input.mimeType === "application/pdf") {
-    return {
-      type: "document",
-      source: { type: "base64", media_type: input.mimeType, data },
-    };
-  }
-
-  return {
-    type: "image",
-    source: { type: "base64", media_type: input.mimeType, data },
-  };
-}
-
-function textFrom(response: MessageResponse, stage: "transcription" | "extraction"): string {
+function textFrom(response: MessageResponse): string {
   if (response.stop_reason !== "end_turn") {
     throw new ExtractionValidationError(
-      `${stage} response did not complete normally (stop_reason: ${response.stop_reason ?? "missing"})`,
+      `extraction response did not complete normally (stop_reason: ${response.stop_reason ?? "missing"})`,
     );
   }
 
@@ -336,7 +335,7 @@ function amountBoundToLabel(item: LetterAnalysis["line_items"][number]): boolean
 
 function assertProvenance(analysis: LetterAnalysis, transcription: string): LetterAnalysis {
   if (analysis.transcription !== transcription) {
-    throw provenanceError("transcription must exactly match the pass-one transcription");
+    throw provenanceError("transcription must exactly match the letter text");
   }
 
   const hasEmptyLineQuote = analysis.line_items.some(
@@ -511,7 +510,7 @@ function labelFromLine(line: string): string {
 }
 
 /**
- * Decides whether a PDF text layer can stand in for the vision transcription. Each check
+ * Decides whether a PDF text layer is exact enough to anchor claims to. Each check
  * mirrors an invariant the pipeline enforces later, so a text layer that would fail
  * provenance is rejected before it costs a model call rather than after.
  */
@@ -532,37 +531,31 @@ export function isUsableTextLayer(text: string): boolean {
   return recognized.length >= minimumRecognizedAidLines;
 }
 
-async function visionTranscription(
-  input: LetterInput,
-  client: MessagesClient,
-): Promise<string> {
-  const response = await client.create({
-    model: model(),
-    max_tokens: MAX_OUTPUT_TOKENS,
-    system: TRANSCRIPTION_PROMPT,
-    messages: [{ role: "user", content: [attachment(input)] }],
-  });
-  return textFrom(response, "transcription");
-}
-
 /**
- * A usable PDF text layer is already an exact transcription, so it replaces the vision pass
- * and the letter costs one model call instead of two. Images, scanned PDFs, and text layers
- * that fail the gate all fall through to vision.
+ * Produces the transcription every later claim is anchored to, without a model ever reading
+ * the letter. A plain-text upload is already the transcription. A digital PDF carries one in
+ * its text layer, read deterministically and then gated before it is trusted.
+ *
+ * There is deliberately no OCR fallback. A scan has no text to recover, and transcribing it
+ * by vision would produce a plausible reading that provenance checks would then happily
+ * confirm against itself — a confident, fully "anchored", and possibly wrong answer. Failing
+ * here instead sends the student back with something they can fix.
  */
 async function transcribe(
   input: LetterInput,
-  client: MessagesClient,
   readPdfText: PdfTextReader,
 ): Promise<string> {
-  if (input.mimeType !== "application/pdf") {
-    return visionTranscription(input, client);
+  if (input.mimeType === "text/plain") {
+    const text = decodeUploadText(input.bytes);
+    if (text === null) throw new UnreadableLetterError("text");
+    return text;
   }
 
   const text = await readPdfText(input.bytes);
-  return text !== null && isUsableTextLayer(text)
-    ? text
-    : visionTranscription(input, client);
+  if (text === null || !isUsableTextLayer(text)) {
+    throw new UnreadableLetterError("pdf");
+  }
+  return text;
 }
 
 /** Injected the same way the messages client is, so tier selection is testable without a real PDF. */
@@ -573,7 +566,7 @@ export async function extractLetter(
   client: MessagesClient = defaultClient(),
   readPdfText: PdfTextReader = extractPdfText,
 ): Promise<LetterAnalysis> {
-  const transcription = await transcribe(input, client, readPdfText);
+  const transcription = await transcribe(input, readPdfText);
   let feedback: string | undefined;
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
@@ -592,7 +585,7 @@ export async function extractLetter(
 
     try {
       const parsed = LetterAnalysisSchema.parse(
-        parseJson(textFrom(extractionResponse, "extraction")),
+        parseJson(textFrom(extractionResponse)),
       );
       const proven = assertProvenance(parsed, transcription);
       const award = assertAwardLetter(proven, transcription);

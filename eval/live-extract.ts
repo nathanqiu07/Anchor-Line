@@ -5,10 +5,8 @@ import {
   ExtractionValidationError,
   extractLetter,
   isExtractionConfigured,
-  isUsableTextLayer,
   type LetterInput,
 } from "../lib/llm";
-import { extractPdfText } from "../lib/pdf-text";
 import { LetterAnalysisSchema, type LetterAnalysis } from "../lib/schema";
 import { evaluateLetter } from "./evaluation";
 
@@ -18,9 +16,7 @@ import { evaluateLetter } from "./evaluation";
  * lives behind its own script and never runs in the test suite.
  */
 const mimeTypesByExtension: Record<string, LetterInput["mimeType"]> = {
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
+  ".txt": "text/plain",
   ".pdf": "application/pdf",
 };
 
@@ -34,7 +30,7 @@ function parseArguments(argv: string[]): Arguments {
   const [letterPath, ...rest] = argv;
   if (!letterPath) {
     throw new Error(
-      "Usage: npm run eval:live -- <letter.png|jpg|pdf> [--expect <truth.json>] [--out <result.json>]",
+      "Usage: npm run eval:live -- <letter.txt|pdf> [--expect <truth.json>] [--out <result.json>]",
     );
   }
 
@@ -70,17 +66,7 @@ function resolvePath(path: string): string {
   return isAbsolute(path) ? path : join(process.cwd(), path);
 }
 
-/** Reports which tier the pipeline will pick, so the printed call count is not a guess. */
-async function usesTextLayer(bytes: Uint8Array): Promise<boolean> {
-  const text = await extractPdfText(bytes);
-  return text !== null && isUsableTextLayer(text);
-}
-
-function reportAccuracy(
-  actual: LetterAnalysis,
-  expected: LetterAnalysis,
-  usedTextLayer: boolean,
-): void {
+function reportAccuracy(actual: LetterAnalysis, expected: LetterAnalysis): void {
   const result = evaluateLetter(actual, expected);
   console.log("\nScored against expected truth:");
   console.table([
@@ -90,16 +76,6 @@ function reportAccuracy(
       anchors: `${result.verifiedAnchors}/${result.totalAnchors}`,
     },
   ]);
-  if (!usedTextLayer) {
-    // Anchor credit needs the candidate quote to equal the fixture quote byte for byte. A
-    // vision run writes its own transcription, so spacing and dash characters drift and the
-    // anchor number understates correctness. Only the text-layer tier is directly comparable.
-    console.log(
-      "Note: this letter was transcribed by the vision pass, which authors its own\n" +
-      "transcription. Anchor credit requires byte-identical quotes against the checked-in\n" +
-      "fixture, so treat the anchor figure as a lower bound rather than a quality score.",
-    );
-  }
 }
 
 async function main(): Promise<void> {
@@ -112,11 +88,12 @@ async function main(): Promise<void> {
 
   const mimeType = mimeTypeFor(letterPath);
   const bytes = new Uint8Array(await readFile(resolvePath(letterPath)));
-  const usedTextLayer =
-    mimeType === "application/pdf" && (await usesTextLayer(bytes));
-  const tier = usedTextLayer ? "text layer, 1 call" : "vision, 2 calls";
+  // Both accepted formats are exact, so there is one tier and one call. A PDF whose text
+  // layer fails the gate is refused by extractLetter rather than read by vision.
+  const source =
+    mimeType === "text/plain" ? "uploaded text" : "pdf text layer";
   console.log(
-    `Extracting ${basename(letterPath)} (${mimeType}, ${bytes.byteLength} bytes) via ${tier}.`,
+    `Extracting ${basename(letterPath)} (${mimeType}, ${bytes.byteLength} bytes) via ${source}, 1 call.`,
   );
 
   const startedAt = Date.now();
@@ -145,7 +122,7 @@ async function main(): Promise<void> {
     const expected = LetterAnalysisSchema.parse(
       JSON.parse(await readFile(resolvePath(expectedPath), "utf8")),
     );
-    reportAccuracy(analysis, expected, usedTextLayer);
+    reportAccuracy(analysis, expected);
   }
 
   if (outputPath) {

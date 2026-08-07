@@ -35,16 +35,16 @@ function truncateDetail(detail: string): string {
     : collapsed;
 }
 
-/** Translates one Anthropic-shaped content block into its Gemini equivalent. */
+/**
+ * Translates one content block into its Gemini equivalent.
+ *
+ * Text is the only block type the pipeline produces. Attachment translation was removed
+ * along with the vision transcription pass: nothing sends a letter to the model as an image
+ * or document any more, because every accepted format yields its text without one.
+ */
 function toPart(block: Record<string, unknown>): GeminiPart {
   if (block.type === "text" && typeof block.text === "string") {
     return { text: block.text };
-  }
-
-  const source = block.source as { media_type?: unknown; data?: unknown } | undefined;
-  const isAttachment = block.type === "image" || block.type === "document";
-  if (isAttachment && typeof source?.data === "string" && typeof source.media_type === "string") {
-    return { inlineData: { mimeType: source.media_type, data: source.data } };
   }
 
   throw new Error(

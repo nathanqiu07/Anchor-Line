@@ -95,7 +95,7 @@ describe("ClaimCard", () => {
           amount: 5_500,
           explanation: "You repay this, with interest.",
         }}
-        anchor={{ start: 0, end: 10, score: 1 }}
+        anchor={{ start: 0, end: 10 }}
         active={false}
         onActivate={() => undefined}
       />,
@@ -118,7 +118,7 @@ describe("ClaimCard", () => {
       const html = renderToStaticMarkup(
         <ClaimCard
           item={{ ...item, category: "loan", amount: 5_500, period }}
-          anchor={{ start: 0, end: 10, score: 1 }}
+          anchor={{ start: 0, end: 10 }}
           active={false}
           onActivate={() => undefined}
         />,

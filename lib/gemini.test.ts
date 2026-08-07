@@ -39,75 +39,62 @@ function geminiResponse(
   );
 }
 
-const imageRequest: MessageRequest = {
+const textRequest: MessageRequest = {
   model: "gemini-2.5-flash",
   max_tokens: 8_000,
-  system: "Transcribe the letter.",
+  system: "Extract the letter.",
   messages: [
-    {
-      role: "user",
-      content: [
-        {
-          type: "image",
-          source: { type: "base64", media_type: "image/png", data: "aGk=" },
-        },
-      ],
-    },
+    { role: "user", content: [{ type: "text", text: "Extract JSON only." }] },
   ],
 };
 
 describe("createGeminiClient", () => {
-  test("sends the system prompt as systemInstruction and the attachment as inlineData", async () => {
+  test("sends the system prompt as systemInstruction and the letter text as a text part", async () => {
     const { fetchImplementation, captured } = stubFetch(
       geminiResponse([{ text: "Cedar Ridge University" }]),
     );
 
-    await createGeminiClient("test-key", fetchImplementation).create(imageRequest);
+    await createGeminiClient("test-key", fetchImplementation).create(textRequest);
 
     expect(captured).toHaveLength(1);
     expect(captured[0].url).toBe(
       "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
     );
     expect(captured[0].headers["x-goog-api-key"]).toBe("test-key");
-    expect(captured[0].body.systemInstruction.parts[0].text).toBe("Transcribe the letter.");
-    expect(captured[0].body.contents[0].parts[0]).toEqual({
-      inlineData: { mimeType: "image/png", data: "aGk=" },
-    });
+    expect(captured[0].body.systemInstruction.parts[0].text).toBe("Extract the letter.");
+    expect(captured[0].body.contents[0].parts[0]).toEqual({ text: "Extract JSON only." });
     expect(captured[0].body.generationConfig.maxOutputTokens).toBe(8_000);
   });
 
-  test("sends a PDF attachment inline with its own media type", async () => {
+  test.each([
+    ["image", "image/png"],
+    ["document", "application/pdf"],
+  ])("refuses to send a %s attachment now that nothing is read by vision", async (type, mediaType) => {
     const { fetchImplementation, captured } = stubFetch(geminiResponse([{ text: "ok" }]));
 
-    await createGeminiClient("test-key", fetchImplementation).create({
-      ...imageRequest,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "document",
-              source: {
-                type: "base64",
-                media_type: "application/pdf",
-                data: "JVBER",
-              },
-            },
-          ],
-        },
-      ],
-    });
+    await expect(
+      createGeminiClient("test-key", fetchImplementation).create({
+        ...textRequest,
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type, source: { type: "base64", media_type: mediaType, data: "aGk=" } },
+            ],
+          },
+        ],
+      }),
+    ).rejects.toThrow(/cannot translate content block/);
 
-    expect(captured[0].body.contents[0].parts[0]).toEqual({
-      inlineData: { mimeType: "application/pdf", data: "JVBER" },
-    });
+    // The refusal is local; no attachment ever reaches the provider.
+    expect(captured).toHaveLength(0);
   });
 
   test("sends string content as a single text part", async () => {
     const { fetchImplementation, captured } = stubFetch(geminiResponse([{ text: "{}" }]));
 
     await createGeminiClient("test-key", fetchImplementation).create({
-      ...imageRequest,
+      ...textRequest,
       messages: [{ role: "user", content: "Extract JSON only." }],
     });
 
@@ -116,14 +103,14 @@ describe("createGeminiClient", () => {
 
   test("omits temperature unless the caller set one", async () => {
     const withoutTemperature = stubFetch(geminiResponse([{ text: "ok" }]));
-    await createGeminiClient("k", withoutTemperature.fetchImplementation).create(imageRequest);
+    await createGeminiClient("k", withoutTemperature.fetchImplementation).create(textRequest);
     expect(withoutTemperature.captured[0].body.generationConfig).not.toHaveProperty(
       "temperature",
     );
 
     const withTemperature = stubFetch(geminiResponse([{ text: "ok" }]));
     await createGeminiClient("k", withTemperature.fetchImplementation).create({
-      ...imageRequest,
+      ...textRequest,
       temperature: 0,
     });
     expect(withTemperature.captured[0].body.generationConfig.temperature).toBe(0);
@@ -134,7 +121,7 @@ describe("createGeminiClient", () => {
       geminiResponse([{ text: "first " }, { inlineData: {} }, { text: "second" }]),
     );
 
-    const result = await createGeminiClient("k", fetchImplementation).create(imageRequest);
+    const result = await createGeminiClient("k", fetchImplementation).create(textRequest);
 
     expect(result.stop_reason).toBe("end_turn");
     expect(result.content).toEqual([
@@ -148,7 +135,7 @@ describe("createGeminiClient", () => {
       geminiResponse([{ text: "truncated" }], "MAX_TOKENS"),
     );
 
-    const result = await createGeminiClient("k", fetchImplementation).create(imageRequest);
+    const result = await createGeminiClient("k", fetchImplementation).create(textRequest);
 
     expect(result.stop_reason).toBe("MAX_TOKENS");
   });
@@ -162,7 +149,7 @@ describe("createGeminiClient", () => {
       ),
     );
 
-    const result = await createGeminiClient("k", fetchImplementation).create(imageRequest);
+    const result = await createGeminiClient("k", fetchImplementation).create(textRequest);
 
     expect(result.stop_reason).toBeNull();
   });
@@ -175,7 +162,7 @@ describe("createGeminiClient", () => {
     );
 
     await expect(
-      createGeminiClient("k", fetchImplementation).create(imageRequest),
+      createGeminiClient("k", fetchImplementation).create(textRequest),
     ).rejects.toBeInstanceOf(ExtractionQuotaError);
   });
 
@@ -185,7 +172,7 @@ describe("createGeminiClient", () => {
     );
 
     await expect(
-      createGeminiClient("k", fetchImplementation).create(imageRequest),
+      createGeminiClient("k", fetchImplementation).create(textRequest),
     ).rejects.toThrow(/gemini-2\.5-flash[\s\S]*EXTRACTION_MODEL/);
   });
 
@@ -193,7 +180,7 @@ describe("createGeminiClient", () => {
     const { fetchImplementation } = stubFetch(new Response("boom", { status: 500 }));
 
     await expect(
-      createGeminiClient("k", fetchImplementation).create(imageRequest),
+      createGeminiClient("k", fetchImplementation).create(textRequest),
     ).rejects.toThrow(/HTTP 500/);
   });
 
@@ -202,7 +189,7 @@ describe("createGeminiClient", () => {
 
     await expect(
       createGeminiClient("k", fetchImplementation).create({
-        ...imageRequest,
+        ...textRequest,
         messages: [{ role: "user", content: [{ type: "tool_use", id: "1" }] }],
       }),
     ).rejects.toThrow(/cannot translate content block/);
@@ -217,7 +204,7 @@ describe("createGeminiClient", () => {
     const fetchImplementation = (async () => responses[calls++]!) as unknown as typeof fetch;
 
     const client = createGeminiClient("test-key", fetchImplementation);
-    await expect(client.create(imageRequest)).resolves.toMatchObject({
+    await expect(client.create(textRequest)).resolves.toMatchObject({
       content: [{ type: "text", text: "Cedar Ridge University" }],
     });
     expect(calls).toBe(2);
@@ -231,7 +218,7 @@ describe("createGeminiClient", () => {
     }) as unknown as typeof fetch;
 
     const client = createGeminiClient("test-key", fetchImplementation);
-    await expect(client.create(imageRequest)).rejects.toThrow(/503/);
+    await expect(client.create(textRequest)).rejects.toThrow(/503/);
     expect(calls).toBe(2);
   });
 
@@ -243,7 +230,7 @@ describe("createGeminiClient", () => {
     }) as unknown as typeof fetch;
 
     const client = createGeminiClient("test-key", fetchImplementation);
-    await expect(client.create(imageRequest)).rejects.toBeInstanceOf(ExtractionQuotaError);
+    await expect(client.create(textRequest)).rejects.toBeInstanceOf(ExtractionQuotaError);
     expect(calls).toBe(1);
   });
 });

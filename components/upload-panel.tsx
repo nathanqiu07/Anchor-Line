@@ -35,7 +35,9 @@ const samples = [
 ] as const;
 
 export function validateUpload(file: File): string | null {
-  if (!isAcceptedUploadType(file.type)) return "Choose a PNG, JPG, or PDF award letter.";
+  if (!isAcceptedUploadType(file.type)) {
+    return "Choose a plain-text (.txt) or digital PDF award letter.";
+  }
   if (file.size > MAX_UPLOAD_BYTES) {
     return `Choose a file that is ${MAX_UPLOAD_MIB} MB or smaller.`;
   }
@@ -111,11 +113,15 @@ export function UploadPanel() {
     try {
       const analysis = await requestAnalysis({ body: form });
       const id = `upload-${Date.now()}-${crypto.randomUUID()}`;
+      // A PDF still has an original worth showing beside the claims. A text upload does
+      // not: the transcription pane already renders the exact bytes that were uploaded.
+      const isPdf = file.type.startsWith("application/pdf");
       finishAnalysis(id, analysis, {
         kind: "upload",
         label: file.name,
-        mediaUrl: URL.createObjectURL(file),
-        mediaType: file.type as AnalysisSource["mediaType"],
+        ...(isPdf
+          ? { mediaUrl: URL.createObjectURL(file), mediaType: "application/pdf" as const }
+          : {}),
       });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "We couldn't read that letter.");
@@ -161,13 +167,13 @@ export function UploadPanel() {
               <input
                 className="visually-hidden"
                 type="file"
-                accept=".png,.jpg,.jpeg,.pdf,image/png,image/jpeg,application/pdf"
+                accept=".txt,.pdf,text/plain,application/pdf"
                 onChange={onFileChange}
                 disabled={Boolean(busyLabel)}
               />
               {busyLabel ? "Reading letter…" : "Choose a letter"}
             </label>
-            <span className="upload-meta">PNG, JPG, or PDF · {MAX_UPLOAD_MIB} MB max</span>
+            <span className="upload-meta">Text or digital PDF · {MAX_UPLOAD_MIB} MB max</span>
           </div>
         </div>
         <div className="upload-panel__mark" aria-hidden="true">
@@ -179,7 +185,7 @@ export function UploadPanel() {
       {busyLabel ? (
         <div className="status-message" role="status">
           <span className="status-spinner" aria-hidden="true" />
-          Reading {busyLabel}. First we transcribe it, then we check every claim.
+          Reading {busyLabel}. Every claim is checked against the letter’s own text.
         </div>
       ) : null}
       {error ? (
