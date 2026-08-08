@@ -155,3 +155,14 @@ is byte-stable across runs, differs from the checked-in `.txt` only in leading w
 and blank lines (both normalized away before anchoring), and produces 18 dollar-bearing
 lines each carrying exactly one amount — no column collapse, gate accepts. Suite is 278
 tests green.
+
+2026-08-07 - Polyfilled `Math.sumPrecise` for the PDF path. Node 24 does not ship it, but
+the pdf.js build bundled in unpdf calls it while measuring TrueType glyph and cmap tables;
+the resulting TypeError was swallowed into a pdf.js warning, silently skipping that font
+work. `lib/math-sum-precise.ts` implements the TC39 proposal with Shewchuk exact-partials
+summation (CPython's `math.fsum` algorithm, including the round-half-to-even correction),
+rejects non-Numbers rather than coercing, and returns -0 for an empty iterable.
+`lib/pdf-text.ts` installs it at module load, and installation is a no-op on any runtime
+that ships its own. Verified against the Thornfield fixture: extraction is byte-identical
+to the pre-polyfill output — 2412 chars, 18 dollar-bearing lines, none carrying more than
+one amount — so the fix removes the error without moving the text. Suite 289 green.

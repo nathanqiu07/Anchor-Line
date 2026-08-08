@@ -1,5 +1,11 @@
 import { extractText, getDocumentProxy } from "unpdf";
 
+import { installMathSumPrecise } from "./math-sum-precise";
+
+// Runs once at module load, before any PDF reaches pdf.js. The bundled build calls
+// Math.sumPrecise while measuring font tables, which Node 24 does not provide.
+installMathSumPrecise();
+
 /**
  * A digital PDF already carries an exact transcription in its text layer, so reading it
  * costs no model call. Scanned PDFs carry none, and a null return tells the caller to refuse
