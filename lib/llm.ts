@@ -14,6 +14,7 @@ import {
 } from "../packs/financial-aid";
 import { createGeminiClient } from "./gemini";
 import { extractPdfText } from "./pdf-text";
+import { valueBoundToLabel } from "./measures";
 import {
   ExtractionQuotaError,
   type MessageResponse,
@@ -283,48 +284,24 @@ function dollarAmounts(text: string): number[] {
   return dollarOccurrences(text).map((occurrence) => occurrence.amount);
 }
 
-function labelOccurrences(text: string, label: string): number[] {
-  const starts: number[] = [];
-  let fromIndex = 0;
-  const wordCharacter = (value: string | undefined) =>
-    value !== undefined && /[\p{L}\p{N}]/u.test(value);
-  while (fromIndex <= text.length - label.length) {
-    const start = text.indexOf(label, fromIndex);
-    if (start === -1) break;
-    const end = start + label.length;
-    const startsInsideWord =
-      wordCharacter(label[0]) && wordCharacter(text[start - 1]);
-    const endsInsideWord =
-      wordCharacter(label[label.length - 1]) && wordCharacter(text[end]);
-    if (!startsInsideWord && !endsInsideWord) starts.push(start);
-    fromIndex = start + 1;
-  }
-  return starts;
-}
-
 function amountBoundToTextLabel(
   sourceQuote: string,
   label: string,
   amountValue: number,
 ): boolean {
-  const amounts = dollarOccurrences(sourceQuote);
-  const labels = labelOccurrences(sourceQuote, label);
-  if (amounts.length === 0 || labels.length === 0) return false;
-
-  const distances = amounts.map((amount) => ({
-    amount,
-    distance: Math.min(
-      ...labels.map((labelStart) => {
-        const labelEnd = labelStart + label.length;
-        if (amount.end <= labelStart) return labelStart - amount.end;
-        if (amount.start >= labelEnd) return amount.start - labelEnd;
-        return 0;
-      }),
-    ),
-  }));
-  const minimumDistance = Math.min(...distances.map(({ distance }) => distance));
-  const nearest = distances.filter(({ distance }) => distance === minimumDistance);
-  return nearest.length === 1 && nearest[0].amount.amount === amountValue;
+  // The label-binding math (and its whole-token `labelOccurrences` helper) now lives in
+  // `lib/measures.ts` so the syllabus path enforces the identical rule. Numbers are finite
+  // here, so the default `Object.is` comparator matches the previous `===` behavior exactly.
+  return valueBoundToLabel(
+    sourceQuote,
+    label,
+    dollarOccurrences(sourceQuote).map((occurrence) => ({
+      value: occurrence.amount,
+      start: occurrence.start,
+      end: occurrence.end,
+    })),
+    amountValue,
+  );
 }
 
 function amountBoundToLabel(item: LetterAnalysis["line_items"][number]): boolean {
