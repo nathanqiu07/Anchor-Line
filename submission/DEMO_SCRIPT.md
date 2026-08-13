@@ -20,3 +20,18 @@ End on Juniper's visible amber **not stated in letter** badge and the
 synthetic anchor verification. Do
 not imply that the checked-in snapshot result is a live-provider or real-letter
 accuracy claim.
+
+## Optional extension — syllabus mode (+0:30)
+
+If time allows after the 3:00 award-letter demo, show the second document domain.
+Still synthetic, still no upload or API key.
+
+| Time | On screen | Narration / action |
+| --- | --- | --- |
+| +0:00–0:10 | Landing page, document-type selector | Return home. Switch the selector from **Award letter** to **Syllabus**. “Anchor Lines reads more than money. The same checkable approach works on a college syllabus.” |
+| +0:10–0:25 | Riverton State · BIOL 101 sample | Click the sample syllabus. “It pulls out every important number — grade weights, the grading scale, penalties, credit hours, and key dates — and groups them.” Hover the **Midterm Exam 25%** card so its source line highlights. “Each number stays tied to its exact line in the syllabus.” |
+| +0:25–0:30 | Grade-weights note / warnings | Point to the grade-weights total (100% here) and the **Worth checking** panel. “It even checks whether the weights add up, and flags a value it cannot anchor as ‘not stated in syllabus’ — the same honesty rule as the letters.” |
+
+Do not imply syllabus extraction has a measured accuracy figure; the offline
+threshold benchmark covers the award letters, and the syllabus fixture is
+validated separately by `eval/syllabi.test.ts`.

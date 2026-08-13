@@ -3,11 +3,17 @@ import { basename, extname, isAbsolute, join } from "node:path";
 
 import {
   ExtractionValidationError,
-  extractLetter,
+  extractDocument,
   isExtractionConfigured,
   type LetterInput,
 } from "../lib/llm";
-import { LetterAnalysisSchema, type LetterAnalysis } from "../lib/schema";
+import {
+  LetterAnalysisSchema,
+  type Analysis,
+  type DocumentType,
+  type LetterAnalysis,
+  type SyllabusAnalysis,
+} from "../lib/schema";
 import { evaluateLetter } from "./evaluation";
 
 /**
@@ -24,27 +30,34 @@ interface Arguments {
   letterPath: string;
   expectedPath: string | null;
   outputPath: string | null;
+  docType: DocumentType;
 }
 
 function parseArguments(argv: string[]): Arguments {
   const [letterPath, ...rest] = argv;
   if (!letterPath) {
     throw new Error(
-      "Usage: npm run eval:live -- <letter.txt|pdf> [--expect <truth.json>] [--out <result.json>]",
+      "Usage: npm run eval:live -- <file.txt|pdf> [--type award_letter|syllabus] [--expect <truth.json>] [--out <result.json>]",
     );
   }
 
   let expectedPath: string | null = null;
   let outputPath: string | null = null;
+  let docType: DocumentType = "award_letter";
   for (let index = 0; index < rest.length; index += 2) {
     const flag = rest[index];
     const value = rest[index + 1];
     if (!value) throw new Error(`Flag ${flag} requires a value`);
     if (flag === "--expect") expectedPath = value;
     else if (flag === "--out") outputPath = value;
-    else throw new Error(`Unknown flag ${flag}`);
+    else if (flag === "--type") {
+      if (value !== "award_letter" && value !== "syllabus") {
+        throw new Error(`--type must be award_letter or syllabus, got ${value}`);
+      }
+      docType = value;
+    } else throw new Error(`Unknown flag ${flag}`);
   }
-  return { letterPath, expectedPath, outputPath };
+  return { letterPath, expectedPath, outputPath, docType };
 }
 
 function mimeTypeFor(letterPath: string): LetterInput["mimeType"] {
@@ -78,29 +91,7 @@ function reportAccuracy(actual: LetterAnalysis, expected: LetterAnalysis): void 
   ]);
 }
 
-async function main(): Promise<void> {
-  const { letterPath, expectedPath, outputPath } = parseArguments(
-    process.argv.slice(2),
-  );
-  if (!isExtractionConfigured()) {
-    throw new Error("GEMINI_API_KEY is not set. Add it to .env.local and retry.");
-  }
-
-  const mimeType = mimeTypeFor(letterPath);
-  const bytes = new Uint8Array(await readFile(resolvePath(letterPath)));
-  // Both accepted formats are exact, so there is one tier and one call. A PDF whose text
-  // layer fails the gate is refused by extractLetter rather than read by vision.
-  const source =
-    mimeType === "text/plain" ? "uploaded text" : "pdf text layer";
-  console.log(
-    `Extracting ${basename(letterPath)} (${mimeType}, ${bytes.byteLength} bytes) via ${source}, 1 call.`,
-  );
-
-  const startedAt = Date.now();
-  const analysis = await extractLetter({ mimeType, bytes });
-  const elapsedSeconds = ((Date.now() - startedAt) / 1000).toFixed(1);
-
-  console.log(`\nCompleted in ${elapsedSeconds}s.`);
+function reportLetter(analysis: LetterAnalysis): void {
   console.log(`School: ${analysis.school_name ?? "(not stated)"}`);
   console.log(`Award year: ${analysis.award_year ?? "(not stated)"}`);
   console.log(
@@ -114,15 +105,63 @@ async function main(): Promise<void> {
       period: item.period,
     })),
   );
+}
+
+function reportSyllabus(analysis: SyllabusAnalysis): void {
+  console.log(`Course: ${analysis.course_name ?? "(not stated)"}`);
+  console.log(`Term: ${analysis.term ?? "(not stated)"}`);
+  console.log(`Important numbers found: ${analysis.items.length}`);
+  console.table(
+    analysis.items.map((item) => ({
+      label: item.raw_label,
+      category: item.category,
+      kind: item.kind,
+      value: item.value,
+    })),
+  );
+}
+
+async function main(): Promise<void> {
+  const { letterPath, expectedPath, outputPath, docType } = parseArguments(
+    process.argv.slice(2),
+  );
+  if (!isExtractionConfigured()) {
+    throw new Error("GEMINI_API_KEY is not set. Add it to .env.local and retry.");
+  }
+
+  const mimeType = mimeTypeFor(letterPath);
+  const bytes = new Uint8Array(await readFile(resolvePath(letterPath)));
+  // Both accepted formats are exact, so there is one tier and one call. A PDF whose text
+  // layer fails the gate is refused rather than read by vision.
+  const source =
+    mimeType === "text/plain" ? "uploaded text" : "pdf text layer";
+  console.log(
+    `Extracting ${basename(letterPath)} as ${docType} (${mimeType}, ${bytes.byteLength} bytes) via ${source}, 1 call.`,
+  );
+
+  const startedAt = Date.now();
+  const analysis: Analysis = await extractDocument({ mimeType, bytes }, docType);
+  const elapsedSeconds = ((Date.now() - startedAt) / 1000).toFixed(1);
+
+  console.log(`\nCompleted in ${elapsedSeconds}s.`);
+  if (analysis.document_type === "syllabus") {
+    reportSyllabus(analysis);
+  } else {
+    reportLetter(analysis);
+  }
   if (analysis.missing_info.length > 0) {
     console.log(`Missing info: ${analysis.missing_info.join("; ")}`);
   }
 
   if (expectedPath) {
-    const expected = LetterAnalysisSchema.parse(
-      JSON.parse(await readFile(resolvePath(expectedPath), "utf8")),
-    );
-    reportAccuracy(analysis, expected);
+    if (analysis.document_type === "syllabus") {
+      console.log("\n(--expect scoring is award-letter only; skipped for syllabus.)");
+    } else {
+      const expected = LetterAnalysisSchema.parse(
+        JSON.parse(await readFile(resolvePath(expectedPath), "utf8")),
+      );
+      reportAccuracy(analysis, expected);
+    }
   }
 
   if (outputPath) {
