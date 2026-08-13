@@ -19,7 +19,7 @@ import {
 import offer1 from "../../../eval/letters/cedar-ridge.json";
 import offer2 from "../../../eval/letters/juniper-tech.json";
 import offer3 from "../../../eval/letters/morrow-bay.json";
-import syllabus1 from "../../../eval/letters/biology-101.json";
+import syllabus1 from "../../../eval/syllabi/biology-101.json";
 
 const samples = {
   "offer-1": offer1,

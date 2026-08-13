@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, type ChangeEvent, type DragEvent } from "react";
 
 import { saveAnalysis, type AnalysisSource, type StoredAnalysis } from "../lib/client-store";
-import { LetterAnalysisSchema, type LetterAnalysis } from "../lib/schema";
+import { AnalysisSchema, type Analysis, type DocumentType } from "../lib/schema";
 import {
   isAcceptedUploadType,
   MAX_UPLOAD_BYTES,
@@ -13,30 +13,73 @@ import {
 
 export const NON_LETTER_MESSAGE = "This doesn't look like an award letter";
 
-const samples = [
+const letterSamples = [
   {
     id: "offer-1",
-    school: "Cedar Ridge University",
+    title: "Cedar Ridge University",
     detail: "Full cost · gifts · loan · work-study",
     mediaUrl: "/samples/cedar-ridge.png",
   },
   {
     id: "offer-2",
-    school: "Juniper Technical Institute",
+    title: "Juniper Technical Institute",
     detail: "A deliberately hidden cost",
     mediaUrl: "/samples/juniper-tech.png",
   },
   {
     id: "offer-3",
-    school: "Morrow Bay College",
+    title: "Morrow Bay College",
     detail: "Parent PLUS and older loan language",
     mediaUrl: "/samples/morrow-bay.png",
   },
 ] as const;
 
+const syllabusSamples = [
+  {
+    id: "syllabus-1",
+    title: "Riverton State · BIOL 101",
+    detail: "Grade weights, scale, penalties, credit hours, dates",
+    mediaUrl: undefined,
+  },
+] as const;
+
+type Sample = { id: string; title: string; detail: string; mediaUrl?: string };
+
+const copy: Record<DocumentType, {
+  kicker: string;
+  heading: string;
+  blurb: string;
+  choose: string;
+  reading: string;
+  sampleKicker: string;
+  sampleHeading: string;
+  sampleBlurb: string;
+}> = {
+  award_letter: {
+    kicker: "Start with your letter",
+    heading: "Drop the award letter here.",
+    blurb: "We’ll turn the numbers into claims you can trace back to the page.",
+    choose: "Choose a letter",
+    reading: "Reading letter…",
+    sampleKicker: "No letter handy?",
+    sampleHeading: "Try sample letters",
+    sampleBlurb: "Synthetic offers. Real financial-aid patterns.",
+  },
+  syllabus: {
+    kicker: "Start with your syllabus",
+    heading: "Drop your syllabus here.",
+    blurb: "We’ll pull out every important number and trace each one back to the page.",
+    choose: "Choose a syllabus",
+    reading: "Reading syllabus…",
+    sampleKicker: "No syllabus handy?",
+    sampleHeading: "Try a sample syllabus",
+    sampleBlurb: "A synthetic syllabus with real grading patterns.",
+  },
+};
+
 export function validateUpload(file: File): string | null {
   if (!isAcceptedUploadType(file.type)) {
-    return "Choose a plain-text (.txt) or digital PDF award letter.";
+    return "Choose a plain-text (.txt) or digital PDF file.";
   }
   if (file.size > MAX_UPLOAD_BYTES) {
     return `Choose a file that is ${MAX_UPLOAD_MIB} MB or smaller.`;
@@ -46,11 +89,15 @@ export function validateUpload(file: File): string | null {
 
 export function UploadPanel() {
   const router = useRouter();
+  const [docType, setDocType] = useState<DocumentType>("award_letter");
   const [busyLabel, setBusyLabel] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
 
-  async function requestAnalysis(request: RequestInit): Promise<LetterAnalysis> {
+  const text = copy[docType];
+  const samples: readonly Sample[] = docType === "syllabus" ? syllabusSamples : letterSamples;
+
+  async function requestAnalysis(request: RequestInit): Promise<Analysis> {
     const response = await fetch("/api/extract", { method: "POST", ...request });
     const payload: unknown = await response.json().catch(() => null);
 
@@ -59,15 +106,15 @@ export function UploadPanel() {
         const message = (payload as { error?: unknown }).error;
         if (typeof message === "string") throw new Error(message);
       }
-      throw new Error("We couldn't read that letter. Please try again.");
+      throw new Error("We couldn't read that file. Please try again.");
     }
 
-    const parsed = LetterAnalysisSchema.safeParse(payload);
-    if (!parsed.success) throw new Error("The letter response was incomplete. Please try again.");
+    const parsed = AnalysisSchema.safeParse(payload);
+    if (!parsed.success) throw new Error("The analysis response was incomplete. Please try again.");
     return parsed.data;
   }
 
-  function finishAnalysis(id: string, analysis: LetterAnalysis, source: AnalysisSource) {
+  function finishAnalysis(id: string, analysis: Analysis, source: AnalysisSource) {
     const saved: StoredAnalysis = {
       id,
       analysis,
@@ -78,8 +125,8 @@ export function UploadPanel() {
     router.push(`/letter/${encodeURIComponent(id)}`);
   }
 
-  async function trySample(sample: (typeof samples)[number]) {
-    setBusyLabel(sample.school);
+  async function trySample(sample: Sample) {
+    setBusyLabel(sample.title);
     setError(null);
     try {
       const analysis = await requestAnalysis({
@@ -88,9 +135,10 @@ export function UploadPanel() {
       });
       finishAnalysis(`sample-${sample.id}`, analysis, {
         kind: "sample",
-        label: `${sample.school} sample letter`,
-        mediaUrl: sample.mediaUrl,
-        mediaType: "image/png",
+        label: `${sample.title} sample`,
+        ...(sample.mediaUrl
+          ? { mediaUrl: sample.mediaUrl, mediaType: "image/png" as const }
+          : {}),
       });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "We couldn't open that sample.");
@@ -109,6 +157,7 @@ export function UploadPanel() {
     setError(null);
     const form = new FormData();
     form.set("file", file);
+    form.set("docType", docType);
 
     try {
       const analysis = await requestAnalysis({ body: form });
@@ -124,7 +173,7 @@ export function UploadPanel() {
           : {}),
       });
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "We couldn't read that letter.");
+      setError(caught instanceof Error ? caught.message : "We couldn't read that file.");
       setBusyLabel(null);
     }
   }
@@ -145,6 +194,27 @@ export function UploadPanel() {
 
   return (
     <div className="upload-experience">
+      <div className="segmented-control document-type-control" aria-label="Document type">
+        <button
+          type="button"
+          className={docType === "award_letter" ? "is-active" : ""}
+          onClick={() => setDocType("award_letter")}
+          aria-pressed={docType === "award_letter"}
+          disabled={Boolean(busyLabel)}
+        >
+          Award letter
+        </button>
+        <button
+          type="button"
+          className={docType === "syllabus" ? "is-active" : ""}
+          onClick={() => setDocType("syllabus")}
+          aria-pressed={docType === "syllabus"}
+          disabled={Boolean(busyLabel)}
+        >
+          Syllabus
+        </button>
+      </div>
+
       <div
         className={`upload-panel${dragging ? " upload-panel--dragging" : ""}`}
         onDragEnter={(event) => {
@@ -159,9 +229,9 @@ export function UploadPanel() {
       >
         <div className="upload-panel__number" aria-hidden="true">01</div>
         <div className="upload-panel__copy">
-          <span className="section-kicker">Start with your letter</span>
-          <h2>Drop the award letter here.</h2>
-          <p>We’ll turn the numbers into claims you can trace back to the page.</p>
+          <span className="section-kicker">{text.kicker}</span>
+          <h2>{text.heading}</h2>
+          <p>{text.blurb}</p>
           <div className="upload-panel__actions">
             <label className={`primary-button${busyLabel ? " is-disabled" : ""}`}>
               <input
@@ -171,7 +241,7 @@ export function UploadPanel() {
                 onChange={onFileChange}
                 disabled={Boolean(busyLabel)}
               />
-              {busyLabel ? "Reading letter…" : "Choose a letter"}
+              {busyLabel ? text.reading : text.choose}
             </label>
             <span className="upload-meta">Text or digital PDF · {MAX_UPLOAD_MIB} MB max</span>
           </div>
@@ -185,7 +255,7 @@ export function UploadPanel() {
       {busyLabel ? (
         <div className="status-message" role="status">
           <span className="status-spinner" aria-hidden="true" />
-          Reading {busyLabel}. Every claim is checked against the letter’s own text.
+          Reading {busyLabel}. Every claim is checked against the source’s own text.
         </div>
       ) : null}
       {error ? (
@@ -198,10 +268,10 @@ export function UploadPanel() {
       <section className="sample-section" aria-labelledby="sample-heading">
         <div className="sample-section__heading">
           <div>
-            <span className="section-kicker">No letter handy?</span>
-            <h2 id="sample-heading">Try sample letters</h2>
+            <span className="section-kicker">{text.sampleKicker}</span>
+            <h2 id="sample-heading">{text.sampleHeading}</h2>
           </div>
-          <p>Synthetic offers. Real financial-aid patterns.</p>
+          <p>{text.sampleBlurb}</p>
         </div>
         <div className="sample-grid">
           {samples.map((sample, index) => (
@@ -214,7 +284,7 @@ export function UploadPanel() {
             >
               <span className="sample-card__index">0{index + 1}</span>
               <span className="sample-card__body">
-                <strong>{sample.school}</strong>
+                <strong>{sample.title}</strong>
                 <small>{sample.detail}</small>
               </span>
               <span className="sample-card__arrow" aria-hidden="true">↗</span>

@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
 import type { LetterAnalysis } from "../lib/schema";
-import type { StoredAnalysis } from "../lib/client-store";
+import type { StoredLetterAnalysis } from "../lib/client-store";
 
 import { CompareTable } from "./compare-table";
 
@@ -43,7 +43,7 @@ const hiddenCostAnalysis: LetterAnalysis = {
   missing_info: ["Cost of attendance was not stated in this letter."],
 };
 
-const offer: StoredAnalysis = {
+const offer: StoredLetterAnalysis = {
   id: "juniper",
   createdAt: "2026-07-18T12:00:00.000Z",
   source: { kind: "sample", label: "Juniper sample" },
@@ -67,7 +67,7 @@ describe("CompareTable", () => {
   });
 
   test("shows total and unknown periods as unclear instead of false annual math", () => {
-    const unclearOffer: StoredAnalysis = {
+    const unclearOffer: StoredLetterAnalysis = {
       ...offer,
       id: "unclear",
       analysis: {
@@ -96,7 +96,7 @@ describe("CompareTable", () => {
   });
 
   test("annualizes semester COA and labels the stated basis", () => {
-    const semesterOffer: StoredAnalysis = {
+    const semesterOffer: StoredLetterAnalysis = {
       ...offer,
       id: "semester-coa",
       analysis: {
@@ -119,7 +119,7 @@ describe("CompareTable", () => {
     ["Total program Cost of Attendance $80,000", "$80,000 stated total"],
     ["Cost of Attendance $40,000", "$40,000 with period not stated"],
   ])("marks unsupported COA basis as not comparable", (sourceQuote, detail) => {
-    const unclearCoaOffer: StoredAnalysis = {
+    const unclearCoaOffer: StoredLetterAnalysis = {
       ...offer,
       id: sourceQuote,
       analysis: {

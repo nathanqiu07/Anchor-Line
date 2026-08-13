@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
 import type { LineItem } from "../lib/schema";
-import type { StoredAnalysis } from "../lib/client-store";
+import type { StoredLetterAnalysis } from "../lib/client-store";
 
 import { ClaimCard } from "./claim-card";
 import { LetterWorkspace } from "./letter-workspace";
@@ -38,7 +38,7 @@ function offerWith(
   transcription: string,
   lineItems: LineItem[],
   costQuote: string | null = null,
-): StoredAnalysis {
+): StoredLetterAnalysis {
   return {
     id: "overlap-offer",
     createdAt: "2026-07-18T12:00:00.000Z",
@@ -137,7 +137,7 @@ describe("ClaimCard", () => {
 
 describe("LetterWorkspace", () => {
   test("groups claims and renders matched source spans", () => {
-    const offer: StoredAnalysis = {
+    const offer: StoredLetterAnalysis = {
       id: "northstar",
       createdAt: "2026-07-18T12:00:00.000Z",
       source: { kind: "sample", label: "Northstar sample" },

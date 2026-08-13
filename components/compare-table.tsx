@@ -1,8 +1,8 @@
-import type { StoredAnalysis } from "../lib/client-store";
+import type { StoredLetterAnalysis } from "../lib/client-store";
 import { calculateOffer, warningsFor } from "../packs/financial-aid";
 
 interface CompareTableProps {
-  offers: StoredAnalysis[];
+  offers: StoredLetterAnalysis[];
 }
 
 const money = new Intl.NumberFormat("en-US", {

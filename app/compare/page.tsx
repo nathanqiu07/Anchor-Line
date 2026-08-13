@@ -5,13 +5,19 @@ import { useState, useSyncExternalStore } from "react";
 
 import { AppShell } from "../../components/app-shell";
 import { CompareTable } from "../../components/compare-table";
-import { listAnalyses, removeAnalysis, type StoredAnalysis } from "../../lib/client-store";
+import {
+  isLetterOffer,
+  listAnalyses,
+  removeAnalysis,
+  type StoredLetterAnalysis,
+} from "../../lib/client-store";
 
 export default function ComparePage() {
   const ready = useSyncExternalStore(subscribeToHydration, clientReady, serverReady);
   const [removedIds, setRemovedIds] = useState<Set<string>>(() => new Set());
-  const offers: StoredAnalysis[] = ready
-    ? listAnalyses().filter((offer) => !removedIds.has(offer.id))
+  // Comparison is a cost/aid table, so it is award-letter only; syllabi are not comparable here.
+  const offers: StoredLetterAnalysis[] = ready
+    ? listAnalyses().filter((offer) => isLetterOffer(offer) && !removedIds.has(offer.id)) as StoredLetterAnalysis[]
     : [];
 
   function remove(id: string) {

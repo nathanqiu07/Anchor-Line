@@ -39,6 +39,7 @@ class MemoryStorage implements Storage {
 }
 
 const analysis: LetterAnalysis = {
+  document_type: "award_letter",
   school_name: "Northstar College",
   award_year: "2026-2027",
   cost_of_attendance: {

@@ -232,6 +232,11 @@ button {
   gap: 24px;
 }
 
+/* The document-type switch sits above the drop zone; keep it to its own width, not full row. */
+.document-type-control {
+  justify-self: start;
+}
+
 .upload-panel {
   position: relative;
   display: grid;

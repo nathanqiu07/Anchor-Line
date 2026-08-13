@@ -39,7 +39,7 @@ describe("upload panel helpers", () => {
     ["letter.jpg", "image/jpeg"],
   ])("rejects %s, whose text would have to be guessed at", (name, type) => {
     expect(validateUpload(new File(["bytes"], name, { type }))).toBe(
-      "Choose a plain-text (.txt) or digital PDF award letter.",
+      "Choose a plain-text (.txt) or digital PDF file.",
     );
   });
 

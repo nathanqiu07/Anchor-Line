@@ -9,8 +9,7 @@
       "kind": "count",
       "value": "3",
       "source_quote": "Term: Fall 2026 · 3 credit hours",
-      "explanation": "This is the course's credit-hour (or unit) value, which counts toward your enrollment load.",
-      "normalized_name": "credit hours"
+      "explanation": "This is the course's credit-hour (or unit) value, which counts toward your enrollment load."
     },
     {
       "raw_label": "Office hours",
@@ -18,8 +17,7 @@
       "kind": "time",
       "value": "10:00 AM",
       "source_quote": "Instructor: Dr. Alex Moreno · Office hours: Tuesdays 10:00 AM",
-      "explanation": "This is a time on the course schedule, such as a class meeting or office hours.",
-      "normalized_name": "Office hours"
+      "explanation": "This is a time on the course schedule, such as a class meeting or office hours."
     },
     {
       "raw_label": "Midterm Exam",
@@ -27,8 +25,7 @@
       "kind": "percent",
       "value": "25%",
       "source_quote": "Midterm Exam 25%",
-      "explanation": "This is how much of the final grade this component is worth. Weights should total 100%.",
-      "normalized_name": "Midterm Exam"
+      "explanation": "This is how much of the final grade this component is worth. Weights should total 100%."
     },
     {
       "raw_label": "Final Exam",
@@ -36,8 +33,7 @@
       "kind": "percent",
       "value": "30%",
       "source_quote": "Final Exam 30%",
-      "explanation": "This is how much of the final grade this component is worth. Weights should total 100%.",
-      "normalized_name": "Final Exam"
+      "explanation": "This is how much of the final grade this component is worth. Weights should total 100%."
     },
     {
       "raw_label": "Weekly Quizzes",
@@ -45,8 +41,7 @@
       "kind": "percent",
       "value": "20%",
       "source_quote": "Weekly Quizzes 20%",
-      "explanation": "This is how much of the final grade this component is worth. Weights should total 100%.",
-      "normalized_name": "Weekly Quizzes"
+      "explanation": "This is how much of the final grade this component is worth. Weights should total 100%."
     },
     {
       "raw_label": "Laboratory Reports",
@@ -54,8 +49,7 @@
       "kind": "percent",
       "value": "15%",
       "source_quote": "Laboratory Reports 15%",
-      "explanation": "This is how much of the final grade this component is worth. Weights should total 100%.",
-      "normalized_name": "Laboratory Reports"
+      "explanation": "This is how much of the final grade this component is worth. Weights should total 100%."
     },
     {
       "raw_label": "Participation",
@@ -63,8 +57,7 @@
       "kind": "percent",
       "value": "10%",
       "source_quote": "Participation 10%",
-      "explanation": "This is how much of the final grade this component is worth. Weights should total 100%.",
-      "normalized_name": "Participation"
+      "explanation": "This is how much of the final grade this component is worth. Weights should total 100%."
     },
     {
       "raw_label": "A",
@@ -72,8 +65,7 @@
       "kind": "percent",
       "value": "93%",
       "source_quote": "A = 93%",
-      "explanation": "This is the score threshold for a letter grade — the minimum needed to earn it.",
-      "normalized_name": "A"
+      "explanation": "This is the score threshold for a letter grade — the minimum needed to earn it."
     },
     {
       "raw_label": "B",
@@ -81,8 +73,7 @@
       "kind": "percent",
       "value": "83%",
       "source_quote": "B = 83%",
-      "explanation": "This is the score threshold for a letter grade — the minimum needed to earn it.",
-      "normalized_name": "B"
+      "explanation": "This is the score threshold for a letter grade — the minimum needed to earn it."
     },
     {
       "raw_label": "C",
@@ -90,8 +81,7 @@
       "kind": "percent",
       "value": "73%",
       "source_quote": "C = 73%",
-      "explanation": "This is the score threshold for a letter grade — the minimum needed to earn it.",
-      "normalized_name": "C"
+      "explanation": "This is the score threshold for a letter grade — the minimum needed to earn it."
     },
     {
       "raw_label": "Late work",
@@ -99,8 +89,7 @@
       "kind": "percent",
       "value": "10%",
       "source_quote": "Late work: 10% deducted per day",
-      "explanation": "This is a deduction applied to late or missed work, so a late submission is worth less.",
-      "normalized_name": "Late work"
+      "explanation": "This is a deduction applied to late or missed work, so a late submission is worth less."
     },
     {
       "raw_label": "Attendance",
@@ -108,8 +97,7 @@
       "kind": "percent",
       "value": "2%",
       "source_quote": "Attendance: 2% of the grade is lost for each unexcused absence",
-      "explanation": "Attendance affects the grade here: missing class can lower what you earn.",
-      "normalized_name": "Attendance"
+      "explanation": "Attendance affects the grade here: missing class can lower what you earn."
     },
     {
       "raw_label": "Final exam date",
@@ -117,8 +105,7 @@
       "kind": "date",
       "value": "December 14",
       "source_quote": "Final exam date: December 14",
-      "explanation": "This is a date on the course calendar, such as a due date or an exam date.",
-      "normalized_name": "Final exam date"
+      "explanation": "This is a date on the course calendar, such as a due date or an exam date."
     }
   ],
   "transcription": "Riverton State University\nBIOL 101: Introduction to Biology — Syllabus\nTerm: Fall 2026 · 3 credit hours\nInstructor: Dr. Alex Moreno · Office hours: Tuesdays 10:00 AM\n\nGrading breakdown\nMidterm Exam 25%\nFinal Exam 30%\nWeekly Quizzes 20%\nLaboratory Reports 15%\nParticipation 10%\n\nGrading scale\nA = 93%\nB = 83%\nC = 73%\n\nCourse policies\nLate work: 10% deducted per day\nAttendance: 2% of the grade is lost for each unexcused absence\n\nKey dates\nFinal exam date: December 14",

@@ -6,7 +6,29 @@ import { useSyncExternalStore } from "react";
 
 import { AppShell } from "../../../components/app-shell";
 import { LetterWorkspace } from "../../../components/letter-workspace";
-import { listAnalyses, loadAnalysis, type StoredAnalysis } from "../../../lib/client-store";
+import { SyllabusWorkspace } from "../../../components/syllabus-workspace";
+import {
+  isLetterOffer,
+  isSyllabusOffer,
+  listAnalyses,
+  loadAnalysis,
+  type StoredAnalysis,
+} from "../../../lib/client-store";
+
+/** The heading pair differs by document: a school/year for a letter, a course/term for a syllabus. */
+function offerHeading(offer: StoredAnalysis): { title: string; subtitle: string } {
+  const analysis = offer.analysis;
+  if (analysis.document_type === "syllabus") {
+    return {
+      title: analysis.course_name ?? "Unnamed course",
+      subtitle: analysis.term ?? "Term not stated",
+    };
+  }
+  return {
+    title: analysis.school_name ?? "Unnamed school",
+    subtitle: analysis.award_year ?? "Award year not stated",
+  };
+}
 
 export default function LetterPage() {
   const params = useParams<{ id: string }>();
@@ -40,8 +62,8 @@ export default function LetterPage() {
                 <span aria-hidden="true">/</span>
                 <span>Analysis</span>
               </div>
-              <h1>{offer.analysis.school_name ?? "Unnamed school"}</h1>
-              <p>{offer.analysis.award_year ?? "Award year not stated"} · {offer.source.label}</p>
+              <h1>{offerHeading(offer).title}</h1>
+              <p>{offerHeading(offer).subtitle} · {offer.source.label}</p>
             </div>
             <nav className="page-actions" aria-label="Analysis navigation">
               <Link className="secondary-button" href="/">← Back</Link>
@@ -50,7 +72,11 @@ export default function LetterPage() {
               </Link>
             </nav>
           </header>
-          <LetterWorkspace offer={offer} />
+          {isSyllabusOffer(offer) ? (
+            <SyllabusWorkspace offer={offer} />
+          ) : isLetterOffer(offer) ? (
+            <LetterWorkspace offer={offer} />
+          ) : null}
         </main>
       )}
     </AppShell>

@@ -1,6 +1,11 @@
 import { z } from "zod";
 
-import { LetterAnalysisSchema, type LetterAnalysis } from "./schema";
+import {
+  AnalysisSchema,
+  type Analysis,
+  type LetterAnalysis,
+  type SyllabusAnalysis,
+} from "./schema";
 
 export const STORAGE_KEY = "anchor-lines:analyses";
 
@@ -15,7 +20,19 @@ export interface StoredAnalysis {
   id: string;
   createdAt: string;
   source: AnalysisSource;
-  analysis: LetterAnalysis;
+  analysis: Analysis;
+}
+
+/** A stored analysis narrowed to a specific document type, so a workspace gets exact fields. */
+export type StoredLetterAnalysis = StoredAnalysis & { analysis: LetterAnalysis };
+export type StoredSyllabusAnalysis = StoredAnalysis & { analysis: SyllabusAnalysis };
+
+export function isSyllabusOffer(offer: StoredAnalysis): offer is StoredSyllabusAnalysis {
+  return offer.analysis.document_type === "syllabus";
+}
+
+export function isLetterOffer(offer: StoredAnalysis): offer is StoredLetterAnalysis {
+  return offer.analysis.document_type !== "syllabus";
 }
 
 const StoredAnalysisSchema: z.ZodType<StoredAnalysis> = z.object({
@@ -27,7 +44,7 @@ const StoredAnalysisSchema: z.ZodType<StoredAnalysis> = z.object({
     mediaUrl: z.string().optional(),
     mediaType: z.enum(["image/png", "application/pdf"]).optional(),
   }),
-  analysis: LetterAnalysisSchema,
+  analysis: AnalysisSchema,
 });
 
 const transientUploadMedia = new Map<string, string>();

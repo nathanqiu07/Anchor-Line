@@ -88,8 +88,7 @@ async function main(): Promise<void> {
     client,
   );
   const json = `${JSON.stringify(result, null, 2)}\n`;
-  await writeFile(join(process.cwd(), "eval", "letters", "biology-101.json"), json);
-  await writeFile(join(process.cwd(), "eval", "candidates", "biology-101.json"), json);
+  await writeFile(join(process.cwd(), "eval", "syllabi", "biology-101.json"), json);
   console.log(`Wrote biology-101 syllabus fixture with ${result.items.length} items.`);
 }
 
