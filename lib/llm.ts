@@ -646,11 +646,12 @@ function normalizeSyllabusSemantics(analysis: SyllabusAnalysis): SyllabusAnalysi
     items: analysis.items.map((item) => {
       const kind = deriveMeasureKind(item.value);
       const classification = classifySyllabusItem(item.raw_label, item.source_quote, kind);
+      // A syllabus item's raw_label is already its display name, so unlike an award line item
+      // there is no separate normalized_name to store — only kind, category, and explanation.
       return {
         ...item,
         kind,
         category: classification.category,
-        normalized_name: classification.normalizedName,
         explanation: classification.explanation,
       };
     }),
