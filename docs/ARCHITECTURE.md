@@ -2,9 +2,20 @@
 
 > **This document is meant to be kept current.** If you change the extraction
 > contract (`lib/schema.ts`, `lib/prompts.ts`, `lib/llm.ts`), the anchoring
-> algorithm (`lib/anchor.ts`), or the financial-aid rules (`packs/financial-aid.ts`),
-> update the matching section here in the same change. Stale architecture docs
-> are worse than none — a reader will trust and act on what's written.
+> algorithm (`lib/anchor.ts`), the shared measure/binding core (`lib/measures.ts`),
+> or a domain pack (`packs/financial-aid.ts`, `packs/syllabus.ts`), update the
+> matching section here in the same change. Stale architecture docs are worse than
+> none — a reader will trust and act on what's written.
+
+> **Two document domains.** Anchor Lines began as an award-letter tool and now
+> also reads **college syllabi**, extracting every important number (grade
+> weights, grading-scale thresholds, assessment counts, penalties, credit hours,
+> dates, times). Both domains run through the same transcribe → extract →
+> provenance → deterministic-pack → client-anchor pipeline; the user picks the
+> domain with a document-type selector and the route dispatches on it
+> (`extractDocument`). Most of this document describes the award-letter path in
+> detail; the section **"Second document domain: syllabi"** covers what the
+> syllabus path does differently.
 
 Anchor Lines turns a college financial-aid award letter (`.txt` or digital PDF, ≤4 MB)
 into plain-language claims, where every claim is provably traceable back to
@@ -215,6 +226,57 @@ functions over already-verified data — no further model calls:
   separately, and computes a net-price estimate only when the COA period is
   actually comparable — an ambiguous COA period means "not comparable,"
   displayed as such, not papered over with a guess.
+
+## Second document domain: syllabi
+
+The syllabus path (`extractSyllabus` in `lib/llm.ts`, `packs/syllabus.ts`,
+`components/syllabus-workspace.tsx`) reuses the whole pipeline shape and the
+same trust guarantee — every number it shows is a verbatim token on an exact
+source line, or it renders **"not stated in syllabus."** What differs is small
+and deliberate:
+
+- **Numbers are generalized beyond dollars.** `lib/measures.ts` defines typed
+  measure tokens — `percent`, `points`, `count`, `hours`, `date`, `time`,
+  `number` — with `measureOccurrences(text, kind)` mirroring the award path's
+  `dollarOccurrences`. The label-binding math (`valueBoundToLabel`,
+  `labelOccurrences`) was lifted out of `lib/llm.ts` into `lib/measures.ts` so
+  both domains bind a value to the *unambiguously nearest* occurrence of its own
+  kind to its label; the dollar path calls the same function with numeric
+  occurrences, so its behavior is unchanged.
+- **The value is a verbatim string, not a parsed number.** A `SyllabusItem`
+  stores `value` exactly as written ("25%", "3", "December 14") plus a typed
+  `kind`. This keeps provenance a pure substring + binding check across
+  percentages, counts, dates, and times uniformly, and is why the schema keeps
+  `value: string`.
+- **Provenance binds per-claim but does not require full-line coverage.**
+  `assertSyllabusProvenance` checks transcription immutability, that each
+  `source_quote` is one exact transcription line, that `value` is a verbatim
+  substring of it, that `raw_label` is a verbatim label substring containing a
+  letter, and that the value is the nearest unambiguous occurrence of its kind to
+  the label. Unlike `assertProvenance`, it does **not** require every numeric
+  occurrence on a line to be claimed — a syllabus line legitimately carries
+  numbers we intentionally skip ("Week 3", a room number), so exhaustive coverage
+  would fail almost every real syllabus.
+- **Kind and category are re-derived, not trusted.** `normalizeSyllabusSemantics`
+  runs *before* provenance and sets each item's `kind` from the value's own token
+  shape (`deriveMeasureKind`) and its `category`/`explanation` from
+  `classifySyllabusItem`, so the anchored value is always bound to the kind
+  implied by the value itself, not the model's self-report.
+- **The gate is `assertSyllabus` / `isUsableSyllabusTextLayer`.** These require
+  syllabus context (grading/schedule/attendance/credit-hour headings) and a
+  couple of recognized measure-bearing lines, and raise `NotSyllabusError` /
+  `UnreadableLetterError` the same way the award gate does. There is no OCR
+  fallback here either.
+- **The deterministic pack** (`packs/syllabus.ts`) classifies each number into a
+  typed category, explains it from a glossary, and computes the sanity check
+  students care about most — whether the `grade_weight` percentages total 100% —
+  surfacing it and other cues (attendance affecting the grade, uncategorized
+  numbers) as warnings, exactly as `warningsFor` does for letters.
+
+The comparison view stays award-letter only (it is a cost/aid table); syllabi are
+excluded from it via `isLetterOffer`. Offline evaluation of the award letters
+(`eval/run-eval.ts`) is unchanged; the synthetic syllabus fixture lives in
+`eval/syllabi/` and is validated by `eval/syllabi.test.ts`.
 
 ## Client-side anchoring (`lib/anchor.ts`)
 

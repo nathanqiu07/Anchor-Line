@@ -4,6 +4,12 @@ Plain language you can check. Anchor Lines turns a college financial-aid award
 letter into plain-language claims, then anchors every claim back to the letter
 transcription so a student can inspect the evidence.
 
+It also reads **college syllabi**: pick **Syllabus** in the document-type
+selector and it extracts every important number — grade weights, grading-scale
+thresholds, assessment counts, late and attendance penalties, credit hours, and
+key dates and times — anchoring each one to its exact source line the same way,
+and flagging when the grade weights do not add up to 100%.
+
 It is a demonstration tool for understanding an award letter, not financial
 advice. Confirm awards, eligibility, renewal terms, and final costs with the
 school's financial-aid office.

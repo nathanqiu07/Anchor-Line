@@ -166,3 +166,21 @@ rejects non-Numbers rather than coercing, and returns -0 for an empty iterable.
 that ships its own. Verified against the Thornfield fixture: extraction is byte-identical
 to the pre-polyfill output — 2412 chars, 18 dollar-bearing lines, none carrying more than
 one amount — so the fix removes the error without moving the text. Suite 289 green.
+
+2026-08-12 - Added a second document domain: college syllabi. The app now extracts
+every important number from a syllabus (grade weights, grading-scale thresholds,
+assessment counts, late/attendance penalties, credit hours, dates, times) and anchors
+each to its exact source line, keeping the same provenance guarantee as award letters.
+`lib/measures.ts` generalizes the dollar-anchoring machinery into typed measure tokens
+(`percent`, `points`, `count`, `hours`, `date`, `time`, `number`) plus the shared
+`valueBoundToLabel` binding, which the award path now reuses unchanged. `lib/schema.ts`
+adds a `document_type` discriminant (defaulted for legacy award letters) and a
+`SyllabusAnalysis` shape whose `value` is a verbatim string, with an `AnalysisSchema`
+union. `packs/syllabus.ts` classifies each number, re-derives its kind from the value
+token, and flags when grade weights do not total 100%. `lib/llm.ts` gains
+`extractSyllabus`, a syllabus gate/provenance (per-claim binding, no full-line coverage
+requirement), and an `extractDocument` dispatcher; the route reads a `docType` field and
+serves a synthetic syllabus sample. The UI adds a document-type selector and a
+`SyllabusWorkspace` that reuses the anchored two-pane shell; comparison stays
+award-letter only. Award-letter offline eval is unchanged at 91.2% fields and 11/12
+anchors; the syllabus fixture lives in `eval/syllabi/` with its own test. Suite 343 green.
