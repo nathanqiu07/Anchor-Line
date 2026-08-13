@@ -1,0 +1,126 @@
+{
+  "document_type": "syllabus",
+  "course_name": "Introduction to Biology",
+  "term": "Fall 2026",
+  "items": [
+    {
+      "raw_label": "credit hours",
+      "category": "credit_hours",
+      "kind": "count",
+      "value": "3",
+      "source_quote": "Term: Fall 2026 · 3 credit hours",
+      "explanation": "This is the course's credit-hour (or unit) value, which counts toward your enrollment load.",
+      "normalized_name": "credit hours"
+    },
+    {
+      "raw_label": "Office hours",
+      "category": "schedule_time",
+      "kind": "time",
+      "value": "10:00 AM",
+      "source_quote": "Instructor: Dr. Alex Moreno · Office hours: Tuesdays 10:00 AM",
+      "explanation": "This is a time on the course schedule, such as a class meeting or office hours.",
+      "normalized_name": "Office hours"
+    },
+    {
+      "raw_label": "Midterm Exam",
+      "category": "grade_weight",
+      "kind": "percent",
+      "value": "25%",
+      "source_quote": "Midterm Exam 25%",
+      "explanation": "This is how much of the final grade this component is worth. Weights should total 100%.",
+      "normalized_name": "Midterm Exam"
+    },
+    {
+      "raw_label": "Final Exam",
+      "category": "grade_weight",
+      "kind": "percent",
+      "value": "30%",
+      "source_quote": "Final Exam 30%",
+      "explanation": "This is how much of the final grade this component is worth. Weights should total 100%.",
+      "normalized_name": "Final Exam"
+    },
+    {
+      "raw_label": "Weekly Quizzes",
+      "category": "grade_weight",
+      "kind": "percent",
+      "value": "20%",
+      "source_quote": "Weekly Quizzes 20%",
+      "explanation": "This is how much of the final grade this component is worth. Weights should total 100%.",
+      "normalized_name": "Weekly Quizzes"
+    },
+    {
+      "raw_label": "Laboratory Reports",
+      "category": "grade_weight",
+      "kind": "percent",
+      "value": "15%",
+      "source_quote": "Laboratory Reports 15%",
+      "explanation": "This is how much of the final grade this component is worth. Weights should total 100%.",
+      "normalized_name": "Laboratory Reports"
+    },
+    {
+      "raw_label": "Participation",
+      "category": "grade_weight",
+      "kind": "percent",
+      "value": "10%",
+      "source_quote": "Participation 10%",
+      "explanation": "This is how much of the final grade this component is worth. Weights should total 100%.",
+      "normalized_name": "Participation"
+    },
+    {
+      "raw_label": "A",
+      "category": "grading_scale",
+      "kind": "percent",
+      "value": "93%",
+      "source_quote": "A = 93%",
+      "explanation": "This is the score threshold for a letter grade — the minimum needed to earn it.",
+      "normalized_name": "A"
+    },
+    {
+      "raw_label": "B",
+      "category": "grading_scale",
+      "kind": "percent",
+      "value": "83%",
+      "source_quote": "B = 83%",
+      "explanation": "This is the score threshold for a letter grade — the minimum needed to earn it.",
+      "normalized_name": "B"
+    },
+    {
+      "raw_label": "C",
+      "category": "grading_scale",
+      "kind": "percent",
+      "value": "73%",
+      "source_quote": "C = 73%",
+      "explanation": "This is the score threshold for a letter grade — the minimum needed to earn it.",
+      "normalized_name": "C"
+    },
+    {
+      "raw_label": "Late work",
+      "category": "policy_penalty",
+      "kind": "percent",
+      "value": "10%",
+      "source_quote": "Late work: 10% deducted per day",
+      "explanation": "This is a deduction applied to late or missed work, so a late submission is worth less.",
+      "normalized_name": "Late work"
+    },
+    {
+      "raw_label": "Attendance",
+      "category": "policy_penalty",
+      "kind": "percent",
+      "value": "2%",
+      "source_quote": "Attendance: 2% of the grade is lost for each unexcused absence",
+      "explanation": "Attendance affects the grade here: missing class can lower what you earn.",
+      "normalized_name": "Attendance"
+    },
+    {
+      "raw_label": "Final exam date",
+      "category": "schedule_date",
+      "kind": "date",
+      "value": "December 14",
+      "source_quote": "Final exam date: December 14",
+      "explanation": "This is a date on the course calendar, such as a due date or an exam date.",
+      "normalized_name": "Final exam date"
+    }
+  ],
+  "transcription": "Riverton State University\nBIOL 101: Introduction to Biology — Syllabus\nTerm: Fall 2026 · 3 credit hours\nInstructor: Dr. Alex Moreno · Office hours: Tuesdays 10:00 AM\n\nGrading breakdown\nMidterm Exam 25%\nFinal Exam 30%\nWeekly Quizzes 20%\nLaboratory Reports 15%\nParticipation 10%\n\nGrading scale\nA = 93%\nB = 83%\nC = 73%\n\nCourse policies\nLate work: 10% deducted per day\nAttendance: 2% of the grade is lost for each unexcused absence\n\nKey dates\nFinal exam date: December 14",
+  "missing_info": []
+}

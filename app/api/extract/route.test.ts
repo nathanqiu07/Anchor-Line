@@ -1,18 +1,19 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-const { extractLetter } = vi.hoisted(() => ({ extractLetter: vi.fn() }));
+const { extractDocument } = vi.hoisted(() => ({ extractDocument: vi.fn() }));
 
-// Only extractLetter is stubbed; the real error classes and provider detection are kept
+// Only extractDocument is stubbed; the real error classes and provider detection are kept
 // so route mapping is tested against the types it actually receives in production.
 vi.mock("../../../lib/llm", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../../lib/llm")>()),
-  extractLetter,
+  extractDocument,
 }));
 
 import {
   ExtractionQuotaError,
   ExtractionValidationError,
   NotAwardLetterError,
+  NotSyllabusError,
   UnreadableLetterError,
 } from "../../../lib/llm";
 import {
@@ -54,10 +55,12 @@ function upload(
   {
     origin = "http://localhost",
     ip = "198.51.100.1",
-  }: { origin?: string | null; ip?: string } = {},
+    docType,
+  }: { origin?: string | null; ip?: string; docType?: string } = {},
 ) {
   const form = new FormData();
   if (file) form.set("file", file);
+  if (docType) form.set("docType", docType);
   const headers = new Headers({ "x-forwarded-for": ip });
   if (origin !== null) headers.set("origin", origin);
   return new Request("http://localhost/api/extract", {
@@ -69,7 +72,7 @@ function upload(
 
 describe("POST /api/extract", () => {
   beforeEach(() => {
-    extractLetter.mockReset();
+    extractDocument.mockReset();
     extractionGate.reset();
     delete process.env.GEMINI_API_KEY;
   });
@@ -85,7 +88,7 @@ describe("POST /api/extract", () => {
 
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ school_name: "Cedar Ridge University" });
-    expect(extractLetter).not.toHaveBeenCalled();
+    expect(extractDocument).not.toHaveBeenCalled();
   });
 
   test.each(["__proto__", "constructor", "toString"])(
@@ -101,7 +104,7 @@ describe("POST /api/extract", () => {
 
       expect(response.status).toBe(400);
       await expect(response.json()).resolves.toEqual({ error: "Invalid sampleId" });
-      expect(extractLetter).not.toHaveBeenCalled();
+      expect(extractDocument).not.toHaveBeenCalled();
     },
   );
 
@@ -122,7 +125,7 @@ describe("POST /api/extract", () => {
 
   test("accepts a charset-qualified text/plain upload", async () => {
     process.env.GEMINI_API_KEY = "test-key";
-    extractLetter.mockResolvedValue(validAnalysis);
+    extractDocument.mockResolvedValue(validAnalysis);
     const file = new File([letterText], "letter.txt", { type: "text/plain; charset=utf-8" });
 
     const response = await POST(upload(file, { ip: "198.51.100.7" }));
@@ -131,7 +134,7 @@ describe("POST /api/extract", () => {
 
   test("accepts exactly 4 MiB and rejects one byte over the shared limit", async () => {
     process.env.GEMINI_API_KEY = "test-key";
-    extractLetter.mockResolvedValue(validAnalysis);
+    extractDocument.mockResolvedValue(validAnalysis);
     const boundary = validFile("boundary.pdf", "application/pdf", 4 * 1024 * 1024);
     const accepted = await POST(upload(boundary, { ip: "198.51.100.2" }));
     expect(accepted.status).toBe(200);
@@ -144,7 +147,7 @@ describe("POST /api/extract", () => {
 
   test("rejects cross-origin and missing-origin browser uploads before paid work", async () => {
     process.env.GEMINI_API_KEY = "test-key";
-    extractLetter.mockResolvedValue(validAnalysis);
+    extractDocument.mockResolvedValue(validAnalysis);
     const file = validFile();
 
     for (const origin of ["https://evil.example", null]) {
@@ -152,12 +155,12 @@ describe("POST /api/extract", () => {
       expect(response.status).toBe(403);
       await expect(response.json()).resolves.toEqual({ error: "Upload origin is not allowed" });
     }
-    expect(extractLetter).not.toHaveBeenCalled();
+    expect(extractDocument).not.toHaveBeenCalled();
   });
 
   test("rate-limits paid extraction per IP without metering samples", async () => {
     process.env.GEMINI_API_KEY = "test-key";
-    extractLetter.mockResolvedValue(validAnalysis);
+    extractDocument.mockResolvedValue(validAnalysis);
     const file = validFile();
 
     for (
@@ -190,14 +193,14 @@ describe("POST /api/extract", () => {
   test("caps concurrent paid extractions and releases capacity afterward", async () => {
     process.env.GEMINI_API_KEY = "test-key";
     const releases: Array<(value: typeof validAnalysis) => void> = [];
-    extractLetter.mockImplementation(
+    extractDocument.mockImplementation(
       () => new Promise((resolve) => releases.push(resolve)),
     );
     const file = validFile();
 
     const first = POST(upload(file, { ip: "203.0.113.61" }));
     const second = POST(upload(file, { ip: "203.0.113.62" }));
-    await vi.waitFor(() => expect(extractLetter).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(extractDocument).toHaveBeenCalledTimes(2));
 
     const busy = await POST(upload(file, { ip: "203.0.113.63" }));
     expect(busy.status).toBe(503);
@@ -209,7 +212,7 @@ describe("POST /api/extract", () => {
     expect((await first).status).toBe(200);
     expect((await second).status).toBe(200);
 
-    extractLetter.mockResolvedValueOnce(validAnalysis);
+    extractDocument.mockResolvedValueOnce(validAnalysis);
     const after = await POST(upload(file, { ip: "203.0.113.64" }));
     expect(after.status).toBe(200);
   });
@@ -222,7 +225,7 @@ describe("POST /api/extract", () => {
 
   test("accepts an upload once a Gemini key is configured", async () => {
     process.env.GEMINI_API_KEY = "test-gemini-key";
-    extractLetter.mockResolvedValueOnce(validAnalysis);
+    extractDocument.mockResolvedValueOnce(validAnalysis);
     const response = await POST(upload(validFile()));
 
     expect(response.status).toBe(200);
@@ -231,7 +234,7 @@ describe("POST /api/extract", () => {
 
   test("maps provider quota exhaustion to 429 with a retry-later message", async () => {
     process.env.GEMINI_API_KEY = "test-gemini-key";
-    extractLetter.mockRejectedValueOnce(new ExtractionQuotaError("quota gone"));
+    extractDocument.mockRejectedValueOnce(new ExtractionQuotaError("quota gone"));
     const response = await POST(upload(validFile()));
 
     expect(response.status).toBe(429);
@@ -242,7 +245,7 @@ describe("POST /api/extract", () => {
 
   test("maps typed validation failures to 422", async () => {
     process.env.GEMINI_API_KEY = "test-key";
-    extractLetter.mockRejectedValueOnce(new ExtractionValidationError("invalid model output"));
+    extractDocument.mockRejectedValueOnce(new ExtractionValidationError("invalid model output"));
     const response = await POST(upload(validFile()));
 
     expect(response.status).toBe(422);
@@ -251,7 +254,7 @@ describe("POST /api/extract", () => {
 
   test("surfaces a non-letter semantic error", async () => {
     process.env.GEMINI_API_KEY = "test-key";
-    extractLetter.mockRejectedValueOnce(new NotAwardLetterError());
+    extractDocument.mockRejectedValueOnce(new NotAwardLetterError());
     const response = await POST(upload(validFile()));
 
     expect(response.status).toBe(422);
@@ -260,7 +263,7 @@ describe("POST /api/extract", () => {
 
   test("returns the extracted upload analysis", async () => {
     process.env.GEMINI_API_KEY = "test-key";
-    extractLetter.mockResolvedValueOnce(validAnalysis);
+    extractDocument.mockResolvedValueOnce(validAnalysis);
     const response = await POST(upload(validFile()));
 
     expect(response.status).toBe(200);
@@ -279,7 +282,7 @@ describe("POST /api/extract", () => {
     await expect(response.json()).resolves.toEqual({
       error: "File contents do not match the declared file type",
     });
-    expect(extractLetter).not.toHaveBeenCalled();
+    expect(extractDocument).not.toHaveBeenCalled();
   });
 
   test.each([
@@ -295,12 +298,12 @@ describe("POST /api/extract", () => {
     await expect(response.json()).resolves.toEqual({
       error: "File contents do not match the declared file type",
     });
-    expect(extractLetter).not.toHaveBeenCalled();
+    expect(extractDocument).not.toHaveBeenCalled();
   });
 
   test("tells a student what to do when a PDF turns out to be a scan", async () => {
     process.env.GEMINI_API_KEY = "test-key";
-    extractLetter.mockRejectedValueOnce(new UnreadableLetterError("pdf"));
+    extractDocument.mockRejectedValueOnce(new UnreadableLetterError("pdf"));
 
     const response = await POST(upload(validFile("scan.pdf", "application/pdf")));
 
@@ -308,5 +311,57 @@ describe("POST /api/extract", () => {
     const body = (await response.json()) as { error: string };
     expect(body.error).toContain("no readable text layer");
     expect(body.error).toContain(".txt");
+  });
+
+  test("serves the checked-in syllabus sample without an API key", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/extract", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ sampleId: "syllabus-1" }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({ document_type: "syllabus" });
+    expect(extractDocument).not.toHaveBeenCalled();
+  });
+
+  test("routes a syllabus upload to the syllabus document type", async () => {
+    process.env.GEMINI_API_KEY = "test-key";
+    extractDocument.mockResolvedValueOnce({ document_type: "syllabus", items: [] });
+
+    const response = await POST(
+      upload(validFile("syllabus.txt"), { ip: "198.51.100.9", docType: "syllabus" }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(extractDocument).toHaveBeenCalledWith(expect.anything(), "syllabus");
+  });
+
+  test("maps a non-syllabus semantic error to 422", async () => {
+    process.env.GEMINI_API_KEY = "test-key";
+    extractDocument.mockRejectedValueOnce(new NotSyllabusError());
+
+    const response = await POST(
+      upload(validFile("syllabus.txt"), { ip: "198.51.100.10", docType: "syllabus" }),
+    );
+
+    expect(response.status).toBe(422);
+    await expect(response.json()).resolves.toEqual({ error: "This doesn't look like a syllabus" });
+  });
+
+  test("names the syllabus schema in a syllabus validation failure", async () => {
+    process.env.GEMINI_API_KEY = "test-key";
+    extractDocument.mockRejectedValueOnce(new ExtractionValidationError("bad"));
+
+    const response = await POST(
+      upload(validFile("syllabus.txt"), { ip: "198.51.100.11", docType: "syllabus" }),
+    );
+
+    expect(response.status).toBe(422);
+    await expect(response.json()).resolves.toEqual({
+      error: "Model output did not match the syllabus schema",
+    });
   });
 });

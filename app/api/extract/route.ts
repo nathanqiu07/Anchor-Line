@@ -2,10 +2,12 @@ import {
   ExtractionQuotaError,
   ExtractionValidationError,
   NotAwardLetterError,
+  NotSyllabusError,
   UnreadableLetterError,
-  extractLetter,
+  extractDocument,
   isExtractionConfigured,
 } from "../../../lib/llm";
+import type { DocumentType } from "../../../lib/schema";
 import { clientIpKey, extractionGate } from "../../../lib/abuse-controls";
 import {
   hasValidUploadSignature,
@@ -17,8 +19,19 @@ import {
 import offer1 from "../../../eval/letters/cedar-ridge.json";
 import offer2 from "../../../eval/letters/juniper-tech.json";
 import offer3 from "../../../eval/letters/morrow-bay.json";
+import syllabus1 from "../../../eval/letters/biology-101.json";
 
-const samples = { "offer-1": offer1, "offer-2": offer2, "offer-3": offer3 };
+const samples = {
+  "offer-1": offer1,
+  "offer-2": offer2,
+  "offer-3": offer3,
+  "syllabus-1": syllabus1,
+};
+
+/** The two document domains the pipeline supports; anything else falls back to an award letter. */
+function documentTypeFrom(value: unknown): DocumentType {
+  return value === "syllabus" ? "syllabus" : "award_letter";
+}
 
 /**
  * Reasoning models are slow: one live text-layer extraction of a dense letter measured
@@ -64,6 +77,7 @@ export async function POST(request: Request): Promise<Response> {
   if (!hasValidUploadSignature(mimeType, bytes)) {
     return error("File contents do not match the declared file type", 415);
   }
+  const documentType = documentTypeFrom(form?.get("docType"));
   if (!isExtractionConfigured()) {
     return error("Extraction service is not configured", 503);
   }
@@ -76,7 +90,7 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   try {
-    const analysis = await extractLetter({ mimeType, bytes });
+    const analysis = await extractDocument({ mimeType, bytes }, documentType);
     return Response.json(analysis);
   } catch (caught) {
     if (caught instanceof ExtractionQuotaError) {
@@ -86,15 +100,24 @@ export async function POST(request: Request): Promise<Response> {
       );
     }
     if (caught instanceof ExtractionValidationError) {
-      return error("Model output did not match the award-letter schema", 422);
+      return error(
+        documentType === "syllabus"
+          ? "Model output did not match the syllabus schema"
+          : "Model output did not match the award-letter schema",
+        422,
+      );
     }
     if (caught instanceof NotAwardLetterError) {
       return error("This doesn't look like an award letter", 422);
     }
+    if (caught instanceof NotSyllabusError) {
+      return error("This doesn't look like a syllabus", 422);
+    }
     if (caught instanceof UnreadableLetterError) {
+      const document = documentType === "syllabus" ? "syllabus" : "letter";
       return error(
         caught.kind === "pdf"
-          ? "This PDF has no readable text layer, so it is probably a scan. Copy the letter's text into a .txt file and check the figures before uploading."
+          ? `This PDF has no readable text layer, so it is probably a scan. Copy the ${document}'s text into a .txt file and check the figures before uploading.`
           : "This text file could not be read. Save it as plain UTF-8 text and try again.",
         415,
       );
