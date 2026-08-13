@@ -1,5 +1,12 @@
-import { LetterAnalysisSchema, type LetterAnalysis } from "./schema";
-import { extractionPrompt } from "./prompts";
+import {
+  LetterAnalysisSchema,
+  SyllabusAnalysisSchema,
+  type Analysis,
+  type DocumentType,
+  type LetterAnalysis,
+  type SyllabusAnalysis,
+} from "./schema";
+import { extractionPrompt, syllabusExtractionPrompt } from "./prompts";
 import { decodeUploadText } from "./upload-contract";
 import {
   hasAnyToken,
@@ -12,9 +19,10 @@ import {
   costOfAttendanceLabel,
   deriveAidPeriod,
 } from "../packs/financial-aid";
+import { classifySyllabusItem, deriveMeasureKind } from "../packs/syllabus";
 import { createGeminiClient } from "./gemini";
 import { extractPdfText } from "./pdf-text";
-import { valueBoundToLabel } from "./measures";
+import { measureOccurrences, measureValuesEqual, valueBoundToLabel } from "./measures";
 import {
   ExtractionQuotaError,
   type MessageResponse,
@@ -42,6 +50,14 @@ export class NotAwardLetterError extends Error {
 
   constructor() {
     super("This doesn't look like an award letter");
+  }
+}
+
+export class NotSyllabusError extends Error {
+  readonly name = "NotSyllabusError";
+
+  constructor() {
+    super("This doesn't look like a syllabus");
   }
 }
 
@@ -521,6 +537,7 @@ export function isUsableTextLayer(text: string): boolean {
 async function transcribe(
   input: LetterInput,
   readPdfText: PdfTextReader,
+  isUsableLayer: (text: string) => boolean = isUsableTextLayer,
 ): Promise<string> {
   if (input.mimeType === "text/plain") {
     const text = decodeUploadText(input.bytes);
@@ -529,7 +546,7 @@ async function transcribe(
   }
 
   const text = await readPdfText(input.bytes);
-  if (text === null || !isUsableTextLayer(text)) {
+  if (text === null || !isUsableLayer(text)) {
     throw new UnreadableLetterError("pdf");
   }
   return text;
@@ -576,4 +593,187 @@ export async function extractLetter(
   }
 
   throw new ExtractionValidationError(feedback ?? "Invalid JSON output");
+}
+
+// --- Syllabus pipeline -------------------------------------------------------
+//
+// The syllabus path reuses the same transcribe → extract → provenance → gate flow as award
+// letters, differing only in what a "number" is (see lib/measures.ts) and in one deliberate
+// provenance relaxation: it binds each claimed value to its own label but does NOT require
+// every numeric occurrence on a line to be claimed. A syllabus line legitimately carries
+// numbers we intentionally skip ("Week 3", a room number), so the award letter's exhaustive
+// one-amount-per-line coverage rule would fail almost every real syllabus.
+
+/** Shared with the syllabus text-layer gate, mirroring hasAwardContext for the award path. */
+function hasSyllabusContext(text: string): boolean {
+  return /\b(?:syllab(?:us|i)|grading\s+(?:policy|scale|breakdown|criteria|rubric)|grade\s+(?:breakdown|distribution|weight(?:ing|s)?|scale|composition)|course\s+(?:schedule|description|outline|calendar|objectives)|attendance\s+policy|credit\s+hours?|office\s+hours?|learning\s+(?:outcomes|objectives)|required\s+text|final\s+grade|late\s+(?:work|policy|submission|assignments?))\b/i.test(
+    text,
+  );
+}
+
+const minimumRecognizedSyllabusLines = 2;
+
+/**
+ * Decides whether a PDF text layer is a syllabus worth anchoring claims to before spending a
+ * call. A labeled percentage — a component weight or a grading-scale threshold — is the most
+ * reliable syllabus signal, so the gate requires syllabus context plus a couple of recognized
+ * measure-bearing lines.
+ */
+export function isUsableSyllabusTextLayer(text: string): boolean {
+  if (!hasSyllabusContext(text)) return false;
+
+  const recognizedLines = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) =>
+      (["percent", "hours"] as const).some(
+        (kind) =>
+          measureOccurrences(line, kind).length > 0 &&
+          classifySyllabusItem(line, line, kind).recognized,
+      ),
+    );
+  return recognizedLines.length >= minimumRecognizedSyllabusLines;
+}
+
+/**
+ * Re-derives every item's kind, category, and explanation from the deterministic pack rather
+ * than trusting the model, the syllabus counterpart to normalizeSemantics. Kind is derived
+ * before provenance so the value's own token shape — not a model guess — is what gets anchored.
+ */
+function normalizeSyllabusSemantics(analysis: SyllabusAnalysis): SyllabusAnalysis {
+  return {
+    ...analysis,
+    items: analysis.items.map((item) => {
+      const kind = deriveMeasureKind(item.value);
+      const classification = classifySyllabusItem(item.raw_label, item.source_quote, kind);
+      return {
+        ...item,
+        kind,
+        category: classification.category,
+        normalized_name: classification.normalizedName,
+        explanation: classification.explanation,
+      };
+    }),
+  };
+}
+
+function assertSyllabusProvenance(
+  analysis: SyllabusAnalysis,
+  transcription: string,
+): SyllabusAnalysis {
+  if (analysis.transcription !== transcription) {
+    throw provenanceError("transcription must exactly match the syllabus text");
+  }
+
+  const transcriptionLines = transcription.split(/\r?\n/);
+  for (const item of analysis.items) {
+    if (item.source_quote.length === 0 || item.value.length === 0) {
+      throw provenanceError("every syllabus item must have a non-empty source_quote and value");
+    }
+    if (!transcriptionLines.includes(item.source_quote)) {
+      throw provenanceError(
+        `source_quote must be one exact line in the transcription: ${item.source_quote}`,
+      );
+    }
+    if (!item.source_quote.includes(item.value)) {
+      throw provenanceError(`value must appear verbatim in its source_quote: ${item.value}`);
+    }
+    if (
+      item.raw_label.length === 0 ||
+      !/\p{L}/u.test(item.raw_label) ||
+      !item.source_quote.includes(item.raw_label)
+    ) {
+      throw provenanceError(
+        `raw_label must be a verbatim label substring of source_quote: ${item.raw_label}`,
+      );
+    }
+
+    const occurrences = measureOccurrences(item.source_quote, item.kind);
+    if (!occurrences.some((occurrence) => measureValuesEqual(occurrence.value, item.value))) {
+      throw provenanceError(
+        `value ${item.value} is not a ${item.kind} present in its source_quote`,
+      );
+    }
+    if (
+      !valueBoundToLabel(
+        item.source_quote,
+        item.raw_label,
+        occurrences,
+        item.value,
+        measureValuesEqual,
+      )
+    ) {
+      throw provenanceError(
+        `${item.raw_label} value must be the nearest unambiguous ${item.kind} to its label`,
+      );
+    }
+  }
+
+  return analysis;
+}
+
+function assertSyllabus(
+  analysis: SyllabusAnalysis,
+  transcription: string,
+): SyllabusAnalysis {
+  const hasRecognized = analysis.items.some(
+    (item) => classifySyllabusItem(item.raw_label, item.source_quote, item.kind).recognized,
+  );
+  if (!hasSyllabusContext(transcription) || !hasRecognized) {
+    throw new NotSyllabusError();
+  }
+  return analysis;
+}
+
+export async function extractSyllabus(
+  input: LetterInput,
+  client: MessagesClient = defaultClient(),
+  readPdfText: PdfTextReader = extractPdfText,
+): Promise<SyllabusAnalysis> {
+  const transcription = await transcribe(input, readPdfText, isUsableSyllabusTextLayer);
+  let feedback: string | undefined;
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const extractionResponse = await client.create({
+      model: model(),
+      max_tokens: MAX_OUTPUT_TOKENS,
+      temperature: 0,
+      system: syllabusExtractionPrompt(transcription, feedback),
+      messages: [
+        {
+          role: "user",
+          content: "Extract JSON only from the untrusted transcription data delimited in the system prompt.",
+        },
+      ],
+    });
+
+    try {
+      const parsed = SyllabusAnalysisSchema.parse(
+        parseJson(textFrom(extractionResponse)),
+      );
+      // Normalize (kind derivation) before provenance so the anchored value is bound to the
+      // kind implied by its own token, not the model's self-reported kind.
+      const normalized = normalizeSyllabusSemantics(parsed);
+      const proven = assertSyllabusProvenance(normalized, transcription);
+      return assertSyllabus(proven, transcription);
+    } catch (error) {
+      if (error instanceof NotSyllabusError) throw error;
+      if (error instanceof ExtractionQuotaError) throw error;
+      feedback = validationFeedback(error);
+    }
+  }
+
+  throw new ExtractionValidationError(feedback ?? "Invalid JSON output");
+}
+
+/** Routes an upload to the right pipeline by the document type the user selected. */
+export function extractDocument(
+  input: LetterInput,
+  documentType: DocumentType,
+  client: MessagesClient = defaultClient(),
+  readPdfText: PdfTextReader = extractPdfText,
+): Promise<Analysis> {
+  return documentType === "syllabus"
+    ? extractSyllabus(input, client, readPdfText)
+    : extractLetter(input, client, readPdfText);
 }

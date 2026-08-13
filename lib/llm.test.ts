@@ -17,6 +17,7 @@ Direct Unsub $5,500
 Federal Work-Study $2,500
 Amounts are offered for the academic year.`;
 const analysis = {
+  document_type: "award_letter",
   school_name: "Cedar Ridge University",
   award_year: "2026-2027",
   cost_of_attendance: {
@@ -71,6 +72,7 @@ function singleItemAnalysis(
   amount: number,
 ) {
   return {
+    document_type: "award_letter",
     school_name: "Northstar College",
     award_year: null,
     cost_of_attendance: { amount: null, source_quote: null },
@@ -977,6 +979,7 @@ Federal Pell Grant $3,200`;
     const nonMonetaryTranscription =
       "Cedar Ridge University\nFinancial Aid Offer\nFederal Work-Study amount will be determined";
     const nonMonetaryAnalysis = {
+      document_type: "award_letter",
       school_name: "Cedar Ridge University",
       award_year: null,
       cost_of_attendance: { amount: null, source_quote: null },
