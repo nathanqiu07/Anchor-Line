@@ -11,8 +11,7 @@
     "test": "vitest run --passWithNoTests",
     "make-fixtures": "tsx eval/make-fixtures.ts",
     "eval": "tsx eval/run-eval.ts",
-    "eval:live": "tsx --env-file-if-exists=.env.local eval/live-extract.ts",
-    "gen:syllabi": "tsx --env-file-if-exists=.env.local eval/generate-syllabi.ts"
+    "eval:live": "tsx --env-file-if-exists=.env.local eval/live-extract.ts"
   },
   "dependencies": {
     "next": "^16.2.11",

@@ -38,8 +38,6 @@ yarn-error.log*
 
 # sensitive local fixtures
 /real-letters/
-# generated synthetic syllabus testing set (npm run gen:syllabi)
-/test-syllabi/
 
 # vercel
 .vercel
