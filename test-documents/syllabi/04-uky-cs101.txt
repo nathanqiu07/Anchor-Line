@@ -1,0 +1,36 @@
+CS 101 Introduction to Computers Spring 2022 Syllabus - Grading
+
+Grades are determined by:
+
+Midterm Written Test 250
+Final Written Test 250
+Lab Test 1 on Windows/Excel90
+Lab Test 2 on MS Excel 100
+Lab Test 3 on MS Access 110
+HTML Project 56
+Alice Project 40
+Zybook Homework 22
+Attendance at Lectures 56
+Attending First Lab
+First Lab Tasks 10
+Attendance at Last Lab 16
+
+Your grade is calculated as a percentage of 1000 points.
+That is the sum of the components of the class.
+Each attendance at lecture (Quiz) is worth 2 points.
+
+Grading Scale: 90-100% = A
+
+80-89.9% = B
+70-79.9% = C
+60-69.9% = D
+below 60 = E
+
+Bonus Points
+
+Students can earn up to 9 bonus
+points. They will be added to the student's final point total.
+One point is given for each Open Lab attended
+during the semester, up to 9 points.
+
+All policies associated with this course are subject to revision. Reasonable notification will be provided to students before any major changes are made.

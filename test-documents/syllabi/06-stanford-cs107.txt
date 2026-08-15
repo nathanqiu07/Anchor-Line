@@ -1,0 +1,180 @@
+General Information and Syllabus
+
+NOTE: this website is out of date. This is the course web site from a past quarter. If you are a current student taking the course, you should visit the current class web site instead. If the current website is not yet visible by going to cs107.stanford.edu, it may be accessible by visiting this link until the new page is mounted at this address. Please be advised that courses' policies change with each new quarter and instructor, and any information on this out-of-date page may not apply to you.
+
+Based on a document by Julie Zelenski, Cynthia Lee, and others
+Last updated June 22nd, 2024
+Instructor: Jerry Cain (jerry@cs.stanford.edu)
+Head CA: Ola Adekola (oadekola@stanford.edu)
+Helper Hours on helper hours calendar
+All course staff: See front page
+Course Essentials
+
+The class website for CS107 is located at https://cs107.stanford.edu.
+Please check the course website regularly, as we will post important announcements there alongside the course schedule, lecture materials, handouts, assignments, and more.
+
+We hold lectures on Mondays, Wednesdays and Fridays from 10:30AM - 11:20AM in NVIDIA Auditorium.
+
+We will be using Canvas to store lecture recordings and access Zoom links for remote helper hours. Access our Canvas course.
+
+Visit helper hours if you have specific debugging or conceptual questions.
+
+The myth servers are our remote workspaces for completing programming assignments. Read more in our getting started guide
+
+Course Overview
+CS107 is the third course in Stanford's introductory programming sequence. The CS106 courses provide you with a solid foundation in programming methodology and abstractions, and CS107 follows on this to build up and expand your breadth and depth of programming experience and techniques. The course will work from the C programming language down to the microprocessor to de-mystify the machine. With a complete understanding of how computer systems execute programs and manipulate data, you will become a more effective programmer, especially in dealing with issues of debugging, performance, memory, and robustness. Topics covered include: the C programming language, data representation, machine-level code, computer arithmetic, elements of code compilation, optimization of memory and runtime performance, and memory organization and management.
+CS107ACE
+CS107ACE, also called CS107A, Pathfinders (or ACE), is a supplementary instruction program that meets for a weekly section and holds Pathfinders-specific review sessions. CS107ACE is application-only; CS107ACE is done in addition to all the normal requirements for CS107. You will receive an extra unit of course credit for the work you do in this program. Enrollment in CS107ACE is by application, and you can find more information at this link: click here. Once enrollment decisions are made, students who are accepted will then be given a permission number to enroll in CS107ACE on Axess. If you have questions about CS107ACE, please email the ACE CA (contact information listed on the course homepage).
+Prerequisites
+The prerequisite for CS107 is CS106B (or equivalent). You should have practical C/C++ skills using recursion, dynamic data structures (pointers, linked lists, trees, graphs), data abstraction, classic data structures (lists, stacks, queues, sets, maps), and standard algorithms (searching, sorting, hashing). You should have an appreciation of the intrinsic value of good engineering and design and you will be expected to produce well-decomposed, readable code. Come talk with us if you need help determining the right course for you.
+Units
+If you are a matriculated Stanford graduate student, you may enroll in CS107 for 3-5 units based on your schedule. Otherwise, you are required to enroll in CS107 for 5 units. In particular, anyone enrolled as a Stanford undergraduate must register for the full 5 units, or you will not be assigned a grade in the course. Taking the course for reduced units does not alter the course requirements.
+Guiding Principles
+We have designed the course to the best of our ability to provide flexibility. There are campus resources, such as accommodations, undergraduate advising directors, well-being coaches, counselors, academic coaches, Hume Center writing tutors, and the FLI opportunity fund for broader needs you might have. If there are additional ways we can support you in the course, please feel encouraged to reach out to us. Without requesting or expecting details of your situation, we will do everything we can to ensure your course learning is productive and enjoyable.
+Stanford as an institution is committed to the highest quality education, and as your teaching team, our first priority is to uphold your educational experience. To that end we are committed to following the syllabus as written here, including through short or long-term disruptions, such as public health emergencies, natural disasters, or protests and demonstrations. However, there may be extenuating circumstances that necessitate some changes. Should adjustments be necessary we will communicate clearly and promptly to ensure you understand the expectations and are positioned for successful learning.
+Course Accommodations
+If you are ever sick, encounter an emergency, or enduring some other exceptional circumstance, we have a variety of accommodation mechanisms for each course component, and we encourage you to reach out to the instructor and CAs to let us know how we as a course staff can help! The accommodation mechanisms include:
+
+extended time on assignments (see assignment late policy)
+attending a makeup lab or getting an excused lab absence (see labs)
+accommodations for exams due to illness or other emergencies (see exams)
+students who are ill or need to be away from campus for a family or personal emergency may temporarily attend all helper hours remotely with course staff permission (see Getting Help)
+
+If you feel ill or are sick, for the wellbeing of yourself and others, please stay home, take care of yourself, take advantage of these accommodations, and reach out to us - we never want you to feel that you must attend class if you are not feeling well! Similarly, if you have an emergency or are suffering from some exceptional circumstance, please take advantage of these accommodations and reach out to us so that we can help.
+Course Goals
+The goals for CS107 are for students to gain mastery of
+
+writing C programs with complex use of memory and pointers
+an accurate model of the address space of C programs
+the compile/runtime behavior of C programs
+
+to achieve competence in
+
+translating C to/from assembly
+writing programs that respect the limitations of computer arithmetic
+identifying bottlenecks and improving runtime performance
+working effectively in a Unix development environment
+
+and have exposure to
+
+the basics of computer architecture
+understanding compilers and disassemblers
+
+Course Environment
+In CS107, there will be significant programming assignments and you can expect to work hard and be challenged by this course. Your effort will really pay off - as you master the concept and advance your programming skills to the next level, you will be able to apply those skills to future projects! To make that happen for everyone, we strive to create an inclusive and equitable class. We further depend on you to help each other obtain excellence rather than mistaking Stanford or this class as zero-sum. We ask that you do your part by seeking to promote the success of others, and by treating each other in ways that respect and celebrate the diversity of talent that is drawn to our exciting field of Computer Science. Here are several aspects of our policy for creating an inclusive and equitable class:
+
+Preparation: Perhaps more than many other subjects, students come to computer science with greatly varying previous exposure to the subject. Regardless of your background, as long as you meet the course prerequisites, you are well-prepared to succeed in CS107. Just ask the students who are now your CAs!
+
+Classroom Environment: We are happy to answer questions you have through various course support channels (helper hours, discussion forum, etc.). However, during lectures, we request that any questions you ask be clarifications for yourself or others of the course material being discussed, rather than a question or comment intended to demonstrate additional knowledge beyond the scope of the current topic or the course, which may intimidate or discourage other students. If you do have such questions or comments, we are more than happy to discuss them during helper hours, or before/after any lecture!
+
+Access and Accommodations: Stanford is committed to providing equal educational opportunities for disabled students. Disabled students are a valued and essential part of the Stanford community. We welcome you to our class. If you experience disability, please register with the Office of Accessible Education (OAE). Professional staff will evaluate your needs, support appropriate and reasonable accommodations, and prepare an Academic Accommodation Letter for faculty. To get started, or to re-initiate services, please visit oae.stanford.edu. If you already have an Academic Accommodation Letter, we invite you to share your letter with us. Academic Accommodation Letters should be shared at the earliest possible opportunity so we may partner with you and OAE to identify any barriers to access and inclusion that might be encountered in your experience of this course.
+
+Students who are immunocompromised should register with the OAE as soon as possible.
+Student athletes who anticipate challenges in being able to participate in class or submit assignments on time should speak to a course instructor or teaching assistant as soon as possible about available alternatives or allowances.
+
+Name and Pronouns: We want you to be you in our class. You are always welcome to put your preferred name on all classwork and exams. If you have a name and/or pronoun that doesn’t match our registrar-provided class roster, please let us know and we will ensure that we use it in our class.
+
+Course Expenses: If obtaining any material or resource for use in our class presents a financial hardship for you, please let us know and we will work with you to accommodate.
+
+Feedback: Please do not hesitate to reach out to the CAs or the instructor, anonymously if you prefer (there is an anonymous feedback link on the main page of the course website), if any aspect of our course or community can be improved.
+
+Course Structure
+Course Grades
+Final grades for the course will be determined using the following weights:
+
+40% Assignments
+10% Lab Participation
+20% Midterm Exam
+30% Final Exam
+
+When the exam median is below 80%, that median is curved up to 80, the highest grade is curved up to 100, and all other scores are scaled up proportionally.
+If you choose to take the course CR/NC, your final grade must be satisfactory or better--in other words, you need a C- or better to get a CR.
+Lecture
+Lectures are held in person on Mondays, Wednesdays, and Fridays. The best way to take advantage of all that lecture has to offer is to attend live in person. You can ask questions, participate in activities, and guide our focus in lecture based on your questions.
+
+Because CS107 is on SCPD (for professional development students) this quarter, the course lectures are recorded for later viewing. (You can find a full list of when courses are offered on SCPD here).
+
+Labs
+In addition to lecture, you must also sign up for a weekly hands-on, in-person lab led by one of our CAs. During the lab, students will work in small groups on guided exercises. Labs encourage participatory collaborative learning - the goal is for everyone to come away with a clear understanding of the lab concepts which will complement the assignments.
+Part of your course grade comes from arriving on time, attending, participating in and completing the work in your lab each week. At the end of the lab, you will submit a checkoff sheet to record your lab participation / attendance grade. Arriving late or leaving early will result in not receiving lab credit.
+You must submit your lab time preferences using a link posted on the main course webpage starting on Wed Jan 8 5:00 pm PDT. Note that signups are not first-come, first-serve; you may submit your preferences any time up to Sun Jan 12 5:00 pm PDT. You may also come back and update your preferences until this time as well. Our typical weekly schedule offers labs Wednesdays and Thursdays at various times throughout the day. Labs begin the second week of classes. Note that you must sign up for labs via the course website (you do not sign up for labs on Axess).
+
+If you have an extenuating circumstance (illness, emergency, etc.) and cannot make any labs during a given week, please email the course instructor for accommodations. Otherwise, if you do have to miss attending the lab entirely, we strongly encourage you to work through the exercises for your own benefit, but there is no makeup credit for missed participation.
+Assignments
+There will be seven assignments throughout the quarter, all of which are to be done individually. Assignments are due at 11:59pm PT sharp on the dates specified and are written and submitted electronically using the myth cluster of Unix workstations in the Gates Computer Science Building. These machines are accessible remotely from other machines such as your personal computer, and they are pre-installed with all software used for labs and assignments. Students edit, compile, and debug on the myth systems using a suite of open source development tools including gcc, make, gdb, and valgrind.
+Assignments may consist of written portions and coding portions, and are graded and returned to you electronically via the course website. The course staff grades each programming portion on functionality (is the program’s behavior correct from an external perspective?) and style ("code review" - is the code clean, well-written and elegant?). Functionality is measured by how successfully the program executes on a comprehensive set of test cases. We create our test suite by working from the original program specification to identify a list of expected behaviors and write a test case for each. We use the autotester to run a submission on each test and award points for each successful result. Thus, the resulting functionality score is a direct reflection of how much observably correct behavior your program exhibited. This process is completely automated; the grader does not search your code to find bugs and deduct for them, nor do they appraise the code and award points for tasks that are attempted or close to correct. There may also be some limited points awarded manually by TAs for other functionality aspects not covered in the automated test cases.
+The total number of points for an assignment is noted in its writeup. The points indicate the weight of that assignment relative to the others; i.e. an assignment graded out of 100 points has twice the weight of one graded out of 50.
+Style is measured via several quality metrics (such as building cleanly, cleanly running under Valgrind, etc.) as well as a code review by the course staff. The style guide outlines further guidelines. Your style score is mapped to the following scale; from past experience, most grades will be ok and -.
+
++ An outstanding job; reflects code that is notably clean, elegant and readable, and could be used as course example code for good style. This grade is given out very rarely, since the solutions to so many of the problems in the first five assignments are so short that it's difficult for one's style to stand out as breathtaking.
+ok A good job; reflects code that demonstrates solid effort and is fairly successful at meeting expectations, but also has opportunities for improvement.
+– Has larger problems, but shows some effort and understanding. There were either large concerns, or a multitude of smaller concerns, in the submission.
+–– Shows many significant issues and represents minimally passing work.
+0 No work submitted, or barely any changes made to the starter code.
+
+Using these categories means that the course staff can focus on the assignment’s learning goals rather than spending time justifying each point. Our goal is to maximize the learning experience in doing the assignments, and we have found the "bucket" grading system to work much better for style feedback than assigning numeric grades from a pedagogical perspective over many quarters of experience.
+Disputes about homework grading must be submitted to the course staff within 1 week of grades being released. For more information about the assignment grading process, please see our page on how assignments are graded.
+Assignment Late Policy
+We understand everyone is busy, but falling behind on assignments just leads to more problems, and it interferes with our ability to code review your review and return grades in a timely manner.
+All programming assignments are due a minute before midnight, Stanford time. If you need to submit an assignment after the deadline, you still can. But doing so places a cap on the maximum number of points you can get, depending on how late you submit.
+
+If you submit an assignment before the published deadline, then you can potentially get 100% of the points. Seems fair, no?
+If you submit an assignment after the deadline, but within 24 hours, you can get at most 95% of the points. This doesn't mean we impose a 5% penalty regardless of your final score. It means that all scores between 96% and 100% are demoted to 95%, but all other scores are left alone. If your assignment is severely broken at the time you would normally need to submit, then you have a good reason to take an additional 24 hours to increase your score, as it can only go up. If your program is pretty much working with no obvious flaws, then you might submit it by the published deadline.
+If you submit an assignment between 24 hours and 48 hours after the deadline, you can get at most 90% of the points.
+If you submit an assignment between 48 hours and 72 hours after the deadline, you can get at most 85% of the points.
+Unless you've made prior arrangements with Jerry, I never accept work more than three days late.
+
+Assignment Resubmission Policy
+For all assignments except assign6, I will allow anyone who pulled less than 85% of the functionality points
+to re-submit their work to get to up to that 85% mark. (You must, however, have received at least 25% of the functionality
+points in the first place, otherwise the maximum you can get is three times your original score. This is to guard against
+student who ignore an assignment altogether and then submit the entire thing at some later date.)
+We won't do code reviews on resubmissions, since the style component of an assignment grade is
+rarely more than 15% or so, and isolated minuses and double minuses have so little impact on
+your final grade that I don't want people to stress over them. All restated, we only rerun automated tests
+to see if you were able to fix any bugs that prevented you from doing well on the assignment. If you'd like to
+re-submit an assignment to hoist your functionality score up to 85%, email me when you're ready to submit again
+and I'll provide instructions on how to do so. I allow resubmissios up until the last day of finals week.
+In theory, I'll let you re-submit as many times as necessary, though in practice you'll want to re-submit just once, maybe twice,
+to get to your 85%.
+
+Examinations
+The midterm examination is in-person and will be administered outside of class from 7:00-9:00PM PDT on Wednesday, February 12th. If you have an academic or University conflict with this time and absolutely cannot make the regularly scheduled midterm, then you can take the exam earlier that same day, from 3:30-5:30PM PDT. If you can't make either of these times, you should send a request by email to the course instructor by 11:59PM on Friday, February 7th to arrange an alternate exam time. Please include in your email all the possible times you are able to take the exam on Wednesday, February 12th or Thursday, February 13th.
+The final examination is in-person and scheduled for Monday, March 17th from 3:30PM-6:30PM PDT. Those holding a conflict with the primary time can take the final earlier in the day, from 12:15-3:15PM PDT on the same day. Please make sure that you can take the final exam at one of these two times before enrolling in the class.
+All examinations are administered on paper and are closed-book, closed-notes, and closed-computer. A reference sheet will be provided to you during each exam, as well as beforehand for studying, containing commonly-needed information. No other materials may be used.
+
+The Honor Code
+Academic conduct for students at Stanford is governed by the Honor Code. Part of the Honor Code is a pledge and expectation to participate in class without seeking inappropriate help on graded work such as assignments and exams. Please read the separate Honor Code page; you are responsible for knowing all of the details at this link, and for following the Honor Code in this course. Violations of the Honor Code are taken very seriously; we reserve the right to use software tools to compare your submissions against those of all other current and past students, and will refer all suspected violations to the Office of Community Standards (OCS).
+Artificial Intelligence (AI) tools: While artificial intelligence (AI) tools can be valuable in certain contexts, in this course it is important that students develop their own skills and abilities to write, debug and think critically, without the use of this technology. For the assignments in this course, it will be the effort and process (not just the product) that is most valuable to your learning, and while useful, AI tools can inhibit the gains from working through this process. For that reason, you should only use AI tools in the same way that you would ask a friend in the class for help – high level questions, citations where needed, etc. Please see our Honor Code page for more information.
+Course Resources
+Technology
+You will need to have access to a computer such as a Windows, Mac or Linux computer with an internet connection to complete assignments. If you don't have access to such a device, you can check out computers at the Lathrop Learning Hub or use on-campus library cluster computers. Read more about getting set up for assignment in our getting started guide.
+Textbook(s)
+Required: Bryant & O’Hallaron. Computer Systems: A Programmer’s Perspective. 3rd Edition.
+The bookstore has a less-expensive custom version of this textbook for our course that includes only the chapters we will cover; you can also use the regular full 3rd edition. You will need the 3rd edition of the textbook, which has substantial updates from IA32 to x86-64. There will be assigned readings from this textbook that are important preparation for lecture and lab. For readings that we assign, you can view a free digital PDF copy of the textbook on Canvas under the "Files" tab.
+Strongly recommended: We also strongly recommend you have a "C language goto" in whatever form works best for you: textbook, tutorial, reference sheet, website, etc. As one suggestion, The C Programming Language by Kernighan and Ritchie is the classic text and a digital copy is available for checkout via Open Library (make a free account to "borrow" it digitally). Another option is Nick Parlante's Essential C reader PDF available here.
+There is also a CS107 reader: https://web.stanford.edu/~cgregg/cgi-bin/107-reader, which covers all of the course topics in detail.
+Our lecture readings pull from Bryant & O'Halloran, Kernighan & Ritchie, and Essential C.
+Getting Help
+We want to enable everyone to succeed in this course and offer several help resources. Read more about getting help in CS107.
+
+Discussion Forum: The online discussion forum lets you search, ask and answer questions posted by fellow classmates. The course staff will also monitor and periodically respond to posts. The discussion forum is best for course policy questions, general course topic questions, general assignment questions or small debugging questions. It should not be used for larger questions about your assignment code.
+
+Office Hours: Office hours are offered throughout the week, and are where you can sign up in a queue and get help from the course staff. Office hours are best for course topic questions, general assignment questions, or in depth questions about your code.
+
+Instructor+Head TA Email / Office Hours: For private matters such as grade questions or other sensitive or confidential topics, please feel free to reach out to the Head CA directly or stop by their office hours to talk privately. You can also contact the instructors for private/personal matters.
+
+The course website houses various useful documents, such as how-to guides for the tools, and advice pages. Please take advantage of these resources!
+
+Other Information
+Retraction Policy
+You may contact the instructor at any time prior to the start of the final exam to retract all or part of previously-submitted assignment work, no questions asked. We will record a 0 as the grade for the work in question and act as though it was not submitted.
+
+Planning for the Unexpected
+While the post-pandemic world has mostly returned to normal, we are cognizant that unforeseen circumstances have defined the 2020s. While we don’t foresee a need to massively adjust the course plan, we will remain flexible and appreciate your patience and understanding should the next singular event present itseld this quarter.
+Affordability of Course Materials
+All students should retain receipts for books and other course-related expenses, as these may be qualified educational expenses for tax purposes. If you are an undergraduate receiving financial aid, you may be eligible for additional financial aid for required books and course materials if these expenses exceed the aid amount in your award letter. For more information, review your award letter or visit the Student Budget website.
+Lecture Video Notice
+Video cameras located in the back of the room will capture the instructor presentations in this course. For your convenience, you can access these recordings by logging into the course Canvas site. These recordings might be reused in other Stanford courses, viewed by other Stanford students, faculty, or staff, or used for other education and research purposes. Note that while the cameras are positioned with the intention of recording only the instructor, occasionally a part of your image or voice might be incidentally captured. If you have questions, please contact a member of the teaching team.
+
+This document and its content are copyright Stanford University, 2025. All rights reserved. Any redistribution, reproduction, transmission, or storage of part or all of the contents in any form is prohibited without the authors' expressed written permission. NOTICE RE UPLOADING TO WEBSITES: This content is protected and may not be shared, uploaded, or distributed. (without expressed written permission).

@@ -1,0 +1,103 @@
+⚠️ This page is out of date, from a past version of the course Summer Quarter 2025
+
+Syllabus
+
+Hi there 👋 and welcome to CS106A!
+
+Course Description
+
+Introduction to the engineering of computer applications emphasizing modern software engineering principles: program design, decomposition, encapsulation, abstraction, and testing. Emphasis is on good programming style and the built-in facilities of respective languages. Uses the Python programming language. No prior programming experience required.
+
+Canvas
+We will use Canvas in CS106A this quarter only to post recordings of course videos.
+
+All other information relevant to the class will be posted on the class web page, described below.
+
+Discussion sections
+Section sign-ups
+In addition to lecture, you will also be attending a weekly 50-minute section. In order to take CS 106A, you must sign up for a section (sign-up window to be announced during lecture). The signup form will be available on the CS198 website, which is our section portal. You can also use this website to sign up late or switch sections early on in the quarter.
+
+Section sign-ups are not first-come first-serve, so don't worry about rushing to fill out your preferences as soon as the form opens. The sign-up window will open on Sunday, June 22 at 5:00 pm and close at 5:00 pm on Tuesday, June 24. After a matching process, your section assignments will be emailed out to you by Sunday, June 29, before sections begin in Week 2. Note that you should only sign up for sections at the URL above (you should not sign up for sections on Axess).
+
+Section attendance
+Attendance and participation in section will be graded and will make up 5% of your final grade in the class, so this is a required component of the class.
+
+You are welcome to attend a different section from the one you are assigned on any given week of the quarter, with no advance permission required. If you need to miss your usual section, you can use this list of section times and locations to find another one that works. To ensure that you get attendance credit, when you visit the section, let that section leader know you're visiting and they'll alert your usual section leader. Telling them in person is fine.
+
+Getting help at LaIR
+CS106A provides extensive assistance for students. We offer nightly in-person help hours Sunday through Thursday from 5-9PM to help with assignments - we call this LaIR. You can sign up for LaIR at this link.
+
+Units
+If you are an undergraduate at Stanford, you are required to take CS106A for 5 units. If you are a graduate student, you may enroll in CS106A for 3 or 4 units if it is necessary for you to reduce your units for administrative reasons. Taking the course for reduced units does not mean any change in the course requirements.
+
+Texts and reference material
+There is one required text for this class, entitled Karel the Robot Learns Python. It's a short interactive tutorial that introduces the major concepts in programming in the context of an extremely simple robot world. This text is available for free on the class website. In addition to this text, we will also have reference material on Python available via the class webpage.
+
+Programming assignments
+There will be five programming assignments (not including Assignment 0) in this class. The assignments will become slightly more difficult and require more time as the quarter progresses. Thus, the later assignments will be weighed slightly more than the earlier ones. Each assignment is graded during an interactive, one-on-one session with your section leader, who rates it according to the following scale:
+
++ A submission that is excellent or exceeds our standard expectation for the assignment. To receive this grade, a program often reflects additional work beyond the requirements or gets the job done in a particularly elegant way.
+
+✓+ A submission that satisfies all the requirements for the assignment, showing solid funtionality as well as good style. It reflects a job well done.
+
+✓ A submission that meets the requirements for the assignment, possibly with a few small problems.
+
+✓− A submission that has problems serious enough to fall short of the requirements for the assignment.
+
+− A submission that has extremely serious problems, but nonetheless shows some effort and understanding.
+
+−− A submission that shows little effort and does not represent passing work.
+
+From past experience, we expect most grades to be ✓+ and ✓. Dividing the grades into categories means that your section leader can spend more time talking about what you need to learn from the assignment and not have to worry about justifying each point. The overall goal is to maximize the learning experience in doing the assignments, and we have found the "bucket" grading system to work much better for programming assignments than assigning numeric grades from a pedagogical perspective over many quarters of experience.
+
+After submitting each assignment, you will sign up for an interactive grading session with your section leader. Your section leader will explain in section or over email how to schedule these sessions.
+
+Late policy
+Each of the assignments is due at 11:59pm Pacific Time on the dates specified in the schedule (on the website under Course). The program code for your assignments must be submitted electronically to a website called Paperless. All assignments are due at 11:59pm sharp on the dates indicated on the course schedule. Anything that comes in after 11:59 p.m. will be considered late.
+
+The assignment deadline policy this quarter has been designed to provide all students with built-in flexibility. Here will be the general policy:
+
+Assignments deadlines will fall at the end of the day in the Pacific time zone, i.e. 11:59pm GMT-7.
+Submitting by the deadline earns a small "on-time" bonus. The bonus points for timeliness will be added to the course grade at the end of the quarter.
+There is a 24-hour, penalty-free "grace period" for late submission . The grace period allows you to submit the assignment after the deadline, with no impact on your grade. The grace period is intended to give you built-in accommodation for unexpected snags. If you plan your work to submit by the deadline, you have the grace period in reserve to give you cover if something unexpected derails your schedule.
+Late submissions are not accepted after the grace period expires, unless there have been arrangements made for an exceptional situation as described below.
+
+The grace period is effectively an automatic extension that has been approved in advance. Given that, additional extensions beyond the grace period are generally not granted. In exceptional circumstances (primarily extended medical problems, emergencies, or previously established OAE accommodations), the grace period may be extended for individual students on a case-by-case basis. An extension request must be received no later than 24 hours before the deadline. Only the lecturers or Head TA are able to approve extensions. In particular, do not ask your section leader.
+
+Grading
+Final grades for the course will be determined using the following weights:
+
+40% Programming assignments (weighted toward the later assignments)
+
+20% Diagnostic examination
+
+35% Final examination
+
+5% Section participation
+
+IMPORTANT NOTE: We are strong believers in mastery learning - that is, students should show mastery of the course material by engaging in all of it. Therefore, to pass the class you are required to make a real effort on and submit all the assignments, take both exams, and attend/participate in section. Exceptions can be be granted in special circumstances that are pre-approved by one of the instructors (e.g., medical or other emergencies). But, importantly, skipping some portion of the class because you think you “don't need it” to pass the class is taken as an indication of lacking mastery of the material and can lead to a non-passing grade. We want you to engage with all the material in the class, not aim to do the minimal amount that you think might be required for passing. Please take this to heart when doing the work for this class.
+
+CGOE
+CGOE students will attend a virtual section, unless they are near enough to campus to commute and would prefer an in-person section. CGOE students will take the midpoint diagnostic and final exam remotely with a monitor that they select through CGOE. Students must register a monitor in advance of exams, and this monitor will administer the exam within a 24 hour window before or after the exam.
+
+Computer facilities
+As in any programming course, the assignments in CS106A require extensive hands-on use of a computer. The preferred platform for doing the work is the PyCharm development environment which runs under both Mac OS and Microsoft Windows. Instructions on obtaining and using the PyCharm environment - which is free to download - will be available on the class website in a handout called Installing PyCharm, under the Course tab.
+
+Affordability
+Stanford University and its instructors are committed to ensuring that all courses are financially accessible to all students. If you are an undergraduate who needs assistance with the cost of course materials, you are welcome to approach the course staff directly.
+
+If you would prefer not to approach the course staff directly, the First-Gen and/or Low Income (FLI) Office may be able to financially assist undergraduate students who are experiencing a temporary financial challenge from a hardship or who are seeking funds for an opportunity related to their academic, professional, and/or social development. Go to https://fli.stanford.edu/.
+
+Academic accommodation
+If you have an OAE letter, please send it via email to the head TA as soon as possible so that we can provide any accomodations necessary in CS106A. We cannot provide accomodations if they are shared less than a week before the exam.
+
+Students who may need an academic accommodation based on the impact of a disability must initiate the request with the Office of Accessible Education (OAE). Professional staff will evaluate the request with required documentation, recommend reasonable accommodations, and prepare an Accommodation Letter for faculty dated in the current quarter in which the request is being made. Students should contact the OAE as soon as possible since timely notice is needed to coordinate accommodations. The OAE has contact information on their web page: http://oae.stanford.edu.
+
+Ongoing improvements
+As part of our ongoing efforts to make this course an even better experience for students, our teaching team continually conducts research to improve our teaching methods. In this course, new teaching methods may be used and various aspects of student performance may be analyzed on an ongoing basis. Information about you and your personal performance in this course will be held strictly confidential, but aggregate information for the whole class may be reported. If you would like to opt out of participating in any new teaching methods or having your performance analyzed as part of this research, you may do so without penalty. For more information, please contact the instructors.
+
+We're looking forward to a fun class, and a great quarter of learning!
+
+All course materials © Stanford University 2021
+Website programming by Julie Zelenski • Styles adapted from Chris Piech •
+This page last updated 2025-Jun-22

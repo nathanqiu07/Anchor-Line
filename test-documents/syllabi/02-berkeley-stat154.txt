@@ -1,0 +1,46 @@
+Python
+
+Gradescope
+
+BCourses
+
+ED
+
+No matching items
+
+Instructors
+
+Instructor: Ryan Giordano Office: 389 Evans Hall Office hours: Mon 3:10-4pm, Wed 2:10-3pm rgiordano@berkeley.edu pronouns: He / him
+
+GSI: Erez Buchweitz Office: Evans Hall Office hours: Tue 3:10-4pm, Fri 1:10-2pm Evans 428 erez.buchweitz@berkeley.edu pronouns: He / him
+
+Important
+
+If you are a concurrent enrollment student hoping to enroll in the class, I hope you will be able to join us!
+In the meantime, please join BCourses and hand in your assignments as if you were enrolled. We will not retoractively waive assignments that were due prior to being enrolled in the class. Preference will be given to students who are demonstrably participating in the class.
+Please reach out to Erez if you need to be manually added to BCourses.
+
+This website will contain lecture materials and assignments. Day-to-day announcements and discussion will be found in ED. (See links above.)
+
+Schedule
+Lectures will be held Jan 22 2025 – May 02 2025 on Monday, Wednesday, and Friday, 11:00 am – 12:00 pm, in Lewis 9.
+Labs will be held on Fridays from 2:00pm – 4:00pm and 4:00pm – 6:00pm in Evans 344.
+(Link to official course calendar.)
+
+Materials
+The course will be based largely on a subset of the following texts:
+
+ESL: The Elements of Statistical Learning Hastie, Tibshirani, Friedman
+ISL: An Introduction to Statistical Learning James, Witten, Hastie, Tibshirani
+
+Leture notes and additional reading will supplement these texts as necessary.
+Some other good sources of reading material are:
+
+Patterns, predictions, and actions: A story about machine learning Hardt, Recht
+Understanding Machine Learning: From Theory to Algorithms Shalev-Shwartz, Ben-David
+Probabilistic Machine Learning: An Introduction Murphy
+
+Prerequisites
+Mathematical statistics, probability, linear algebra, multivariate calculus, and Python are all prerequisites.
+For assistance with mathematics prerequisites, the Student Learning Center provides additional assistance.
+A summary of the required linear algebra skills can be found here.

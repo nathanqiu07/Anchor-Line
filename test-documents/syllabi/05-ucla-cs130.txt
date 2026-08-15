@@ -1,0 +1,48 @@
+Grading
+
+[130 home]
+
+7.5% quizzes
+2.5% requirements homework
+40.0% project
+15.0% midterm
+35.0% final exam
+
+Quizzes and exams are done in-class.
+Quizzes are closed book; exams are open book and open notes,
+but no automated devices (e.g., laptops) are allowed.
+No written makeups will be given.
+
+The lateness penalty for an assignment that is submitted between
+N and N+1 full days late (where N is
+nonnegative) is 2N% of the assignment's value.
+That is, if the assignment is worth 100 points,
+the penalty is 1 point for being up to 1 day late, 2 points for being
+from 1 to 2 days late, 4 points for being from 2 to 3 days late, and so
+forth. Assignments are not accepted after the last day of instruction
+(this is typically the Friday before final exams), and are not
+accepted after the lateness penalty renders them irrelevant to the
+final grade.
+
+Students must follow the UCLA
+Student Conduct Code, which prohibits cheating,
+fabrication,
+multiple submissions, and facilitating academic dishonesty. A summary
+of the academic integrity material of the Student Conduct Code can be found in the Student
+Guide to Academic Integrity, and the Office of the Dean of
+Students has a workshop on academic
+integrity.
+
+Students are encouraged to study together, and to discuss general
+problem-solving techniques that are useful on assignments; but when
+working on the homework assignment students must specify the sources
+for all parts of their project. In particular, each changelog entry
+must accurately identify who contributed to that change. If you have
+questions about the policy, please discuss
+them with the instructor.
+
+© 1999–2016
+Paul Eggert.
+See copying rules.
+
+$Id: grading.html,v 1.18 2016/03/25 21:35:53 eggert Exp $
