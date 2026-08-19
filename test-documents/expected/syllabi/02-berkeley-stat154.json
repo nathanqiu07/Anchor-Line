@@ -1,0 +1,54 @@
+{
+  "document_type": "syllabus",
+  "course_name": null,
+  "term": null,
+  "items": [
+    {
+      "raw_label": "Lecture date range",
+      "category": "schedule_date",
+      "kind": "date",
+      "value": "Jan 22 2025 – May 02 2025",
+      "source_quote": "Jan 22 2025 – May 02 2025",
+      "explanation": "Lectures run from January 22, 2025 through May 2, 2025."
+    },
+    {
+      "raw_label": "Lecture meeting time",
+      "category": "schedule_time",
+      "kind": "time",
+      "value": "11:00 am – 12:00 pm",
+      "source_quote": "11:00 am – 12:00 pm",
+      "explanation": "Lectures meet Monday, Wednesday, and Friday from 11:00 am to 12:00 pm in Lewis 9."
+    },
+    {
+      "raw_label": "Lab meeting times",
+      "category": "schedule_time",
+      "kind": "time",
+      "value": "2:00pm – 4:00pm and 4:00pm – 6:00pm",
+      "source_quote": "2:00pm – 4:00pm and 4:00pm – 6:00pm",
+      "explanation": "Labs are held on Fridays in two back-to-back sessions in Evans 344."
+    },
+    {
+      "raw_label": "Instructor office hours",
+      "category": "schedule_time",
+      "kind": "time",
+      "value": "Mon 3:10-4pm, Wed 2:10-3pm",
+      "source_quote": "Mon 3:10-4pm, Wed 2:10-3pm",
+      "explanation": "Office hours for the instructor, Ryan Giordano, in Evans Hall room 389."
+    },
+    {
+      "raw_label": "GSI office hours",
+      "category": "schedule_time",
+      "kind": "time",
+      "value": "Tue 3:10-4pm, Fri 1:10-2pm",
+      "source_quote": "Tue 3:10-4pm, Fri 1:10-2pm",
+      "explanation": "Office hours for the GSI, Erez Buchweitz, in Evans Hall room 428."
+    }
+  ],
+  "missing_info": [
+    "No grading breakdown or grade weights are given anywhere on this page (nor on any reachable subpage)",
+    "No explicit course number or title is stated",
+    "No semester/term name is explicitly stated (only inferable from the lecture date range)",
+    "No credit-hours value is given"
+  ],
+  "transcription": "Python\n\nGradescope\n\nBCourses\n\nED\n\nNo matching items\n\nInstructors\n\nInstructor: Ryan Giordano Office: 389 Evans Hall Office hours: Mon 3:10-4pm, Wed 2:10-3pm rgiordano@berkeley.edu pronouns: He / him\n\nGSI: Erez Buchweitz Office: Evans Hall Office hours: Tue 3:10-4pm, Fri 1:10-2pm Evans 428 erez.buchweitz@berkeley.edu pronouns: He / him\n\nImportant\n\nIf you are a concurrent enrollment student hoping to enroll in the class, I hope you will be able to join us!\nIn the meantime, please join BCourses and hand in your assignments as if you were enrolled. We will not retoractively waive assignments that were due prior to being enrolled in the class. Preference will be given to students who are demonstrably participating in the class.\nPlease reach out to Erez if you need to be manually added to BCourses.\n\nThis website will contain lecture materials and assignments. Day-to-day announcements and discussion will be found in ED. (See links above.)\n\nSchedule\nLectures will be held Jan 22 2025 – May 02 2025 on Monday, Wednesday, and Friday, 11:00 am – 12:00 pm, in Lewis 9.\nLabs will be held on Fridays from 2:00pm – 4:00pm and 4:00pm – 6:00pm in Evans 344.\n(Link to official course calendar.)\n\nMaterials\nThe course will be based largely on a subset of the following texts:\n\nESL: The Elements of Statistical Learning Hastie, Tibshirani, Friedman\nISL: An Introduction to Statistical Learning James, Witten, Hastie, Tibshirani\n\nLeture notes and additional reading will supplement these texts as necessary.\nSome other good sources of reading material are:\n\nPatterns, predictions, and actions: A story about machine learning Hardt, Recht\nUnderstanding Machine Learning: From Theory to Algorithms Shalev-Shwartz, Ben-David\nProbabilistic Machine Learning: An Introduction Murphy\n\nPrerequisites\nMathematical statistics, probability, linear algebra, multivariate calculus, and Python are all prerequisites.\nFor assistance with mathematics prerequisites, the Student Learning Center provides additional assistance.\nA summary of the required linear algebra skills can be found here.\n"
+}

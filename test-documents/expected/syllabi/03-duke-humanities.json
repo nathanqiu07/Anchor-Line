@@ -1,0 +1,46 @@
+{
+  "document_type": "syllabus",
+  "course_name": null,
+  "term": null,
+  "items": [
+    {
+      "raw_label": "Attendance and participation weight",
+      "category": "grade_weight",
+      "kind": "percent",
+      "value": "40%",
+      "source_quote": "Attendance and participation: 40%",
+      "explanation": "Attendance and participation together are worth 40% of the final grade."
+    },
+    {
+      "raw_label": "Term paper weight",
+      "category": "grade_weight",
+      "kind": "percent",
+      "value": "60%",
+      "source_quote": "Term paper: 60%",
+      "explanation": "The term paper is worth 60% of the final grade."
+    },
+    {
+      "raw_label": "Term paper length (undergraduate)",
+      "category": "other",
+      "kind": "number",
+      "value": "8-10 pages",
+      "source_quote": "8-10 pages for undergraduate students",
+      "explanation": "Undergraduate term papers are expected to be 8 to 10 pages long."
+    },
+    {
+      "raw_label": "Term paper length (graduate)",
+      "category": "other",
+      "kind": "number",
+      "value": "10-20 pages",
+      "source_quote": "10-20 pages for graduate students",
+      "explanation": "Graduate term papers are expected to be 10 to 20 pages long."
+    }
+  ],
+  "missing_info": [
+    "No course name or number is given",
+    "No term or semester is stated",
+    "No specific due date is given for the term paper - it only says 'the date indicated in the syllabus' without stating what that date is",
+    "No grading rubric beyond the page-length ranges is given"
+  ],
+  "transcription": "Skip to content\n\nAttendance and participation: 40%\nTerm paper: 60%\n\nNotes\nAttendance and participation. Students are expected to read the material assigned and discuss specific notes of their choosing in class. Some questions and prompts for in-class discussion will be provided beforehand.\nTerm paper. Students are expected to write a term paper on a topic agreed-upon with the teacher and discussed in class during the “Term paper preparatory sessions” indicated in the syllabus. The approximate length of the paper is: 8-10 pages for undergraduate students; 10-20 pages for graduate students. Term papers should be submitted via email at dainotto@duke.edu on the date indicated in the syllabus.\n\nSites@Duke Express is powered by WordPress. Read the Sites@Duke Express\npolicies and\nFAQs, or request help.\n"
+}

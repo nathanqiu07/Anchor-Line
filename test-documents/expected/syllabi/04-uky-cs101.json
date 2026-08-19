@@ -1,0 +1,165 @@
+{
+  "document_type": "syllabus",
+  "course_name": "CS 101 Introduction to Computers",
+  "term": "Spring 2022",
+  "items": [
+    {
+      "raw_label": "Midterm Written Test",
+      "category": "grade_weight",
+      "kind": "points",
+      "value": "250",
+      "source_quote": "Midterm Written Test 250",
+      "explanation": "The Midterm Written Test is worth 250 of the 1000 total points."
+    },
+    {
+      "raw_label": "Final Written Test",
+      "category": "grade_weight",
+      "kind": "points",
+      "value": "250",
+      "source_quote": "Final Written Test 250",
+      "explanation": "The Final Written Test is worth 250 of the 1000 total points."
+    },
+    {
+      "raw_label": "Lab Test 1 on Windows/Excel",
+      "category": "grade_weight",
+      "kind": "points",
+      "value": "90",
+      "source_quote": "Lab Test 1 on Windows/Excel90",
+      "explanation": "Lab Test 1 is worth 90 of the 1000 total points."
+    },
+    {
+      "raw_label": "Lab Test 2 on MS Excel",
+      "category": "grade_weight",
+      "kind": "points",
+      "value": "100",
+      "source_quote": "Lab Test 2 on MS Excel 100",
+      "explanation": "Lab Test 2 is worth 100 of the 1000 total points."
+    },
+    {
+      "raw_label": "Lab Test 3 on MS Access",
+      "category": "grade_weight",
+      "kind": "points",
+      "value": "110",
+      "source_quote": "Lab Test 3 on MS Access 110",
+      "explanation": "Lab Test 3 is worth 110 of the 1000 total points."
+    },
+    {
+      "raw_label": "HTML Project",
+      "category": "grade_weight",
+      "kind": "points",
+      "value": "56",
+      "source_quote": "HTML Project 56",
+      "explanation": "The HTML Project is worth 56 of the 1000 total points."
+    },
+    {
+      "raw_label": "Alice Project",
+      "category": "grade_weight",
+      "kind": "points",
+      "value": "40",
+      "source_quote": "Alice Project 40",
+      "explanation": "The Alice Project is worth 40 of the 1000 total points."
+    },
+    {
+      "raw_label": "Zybook Homework",
+      "category": "grade_weight",
+      "kind": "points",
+      "value": "22",
+      "source_quote": "Zybook Homework 22",
+      "explanation": "Zybook Homework is worth 22 of the 1000 total points."
+    },
+    {
+      "raw_label": "Attendance at Lectures",
+      "category": "grade_weight",
+      "kind": "points",
+      "value": "56",
+      "source_quote": "Attendance at Lectures 56",
+      "explanation": "Lecture attendance is worth 56 of the 1000 total points."
+    },
+    {
+      "raw_label": "First Lab Tasks",
+      "category": "grade_weight",
+      "kind": "points",
+      "value": "10",
+      "source_quote": "First Lab Tasks 10",
+      "explanation": "First Lab Tasks are worth 10 of the 1000 total points."
+    },
+    {
+      "raw_label": "Attendance at Last Lab",
+      "category": "grade_weight",
+      "kind": "points",
+      "value": "16",
+      "source_quote": "Attendance at Last Lab 16",
+      "explanation": "Attendance at the Last Lab is worth 16 of the 1000 total points."
+    },
+    {
+      "raw_label": "Lecture attendance quiz value",
+      "category": "grade_weight",
+      "kind": "points",
+      "value": "2",
+      "source_quote": "Each attendance at lecture (Quiz) is worth 2 points.",
+      "explanation": "Each individual lecture-attendance quiz is worth 2 points."
+    },
+    {
+      "raw_label": "Grade A threshold",
+      "category": "grading_scale",
+      "kind": "percent",
+      "value": "90-100%",
+      "source_quote": "90-100% = A",
+      "explanation": "A score of 90-100% earns an A."
+    },
+    {
+      "raw_label": "Grade B threshold",
+      "category": "grading_scale",
+      "kind": "percent",
+      "value": "80-89.9%",
+      "source_quote": "80-89.9% = B",
+      "explanation": "A score of 80-89.9% earns a B."
+    },
+    {
+      "raw_label": "Grade C threshold",
+      "category": "grading_scale",
+      "kind": "percent",
+      "value": "70-79.9%",
+      "source_quote": "70-79.9% = C",
+      "explanation": "A score of 70-79.9% earns a C."
+    },
+    {
+      "raw_label": "Grade D threshold",
+      "category": "grading_scale",
+      "kind": "percent",
+      "value": "60-69.9%",
+      "source_quote": "60-69.9% = D",
+      "explanation": "A score of 60-69.9% earns a D."
+    },
+    {
+      "raw_label": "Grade E threshold",
+      "category": "grading_scale",
+      "kind": "number",
+      "value": "below 60",
+      "source_quote": "below 60 = E",
+      "explanation": "A score below 60 earns an E."
+    },
+    {
+      "raw_label": "Bonus points maximum",
+      "category": "other",
+      "kind": "points",
+      "value": "9 bonus\npoints",
+      "source_quote": "Students can earn up to 9 bonus\npoints.",
+      "explanation": "Students can earn up to 9 bonus points added to their final total."
+    },
+    {
+      "raw_label": "Open Lab bonus point",
+      "category": "other",
+      "kind": "points",
+      "value": "One point",
+      "source_quote": "One point is given for each Open Lab attended",
+      "explanation": "One bonus point is earned for each Open Lab attended, up to the 9-point cap."
+    }
+  ],
+  "missing_info": [
+    "No date is given for the midterm, final, or lab tests",
+    "No credit-hours value is stated",
+    "The point value for the 'Attending First Lab' line item is unclear - it is listed with no number of its own, separate from 'First Lab Tasks 10'"
+  ],
+  "transcription": "CS 101 Introduction to Computers Spring 2022 Syllabus - Grading\n\nGrades are determined by:\n\nMidterm Written Test 250\nFinal Written Test 250\nLab Test 1 on Windows/Excel90\nLab Test 2 on MS Excel 100\nLab Test 3 on MS Access 110\nHTML Project 56\nAlice Project 40\nZybook Homework 22\nAttendance at Lectures 56\nAttending First Lab\nFirst Lab Tasks 10\nAttendance at Last Lab 16\n\nYour grade is calculated as a percentage of 1000 points.\nThat is the sum of the components of the class.\nEach attendance at lecture (Quiz) is worth 2 points.\n\nGrading Scale: 90-100% = A\n\n80-89.9% = B\n70-79.9% = C\n60-69.9% = D\nbelow 60 = E\n\nBonus Points\n\nStudents can earn up to 9 bonus\npoints. They will be added to the student's final point total.\nOne point is given for each Open Lab attended\nduring the semester, up to 9 points.\n\nAll policies associated with this course are subject to revision. Reasonable notification will be provided to students before any major changes are made.\n"
+}

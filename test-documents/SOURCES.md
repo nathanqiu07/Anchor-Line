@@ -35,6 +35,33 @@ sites. These are copyrighted by their respective instructors/institutions; they 
 for non-commercial extraction-testing purposes with source attribution, not redistributed as
 this project's own work.
 
+## Expected-truth labels (`expected/`)
+
+`expected/award-letters/*.json` and `expected/syllabi/*.json` mirror the file names above and
+hold hand-checked "expected truth" `LetterAnalysis`/`SyllabusAnalysis` JSON for each document,
+for use with `npm run eval:live -- <file> --type ... --expect expected/.../<file>.json`.
+
+**Provenance and limits:** the first-pass extraction for every one of these labels was
+delegated to Haiku (a smaller, cheaper Claude model than the one used elsewhere in this
+project) reading the raw `test-documents/` text directly — not the pipeline under test, and
+not a human annotator. Every `source_quote`/`value` was then mechanically verified to be an
+exact, verbatim substring of the source file (a script checks this, not eye-balling), and the
+JSON was schema-validated against `lib/schema.ts`'s `LetterAnalysisSchema`/
+`SyllabusAnalysisSchema`. Categorization judgment calls (e.g. which numbers count as
+"important", `gift_aid` vs `loan`, which section a policy penalty belongs to) were spot-checked
+and corrected by hand where wrong, but were not independently re-derived by a human from
+scratch. Treat these as **silver labels for regression-testing and manual comparison, not
+gold/authoritative ground truth** — an LLM-derived expected answer that is compared against
+another LLM's extraction mainly measures agreement between the two, not real-world
+correctness. `eval:live`'s `--expect` scoring is currently wired up for award letters only;
+passing `--expect` for a syllabus is accepted but not scored (see `eval/live-extract.ts`), so
+the syllabus `expected/` files exist for future use and manual side-by-side comparison, not
+automated scoring today.
+
+`expected/award-letters/01-ed-sample-2.json` has an empty `line_items: []` deliberately — that
+source document is a blank estimate letter with a blank loan-request form and no actual
+awarded dollar amounts, only a Cost of Attendance figure.
+
 | File | Source |
 | --- | --- |
 | `01-mit-biology.txt` | https://ocw.mit.edu/courses/7-016-introductory-biology-fall-2018/pages/syllabus/ |

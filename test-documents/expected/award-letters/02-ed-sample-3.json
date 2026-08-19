@@ -1,0 +1,90 @@
+{
+  "document_type": "award_letter",
+  "school_name": "State University",
+  "award_year": "20XX-20XX",
+  "cost_of_attendance": {
+    "amount": 19964,
+    "source_quote": "Total $19,964"
+  },
+  "line_items": [
+    {
+      "raw_label": "A D Education Opportunity Grant",
+      "category": "gift_aid",
+      "normalized_name": "Education Opportunity Grant",
+      "amount": 2500,
+      "period": "year",
+      "source_quote": "A D Education Opportunity Grant $1,250 $1,250 $2,500",
+      "explanation": "Gift aid that does not need to be repaid, totaling $2,500 for the year."
+    },
+    {
+      "raw_label": "A D Federal Pell Grant",
+      "category": "gift_aid",
+      "normalized_name": "Federal Pell Grant",
+      "amount": 1781,
+      "period": "year",
+      "source_quote": "A D Federal Pell Grant $891 $890 $1,781",
+      "explanation": "Federal need-based gift aid that does not need to be repaid, totaling $1,781 for the year."
+    },
+    {
+      "raw_label": "Federal Work Study",
+      "category": "work_study",
+      "normalized_name": "Federal Work Study",
+      "amount": 3000,
+      "period": "year",
+      "source_quote": "Federal Work Study $1,500 $1,500 $3,000",
+      "explanation": "Money earned through a part-time job, not a grant or loan, totaling $3,000 for the year."
+    },
+    {
+      "raw_label": "A D Federal Perkins Loan-Undergrad",
+      "category": "loan",
+      "normalized_name": "Federal Perkins Loan",
+      "amount": 2000,
+      "period": "year",
+      "source_quote": "A D Federal Perkins Loan-Undergrad $1,000 $1,000 $2,000",
+      "explanation": "A need-based loan that must be repaid, totaling $2,000 for the year."
+    },
+    {
+      "raw_label": "A D Subsidized Stafford Loan",
+      "category": "loan",
+      "normalized_name": "Subsidized Stafford Loan",
+      "amount": 2000,
+      "period": "year",
+      "source_quote": "A D Subsidized Stafford Loan $1,000 $1,000 $2,000",
+      "explanation": "A need-based loan whose interest is government-paid while in school, totaling $2,000 for the year; up to 3% origination/guarantee fees apply."
+    },
+    {
+      "raw_label": "Subsidized Stafford Loan",
+      "category": "loan",
+      "normalized_name": "Subsidized Stafford Loan",
+      "amount": 3500,
+      "period": "year",
+      "source_quote": "Subsidized Stafford Loan $1,750 $1,750 $3,500",
+      "explanation": "A non-need-based Stafford loan listed under the same subsidized name, totaling $3,500 for the year; up to 3% origination/guarantee fees apply."
+    },
+    {
+      "raw_label": "Unsubsidized Stafford Loan",
+      "category": "loan",
+      "normalized_name": "Unsubsidized Stafford Loan",
+      "amount": 1000,
+      "period": "year",
+      "source_quote": "Unsubsidized Stafford Loan $500 $500 $1,000",
+      "explanation": "A non-need-based loan whose interest accrues while in school, totaling $1,000 for the year; up to 3% origination/guarantee fees apply."
+    },
+    {
+      "raw_label": "A D Unsubsidized Stafford Loan",
+      "category": "loan",
+      "normalized_name": "Unsubsidized Stafford Loan",
+      "amount": 1000,
+      "period": "year",
+      "source_quote": "A D Unsubsidized Stafford Loan $500 $500 $1,000",
+      "explanation": "A second, separately listed non-need-based Unsubsidized Stafford Loan row, totaling $1,000 for the year; up to 3% origination/guarantee fees apply."
+    }
+  ],
+  "missing_info": [
+    "School name is the literal placeholder text 'State University', not a real institution name",
+    "Award year is a template '20XX-20XX', not a specific real year",
+    "Contact email and phone are redacted with XXX placeholders",
+    "The letter date year is templated as 'February 12, 20XX'"
+  ],
+  "transcription": "State University\nScholarships & Financial Aid\n20XX-20XX Financial Aid Offer\nFebruary 12, 20XX\nScholarships & Financial Aid is pleased to offer you the following financial aid for the 20XX-20XX\nacademic year.\nEnclosed is the Offer Booklet which can assist you in review of your financial aid; and answer\nmany other questions that you may have.\nFrequently Asked Questions - See the Offer Booklet\n-Payment Options\n-Financial Aid disbursements\n-Additional Information\nTo process your offer(s):\nTo accept, decline or reduce your financial aid offers, please visit https://xxxxxx Click the My Records tab\nand enter the Financial Aid Portal. You will need your university NET ID and password. Once you have\nlogged in, you may accept, reject, and/or reduce the aid offered. If you are returning this letter as your\nresponse to your offers, please circle A for accept or D for decline by each offer needing a response.\nImportant Note: Financial aid offers are subject to change based upon your eligibility. Eligibility may\nchange due to verification of FAFSA data, enrollment status, satisfactory academic progress\nrequirements, or other factors. For additional information on each program, read the last page of this\ndocument and your offer booklet in its entirety.\nIf you have any questions or would like to discuss your financial aid offer with one of our advisors, please\ncontact our office by email at financialaid@xxx.edu or phone at (XXX) XXX-XXXX.\nThe following assumptions of your current status were used when determining your Cost of\nAttendance and your financial aid offer: (If any of these are incorrect please contact our office\nimmediately)\nResidency Status: Resident Enrollment: Full Time\nFinancial Aid Offer\n*Expected Family Contribution {EFC} $2,907\n(As determined by the Free Application for Federal Student Aid (FAFSA))\nCost of Attendance (COA) – Fall and Spring Semester Total Aid Summary\nTuition and Fees $7,858 $19,964 COA\nLoan Fees $55 $2,907 EFC\nRoom and Board $8,000 $17,057 Financial Need\nBooks and Supplies $1,200 $0 VA Benefits\nTransportation $664 -$4,281 Gift Aid\nMiscellaneous/Personal $2,187 -$3,000 Self Help Aid - Need based\nTotal $19,964 -$4,000 Need based loans\n-$5,500 Non need based loans\n$276 Unmet Financial Need\nType of Award Fall Spring Total\nGift Aid\nA D Education Opportunity Grant $1,250 $1,250 $2,500\nA D Federal Pell Grant $891 $890 $1,781\nSelf Help Aid - Need Based\nFederal Work Study $1,500 $1,500 $3,000\nNeed Based Loan(s) - Repayable\nA D Federal Perkins Loan-Undergrad $1,000 $1,000 $2,000\nA D Subsidized Stafford Loan $1,000 $1,000 $2,000\nNon Need Based Loan(s) - Repayable\nSubsidized Stafford Loan $1,750 $1,750 $3,500\nUnsubsidized Stafford Loan $500 $500 $1,000\nA D Unsubsidized Stafford Loan $500 $500 $1,000\n$8,391 $8,390 $16,781\n*Stafford loans are subject to up to 3% loan origination and guarantee fees that will be deducted from each loan\ndisbursement.\n_______________________________________ ________________________\nDate\n"
+}

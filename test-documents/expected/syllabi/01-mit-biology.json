@@ -1,0 +1,135 @@
+{
+  "document_type": "syllabus",
+  "course_name": "7.016 Introductory Biology",
+  "term": "Fall 2018",
+  "items": [
+    {
+      "raw_label": "Three Term Exams weight",
+      "category": "grade_weight",
+      "kind": "percent",
+      "value": "51%",
+      "source_quote": "51%",
+      "explanation": "Three Term Exams together are worth 51% of the overall grade."
+    },
+    {
+      "raw_label": "Three Term Exams total points",
+      "category": "grade_weight",
+      "kind": "points",
+      "value": "300",
+      "source_quote": "300",
+      "explanation": "Three Term Exams total 300 points."
+    },
+    {
+      "raw_label": "Points per term exam",
+      "category": "grade_weight",
+      "kind": "points",
+      "value": "100",
+      "source_quote": "100 points each",
+      "explanation": "Each term exam is worth 100 points."
+    },
+    {
+      "raw_label": "Five Problem Sets weight",
+      "category": "grade_weight",
+      "kind": "percent",
+      "value": "15%",
+      "source_quote": "15%",
+      "explanation": "Five Problem Sets together are worth 15% of the overall grade."
+    },
+    {
+      "raw_label": "Five Problem Sets total points",
+      "category": "grade_weight",
+      "kind": "points",
+      "value": "100",
+      "source_quote": "100",
+      "explanation": "Five Problem Sets total 100 points."
+    },
+    {
+      "raw_label": "Points per problem set",
+      "category": "grade_weight",
+      "kind": "points",
+      "value": "20",
+      "source_quote": "20 points each",
+      "explanation": "Each of the five counted problem sets is worth 20 points."
+    },
+    {
+      "raw_label": "News Brief Proposal weight",
+      "category": "grade_weight",
+      "kind": "percent",
+      "value": "4%",
+      "source_quote": "4%",
+      "explanation": "The News Brief Proposal (or hands-on project) is worth 4% of the overall grade."
+    },
+    {
+      "raw_label": "News Brief Proposal points",
+      "category": "grade_weight",
+      "kind": "points",
+      "value": "20",
+      "source_quote": "20",
+      "explanation": "The News Brief Proposal is worth 20 points."
+    },
+    {
+      "raw_label": "Comprehensive Final Exam weight",
+      "category": "grade_weight",
+      "kind": "percent",
+      "value": "30%",
+      "source_quote": "30%",
+      "explanation": "The Comprehensive Final Exam is worth 30% of the overall grade."
+    },
+    {
+      "raw_label": "Comprehensive Final Exam points",
+      "category": "grade_weight",
+      "kind": "points",
+      "value": "200",
+      "source_quote": "200",
+      "explanation": "The Comprehensive Final Exam is worth 200 points."
+    },
+    {
+      "raw_label": "Problem sets assigned",
+      "category": "assessment_count",
+      "kind": "count",
+      "value": "6",
+      "source_quote": "six graded problem sets",
+      "explanation": "Six problem sets are assigned, though only the best five count toward the grade."
+    },
+    {
+      "raw_label": "Term exams given",
+      "category": "assessment_count",
+      "kind": "count",
+      "value": "3",
+      "source_quote": "three 50-minute exams",
+      "explanation": "Three term exams are given during the semester."
+    },
+    {
+      "raw_label": "Lectures per week",
+      "category": "logistics",
+      "kind": "count",
+      "value": "3",
+      "source_quote": "Lectures: 3 sessions / week, 1 hour / session",
+      "explanation": "Lectures meet 3 times per week."
+    },
+    {
+      "raw_label": "Recitations per week",
+      "category": "logistics",
+      "kind": "count",
+      "value": "2",
+      "source_quote": "Recitations: 2 sessions / week, 1 hour / session",
+      "explanation": "Recitations meet 2 times per week."
+    },
+    {
+      "raw_label": "Final exam duration",
+      "category": "schedule_time",
+      "kind": "number",
+      "value": "3-hour",
+      "source_quote": "The final exam will be a 3-hour cumulative exam covering the entire course.",
+      "explanation": "The comprehensive final exam is 3 hours long."
+    }
+  ],
+  "missing_info": [
+    "No specific exam dates or final exam date are given",
+    "No grading scale (letter-grade thresholds or point cutoffs) is stated",
+    "No late-submission policy is stated",
+    "The header lists recitations as '1 hour / session' but the Recitations section separately states 50 minutes per meeting",
+    "No due dates are given for problem sets or the news brief/hands-on project"
+  ],
+  "transcription": "Browse Course Material\n\nCourse Info\n\nInstructors\n\nProf. Barbara Imperiali\n\nProf. Adam Martin\n\nDr. Diviya Ray\n\nDepartments\n\nBiology\n\nAs Taught In\n\nFall\n\n2018\n\nLevel\n\nUndergraduate\n\nTopics\n\nHealth and Medicine\n\nCancer\n\nFunctional Genomics\n\nScience\n\nBiology\n\nBiochemistry\n\nCell Biology\n\nGenetics\n\nMicrobiology\n\nMolecular Biology\n\nVirology\n\nLearning Resource Types\n\ngrading\nExam Solutions\n\ngrading\nExams\n\ntheaters\nLecture Videos\n\nassignment_turned_in\nProblem Set Solutions\n\nassignment\nProblem Sets\n\nDownload Course\n\nsearch\n\nGIVE NOW\n\nabout ocw\nhelp & faqs\ncontact us\n\n7.016 | Fall 2018 | Undergraduate\n\nIntroductory Biology\n\nMenu\n\nMore Info\n\nCourse Meeting Times\n\nLectures: 3 sessions / week, 1 hour / session\nRecitations: 2 sessions / week, 1 hour / session\n\nPrerequisites\n\nThere are no formal prerequisites for this course, but we do presuppose high-school-level biology and chemistry (especially familiarity with the fundamental aspects of chemical structure).\nBefore taking this course, you may want to review Pre-7.01 Getting up to Speed in Biology, a self-paced course designed to help prepare students for their first college-level biology class.\n\nTextbook\n\nThe required textbook is: Sadava, D. E., D. M. Hillis, et al. Life: The Science of Biology. 11th ed. W. H. Freeman, 2016. ISBN: 9781319145446.\n\nRecitations\n\nRegular weekly attendance is expected. Each recitation section meets twice per week for 50 minutes.\n\nAssignments\n\nThere will be six graded problem sets, but only your best five problem set scores will be used in determining your grade. While general discussions and collaboration on the problem sets are appropriate, detailed discussion of specific solutions or sharing of answers is a violation of the trust placed in all students in the class, each of whom is expected to produce their own unique set of answers. Students who copy problem sets or allow their answers to be copied will be assigned a zero for that problem set, and may be assigned a zero for all the problem sets.\nIn addition to the five problem sets, students will have a sixth assignment in which they will choose to prepare either a news brief or a “hands-on” project, worth 4% of their final grade. Please refer to the Assignments section for more detail.\n\nExams\n\nThere will be three 50-minute exams given during the term and a comprehensive final given during the finals week. The final exam will be a 3-hour cumulative exam covering the entire course.\n\nGrading\n\nYour overall course grade will depend on the following components:\n\nACTIVITIES\n\nTOTAL POINTS\n\n% OF Overall GRADES\n\nThree Term Exams (100 points each)\n\n300\n\n51%\n\nFive Problem Sets (20 points each)\n\n100\n\n15%\n\nNews Brief Proposal\n\n20\n\n4%\n\nComprehensive Final Exam\n\n200\n\n30%\n\nTotal\n\n620\n\n100%\n\nCourse Info\n\nInstructors\n\nProf. Barbara Imperiali\n\nProf. Adam Martin\n\nDr. Diviya Ray\n\nDepartments\n\nBiology\n\nAs Taught In\n\nFall\n\n2018\n\nLevel\n\nUndergraduate\n\nTopics\n\nHealth and Medicine\n\nCancer\n\nFunctional Genomics\n\nScience\n\nBiology\n\nBiochemistry\n\nCell Biology\n\nGenetics\n\nMicrobiology\n\nMolecular Biology\n\nVirology\n\nLearning Resource Types\n\ngrading\nExam Solutions\n\ngrading\nExams\n\ntheaters\nLecture Videos\n\nassignment_turned_in\nProblem Set Solutions\n\nassignment\nProblem Sets\n\nDownload Course\n\nOver 2,500 courses & materials\n\nFreely sharing knowledge with learners and educators around the world. Learn more\n\n© 2001–2026 Massachusetts Institute of Technology\n\nAccessibility\n\nCreative Commons License\n\nTerms and Conditions\n\nProud member of:\n\n© 2001–2026 Massachusetts Institute of Technology\n\nYou are leaving MIT OpenCourseWare\n\nclose\n\nPlease be advised that external sites may have terms and conditions,\nincluding license rights, that differ from ours. MIT OCW is not responsible\nfor any content on third party sites, nor does a link suggest an endorsement\nof those sites and/or their content.\n\nStay Here\n\nContinue\n"
+}

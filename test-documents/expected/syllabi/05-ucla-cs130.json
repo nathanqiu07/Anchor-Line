@@ -1,0 +1,62 @@
+{
+  "document_type": "syllabus",
+  "course_name": null,
+  "term": null,
+  "items": [
+    {
+      "raw_label": "Quizzes weight",
+      "category": "grade_weight",
+      "kind": "percent",
+      "value": "7.5%",
+      "source_quote": "7.5% quizzes",
+      "explanation": "Quizzes are worth 7.5% of the final grade."
+    },
+    {
+      "raw_label": "Requirements homework weight",
+      "category": "grade_weight",
+      "kind": "percent",
+      "value": "2.5%",
+      "source_quote": "2.5% requirements homework",
+      "explanation": "Requirements homework is worth 2.5% of the final grade."
+    },
+    {
+      "raw_label": "Project weight",
+      "category": "grade_weight",
+      "kind": "percent",
+      "value": "40.0%",
+      "source_quote": "40.0% project",
+      "explanation": "The project is worth 40.0% of the final grade."
+    },
+    {
+      "raw_label": "Midterm weight",
+      "category": "grade_weight",
+      "kind": "percent",
+      "value": "15.0%",
+      "source_quote": "15.0% midterm",
+      "explanation": "The midterm is worth 15.0% of the final grade."
+    },
+    {
+      "raw_label": "Final exam weight",
+      "category": "grade_weight",
+      "kind": "percent",
+      "value": "35.0%",
+      "source_quote": "35.0% final exam",
+      "explanation": "The final exam is worth 35.0% of the final grade."
+    },
+    {
+      "raw_label": "Late-submission penalty formula",
+      "category": "policy_penalty",
+      "kind": "percent",
+      "value": "2N%",
+      "source_quote": "is 2N% of the assignment's value",
+      "explanation": "An assignment submitted between N and N+1 full days late loses 2N% of its value."
+    }
+  ],
+  "missing_info": [
+    "No explicit course title or course number is stated (only a '[130 home]' link)",
+    "No explicit term or semester is stated",
+    "No explicit assignment due dates are given",
+    "No letter-grade or numeric grading-scale thresholds are stated"
+  ],
+  "transcription": "Grading\n\n[130 home]\n\n7.5% quizzes\n2.5% requirements homework\n40.0% project\n15.0% midterm\n35.0% final exam\n\nQuizzes and exams are done in-class.\nQuizzes are closed book; exams are open book and open notes,\nbut no automated devices (e.g., laptops) are allowed.\nNo written makeups will be given.\n\nThe lateness penalty for an assignment that is submitted between\nN and N+1 full days late (where N is\nnonnegative) is 2N% of the assignment's value.\nThat is, if the assignment is worth 100 points,\nthe penalty is 1 point for being up to 1 day late, 2 points for being\nfrom 1 to 2 days late, 4 points for being from 2 to 3 days late, and so\nforth. Assignments are not accepted after the last day of instruction\n(this is typically the Friday before final exams), and are not\naccepted after the lateness penalty renders them irrelevant to the\nfinal grade.\n\nStudents must follow the UCLA\nStudent Conduct Code, which prohibits cheating,\nfabrication,\nmultiple submissions, and facilitating academic dishonesty. A summary\nof the academic integrity material of the Student Conduct Code can be found in the Student\nGuide to Academic Integrity, and the Office of the Dean of\nStudents has a workshop on academic\nintegrity.\n\nStudents are encouraged to study together, and to discuss general\nproblem-solving techniques that are useful on assignments; but when\nworking on the homework assignment students must specify the sources\nfor all parts of their project. In particular, each changelog entry\nmust accurately identify who contributed to that change. If you have\nquestions about the policy, please discuss\nthem with the instructor.\n\n© 1999–2016\nPaul Eggert.\nSee copying rules.\n\n$Id: grading.html,v 1.18 2016/03/25 21:35:53 eggert Exp $\n"
+}
