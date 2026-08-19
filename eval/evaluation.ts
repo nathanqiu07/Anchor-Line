@@ -1,5 +1,5 @@
 import { anchorQuote } from "../lib/anchor";
-import type { LetterAnalysis, LineItem } from "../lib/schema";
+import type { LetterAnalysis, LineItem, SyllabusAnalysis, SyllabusItem } from "../lib/schema";
 
 export interface EvaluationResult {
   fieldAccuracy: number;
@@ -103,6 +103,86 @@ export function evaluateLetter(actual: LetterAnalysis, expected: LetterAnalysis)
   );
   const totalAnchors =
     expectedAnchorClaims.length + extraCoaClaim + extraLineItemClaims;
+
+  return {
+    fieldAccuracy: totalFields === 0 ? 1 : matchedFields / totalFields,
+    matchedFields,
+    totalFields,
+    anchorVerification: totalAnchors === 0 ? null : verifiedAnchors / totalAnchors,
+    verifiedAnchors,
+    totalAnchors,
+  };
+}
+
+function valuesForSyllabusItem(item: SyllabusItem | undefined): unknown[] {
+  if (!item) {
+    return [undefined, undefined, undefined, undefined, undefined, undefined];
+  }
+
+  return [item.raw_label, item.category, item.kind, item.value, item.source_quote, item.explanation];
+}
+
+function syllabusComparisonPairs(
+  actual: SyllabusAnalysis,
+  expected: SyllabusAnalysis,
+): Array<[unknown, unknown]> {
+  const actualBase = [
+    actual.course_name,
+    actual.term,
+    actual.transcription,
+    actual.missing_info,
+    actual.items.length,
+  ];
+  const expectedBase = [
+    expected.course_name,
+    expected.term,
+    expected.transcription,
+    expected.missing_info,
+    expected.items.length,
+  ];
+  const pairs = expectedBase.map(
+    (expectedValue, index) => [actualBase[index], expectedValue] as [unknown, unknown],
+  );
+
+  const itemCount = Math.max(actual.items.length, expected.items.length);
+  for (let index = 0; index < itemCount; index += 1) {
+    const expectedItem = expected.items[index];
+    const actualValues = valuesForSyllabusItem(actual.items[index]);
+    const expectedValues = valuesForSyllabusItem(expectedItem);
+    pairs.push(
+      ...expectedValues.map(
+        (expectedValue, fieldIndex) =>
+          [actualValues[fieldIndex], expectedValue] as [unknown, unknown],
+      ),
+    );
+  }
+
+  return pairs;
+}
+
+/** Compares a deterministic extracted syllabus analysis with its checked-in expectation. */
+export function evaluateSyllabus(
+  actual: SyllabusAnalysis,
+  expected: SyllabusAnalysis,
+): EvaluationResult {
+  const fields = syllabusComparisonPairs(actual, expected);
+  const totalFields = fields.length;
+  const matchedFields = fields.filter(([actualValue, expectedValue]) =>
+    sameValue(actualValue, expectedValue),
+  ).length;
+
+  const expectedAnchorClaims = expected.items.map((expectedItem, index) => ({
+    expectedQuote: expectedItem.source_quote,
+    actualQuote: actual.items[index]?.source_quote,
+  }));
+  const verifiedAnchors = expectedAnchorClaims.filter(
+    ({ expectedQuote, actualQuote }) =>
+      actualQuote === expectedQuote &&
+      Boolean(anchorQuote(expected.transcription, expectedQuote)) &&
+      Boolean(anchorQuote(actual.transcription, expectedQuote)),
+  ).length;
+  const extraItemClaims = Math.max(0, actual.items.length - expected.items.length);
+  const totalAnchors = expectedAnchorClaims.length + extraItemClaims;
 
   return {
     fieldAccuracy: totalFields === 0 ? 1 : matchedFields / totalFields,

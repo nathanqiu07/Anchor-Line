@@ -1,9 +1,10 @@
 import { describe, expect, test } from "vitest";
 
-import type { LetterAnalysis } from "../lib/schema";
+import type { LetterAnalysis, SyllabusAnalysis } from "../lib/schema";
 
 import {
   evaluateLetter,
+  evaluateSyllabus,
   meetsAnchorThreshold,
   meetsEvaluationThresholds,
   summarizeEvaluation,
@@ -171,6 +172,120 @@ describe("deterministic fixture evaluation", () => {
       line_items: [],
     };
     const result = evaluateLetter(structuredClone(noExpectedAnchors), noExpectedAnchors);
+
+    expect(result.anchorVerification).toBeNull();
+    expect(result.totalAnchors).toBe(0);
+    expect(meetsAnchorThreshold(result)).toBe(false);
+    expect(meetsEvaluationThresholds(result)).toBe(false);
+  });
+});
+
+const expectedSyllabus: SyllabusAnalysis = {
+  document_type: "syllabus",
+  course_name: "Intro to Testing",
+  term: "Fall 2026",
+  items: [
+    {
+      raw_label: "Midterm",
+      category: "grade_weight",
+      kind: "percent",
+      value: "30%",
+      source_quote: "Midterm 30%",
+      explanation: "The midterm is worth 30% of the final grade.",
+    },
+  ],
+  transcription: "Midterm 30%\nFinal 70%",
+  missing_info: [],
+};
+
+describe("deterministic syllabus fixture evaluation", () => {
+  test("reports field accuracy and source-quote anchor verification", () => {
+    const result = evaluateSyllabus(structuredClone(expectedSyllabus), expectedSyllabus);
+
+    expect(result.fieldAccuracy).toBe(1);
+    expect(result.anchorVerification).toBe(1);
+    expect(result).toMatchObject({ matchedFields: result.totalFields, verifiedAnchors: 1, totalAnchors: 1 });
+  });
+
+  test("counts a changed extracted field without hiding anchor failures", () => {
+    const actual = {
+      ...expectedSyllabus,
+      course_name: "Wrong Course",
+      items: [{ ...expectedSyllabus.items[0], source_quote: "Missing quote" }],
+    };
+    const result = evaluateSyllabus(actual, expectedSyllabus);
+
+    expect(result.fieldAccuracy).toBeLessThan(1);
+    expect(result.anchorVerification).toBe(0);
+  });
+
+  test("uses expected anchors as the denominator so omitted actual claims fail", () => {
+    const omittedActual: SyllabusAnalysis = {
+      ...expectedSyllabus,
+      items: [],
+      transcription: "",
+    };
+
+    const result = evaluateSyllabus(omittedActual, expectedSyllabus);
+
+    expect(result).toMatchObject({
+      anchorVerification: 0,
+      verifiedAnchors: 0,
+      totalAnchors: 1,
+    });
+    expect(result.fieldAccuracy).toBeLessThan(1);
+    expect(meetsAnchorThreshold(result)).toBe(false);
+  });
+
+  test("gives no anchor credit to self-consistent fabricated candidate evidence", () => {
+    const fabricated: SyllabusAnalysis = {
+      document_type: "syllabus",
+      course_name: "Fabricated Course",
+      term: "Fabricated Term",
+      items: [
+        {
+          raw_label: "Fabricated Item",
+          category: "other",
+          kind: "number",
+          value: "1",
+          source_quote: "Fabricated Item 1",
+          explanation: "Fabricated explanation.",
+        },
+      ],
+      transcription: "Fabricated Item 1",
+      missing_info: ["fabricated"],
+    };
+
+    const result = evaluateSyllabus(fabricated, expectedSyllabus);
+
+    expect(result.verifiedAnchors).toBe(0);
+    expect(result.totalAnchors).toBe(1);
+    expect(result.anchorVerification).toBe(0);
+    expect(meetsEvaluationThresholds(result)).toBe(false);
+  });
+
+  test("penalizes extra candidate claims in field and anchor denominators", () => {
+    const extra: SyllabusAnalysis["items"][number] = {
+      raw_label: "Final",
+      category: "grade_weight",
+      kind: "percent",
+      value: "70%",
+      source_quote: "Final 70%",
+      explanation: "The final is worth 70% of the final grade.",
+    };
+    const result = evaluateSyllabus(
+      { ...expectedSyllabus, items: [...expectedSyllabus.items, extra] },
+      expectedSyllabus,
+    );
+
+    expect(result.verifiedAnchors).toBe(1);
+    expect(result.totalAnchors).toBe(2);
+    expect(result.anchorVerification).toBeCloseTo(0.5);
+  });
+
+  test("reports N/A only when expected truth contains no anchor claims", () => {
+    const noExpectedAnchors: SyllabusAnalysis = { ...expectedSyllabus, items: [] };
+    const result = evaluateSyllabus(structuredClone(noExpectedAnchors), noExpectedAnchors);
 
     expect(result.anchorVerification).toBeNull();
     expect(result.totalAnchors).toBe(0);

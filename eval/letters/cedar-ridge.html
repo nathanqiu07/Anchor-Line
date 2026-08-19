@@ -5,27 +5,35 @@
     <title>Cedar Ridge University financial aid offer</title>
     <style>
       @page { size: letter; margin: 0; }
-      body { background: #eef1f5; color: #16223a; font: 17px/1.45 Arial, sans-serif; margin: 0; }
-      main { background: white; box-shadow: 0 2px 14px #aab2bf; margin: 36px auto; min-height: 950px; padding: 58px 64px; width: 700px; }
-      h1 { color: #173f76; font-size: 32px; margin: 0 0 6px; } h2 { border-bottom: 2px solid #d5dfed; font-size: 21px; margin-top: 38px; padding-bottom: 8px; }
-      .meta { color: #53657f; } table { border-collapse: collapse; width: 100%; } td { border-bottom: 1px solid #d9dfeb; padding: 13px 8px; } td:last-child { text-align: right; font-weight: 700; }
-      .total { background: #eef5ff; font-size: 19px; font-weight: 700; padding: 14px; } .note { color: #506078; font-size: 14px; margin-top: 30px; }
+      body { background: #eef1f5; color: #16223a; font: 15px/1.35 Arial, sans-serif; margin: 0; }
+      main { background: white; box-shadow: 0 2px 14px #aab2bf; margin: 36px auto; min-height: 970px; padding: 50px 58px; width: 720px; }
+      header { border-bottom: 4px solid #173f76; display: flex; justify-content: space-between; padding-bottom: 13px; }
+      h1 { color: #173f76; font-size: 29px; margin: 0 0 5px; } h2 { border-bottom: 2px solid #d5dfed; font-size: 19px; margin: 27px 0 9px; padding-bottom: 6px; }
+      .meta { color: #53657f; font-size: 13px; text-align: right; } table { border-collapse: collapse; width: 100%; } th { background: #e8f0fb; font-size: 12px; padding: 8px; text-align: left; } td { border-bottom: 1px solid #d9dfeb; padding: 8px; } td.amount { text-align: right; font-weight: 700; } .total { background: #eef5ff; font-weight: 700; } .note { color: #506078; font-size: 12px; margin-top: 18px; }
     </style>
   </head>
   <body>
     <main>
-      <h1>Cedar Ridge University</h1>
-      <p class="meta">Financial Aid Offer · 2026–2027 · Student: Avery Linden</p>
-      <h2>Estimated annual cost</h2>
-      <p class="total">Estimated Cost of Attendance: $42,000</p>
-      <h2>Your offered aid</h2>
+      <header>
+        <div><h1>Cedar Ridge University</h1><strong>Office of Financial Aid</strong></div>
+        <div class="meta">Student: Avery Linden<br>Student ID: CRU-10482<br>Award year: 2026–2027</div>
+      </header>
+      <p>Dear Avery: based on your current application, this is your estimated financial aid offer.</p>
+      <h2>Estimated cost of attendance</h2>
       <table><tbody>
-        <tr><td>Cedar Ridge Presidential Scholarship</td><td>$16,000</td></tr>
-        <tr><td>Federal Pell Grant</td><td>$3,200</td></tr>
-        <tr><td>Direct Unsub</td><td>$5,500</td></tr>
-        <tr><td>Federal Work-Study</td><td>$2,500</td></tr>
+        <tr><td>Tuition and required fees</td><td class="amount">$29,600</td></tr>
+        <tr><td>Housing and meals</td><td class="amount">$9,400</td></tr>
+        <tr><td>Books, transportation, and personal expenses</td><td class="amount">$3,000</td></tr>
+        <tr class="total"><td>Estimated Cost of Attendance</td><td class="amount">$42,000</td></tr>
       </tbody></table>
-      <p class="note">Amounts are offered for the academic year. Review eligibility and renewal terms with Financial Aid.</p>
+      <h2>Your offered financial aid</h2>
+      <table><thead><tr><th>Award</th><th>Offered amount</th><th>Accept?</th></tr></thead><tbody>
+        <tr><td>Cedar Ridge Presidential Scholarship</td><td class="amount">$16,000</td><td>Accepted</td></tr>
+        <tr><td>Federal Pell Grant</td><td class="amount">$3,200</td><td>Accepted</td></tr>
+        <tr><td>Direct Unsubsidized Loan</td><td class="amount">$5,500</td><td>Offered</td></tr>
+        <tr><td>Federal Work-Study</td><td class="amount">$2,500</td><td>Offered</td></tr>
+      </tbody></table>
+      <p class="note">Amounts are for the academic year. Loans may be accepted, reduced, or declined. Work-study is earned through employment and is not applied directly to your bill.</p>
     </main>
   </body>
 </html>

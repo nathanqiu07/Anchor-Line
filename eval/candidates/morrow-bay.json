@@ -11,8 +11,8 @@
       "category": "gift_aid",
       "normalized_name": "Morrow Bay Merit Award",
       "amount": 12000,
-      "period": "unknown",
-      "source_quote": "Morrow Bay Merit Award $12,000",
+      "period": "year",
+      "source_quote": "Morrow Bay Merit Award $6,000 $6,000 $12,000",
       "explanation": "Merit award gift aid does not need to be repaid, subject to renewal terms."
     },
     {
@@ -20,8 +20,8 @@
       "category": "loan",
       "normalized_name": "Federal Direct Unsubsidized Loan",
       "amount": 6500,
-      "period": "unknown",
-      "source_quote": "Unsubsidized Stafford Loan DL $6,500",
+      "period": "year",
+      "source_quote": "Unsubsidized Stafford Loan DL $3,250 $3,250 $6,500",
       "explanation": "You repay this federal loan, and interest accrues while you are in school."
     },
     {
@@ -29,11 +29,11 @@
       "category": "loan",
       "normalized_name": "Federal Direct Parent PLUS Loan",
       "amount": 10000,
-      "period": "unknown",
-      "source_quote": "Parent PLUS Loan $10,000",
+      "period": "year",
+      "source_quote": "Parent PLUS Loan $5,000 $5,000 $10,000",
       "explanation": "This federal loan is borrowed and repaid by a parent, not the student."
     }
   ],
-  "transcription": "Morrow Bay College\n2026–2027 Aid Notification · Student: Morgan Vale\nAnnual student budget\nEstimated Cost of Attendance: $48,500\nFinancial aid offered\nMorrow Bay Merit Award $12,000\nUnsubsidized Stafford Loan DL $6,500\nParent PLUS Loan $10,000\nLoan offers may be accepted, reduced, or declined. Parent borrowing requires a separate parent application.",
+  "transcription": "Morrow Bay College\n2026–2027 Financial Aid Notification · Student: Morgan Vale\nDear Morgan, the following awards are based on full-time enrollment for the academic year.\nAnnual student budget\nTuition, housing, meals, and allowances $48,500\nEstimated Cost of Attendance $48,500\nFinancial aid offered\nMorrow Bay Merit Award $6,000 $6,000 $12,000\nUnsubsidized Stafford Loan DL $3,250 $3,250 $6,500\nParent PLUS Loan $5,000 $5,000 $10,000\nLoan offers may be accepted, reduced, or declined. Parent PLUS borrowing requires a separate parent application and is the parent’s responsibility.",
   "missing_info": []
 }

@@ -25,15 +25,15 @@
       "explanation": "Grant gift aid does not need to be repaid, subject to eligibility and award terms."
     },
     {
-      "raw_label": "Direct Unsub",
+      "raw_label": "Direct Unsubsidized Loan",
       "category": "loan",
       "normalized_name": "Federal Direct Unsubsidized Loan",
       "amount": 5500,
       "period": "year",
-      "source_quote": "Direct Unsub $5,500",
+      "source_quote": "Direct Unsubsidized Loan $5,500",
       "explanation": "You repay this federal loan, and interest accrues while you are in school."
     }
   ],
-  "transcription": "Cedar Ridge University\nFinancial Aid Offer · 2026–2027 · Student: Avery Linden\nEstimated annual cost\nEstimated Cost of Attendance: $42,000\nYour offered aid\nCedar Ridge Presidential Scholarship $16,000\nFederal Pell Grant $3,200\nDirect Unsub $5,500\nFederal Work-Study $2,500\nAmounts are offered for the academic year. Review eligibility and renewal terms with Financial Aid.",
+  "transcription": "Cedar Ridge University\nOffice of Financial Aid\nStudent: Avery Linden\nStudent ID: CRU-10482\nAward year: 2026–2027\nDear Avery: based on your current application, this is your estimated financial aid offer.\nEstimated cost of attendance\nTuition and required fees $29,600\nHousing and meals $9,400\nBooks, transportation, and personal expenses $3,000\nEstimated Cost of Attendance $42,000\nYour offered financial aid\nCedar Ridge Presidential Scholarship $16,000 Accepted\nFederal Pell Grant $3,200 Accepted\nDirect Unsubsidized Loan $5,500 Offered\nFederal Work-Study $2,500 Offered\nAmounts are for the academic year. Loans may be accepted, reduced, or declined. Work-study is earned through employment and is not applied directly to your bill.",
   "missing_info": []
 }

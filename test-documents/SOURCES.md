@@ -53,10 +53,9 @@ and corrected by hand where wrong, but were not independently re-derived by a hu
 scratch. Treat these as **silver labels for regression-testing and manual comparison, not
 gold/authoritative ground truth** — an LLM-derived expected answer that is compared against
 another LLM's extraction mainly measures agreement between the two, not real-world
-correctness. `eval:live`'s `--expect` scoring is currently wired up for award letters only;
-passing `--expect` for a syllabus is accepted but not scored (see `eval/live-extract.ts`), so
-the syllabus `expected/` files exist for future use and manual side-by-side comparison, not
-automated scoring today.
+correctness. `eval:live`'s `--expect` scoring covers both document types (`evaluateLetter` /
+`evaluateSyllabus` in `eval/evaluation.ts`), so every file under `expected/` can be used with
+`npm run eval:live -- <file> --type <award_letter|syllabus> --expect expected/.../<file>.json`.
 
 `expected/award-letters/01-ed-sample-2.json` has an empty `line_items: []` deliberately — that
 source document is a blank estimate letter with a blank loan-request form and no actual

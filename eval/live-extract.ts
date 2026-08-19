@@ -9,12 +9,13 @@ import {
 } from "../lib/llm";
 import {
   LetterAnalysisSchema,
+  SyllabusAnalysisSchema,
   type Analysis,
   type DocumentType,
   type LetterAnalysis,
   type SyllabusAnalysis,
 } from "../lib/schema";
-import { evaluateLetter } from "./evaluation";
+import { evaluateLetter, evaluateSyllabus, type EvaluationResult } from "./evaluation";
 
 /**
  * Live single-letter extraction against whichever provider the environment configures.
@@ -79,8 +80,7 @@ function resolvePath(path: string): string {
   return isAbsolute(path) ? path : join(process.cwd(), path);
 }
 
-function reportAccuracy(actual: LetterAnalysis, expected: LetterAnalysis): void {
-  const result = evaluateLetter(actual, expected);
+function reportAccuracy(result: EvaluationResult): void {
   console.log("\nScored against expected truth:");
   console.table([
     {
@@ -154,13 +154,13 @@ async function main(): Promise<void> {
   }
 
   if (expectedPath) {
+    const expectedRaw = JSON.parse(await readFile(resolvePath(expectedPath), "utf8"));
     if (analysis.document_type === "syllabus") {
-      console.log("\n(--expect scoring is award-letter only; skipped for syllabus.)");
+      const expected = SyllabusAnalysisSchema.parse(expectedRaw);
+      reportAccuracy(evaluateSyllabus(analysis, expected));
     } else {
-      const expected = LetterAnalysisSchema.parse(
-        JSON.parse(await readFile(resolvePath(expectedPath), "utf8")),
-      );
-      reportAccuracy(analysis, expected);
+      const expected = LetterAnalysisSchema.parse(expectedRaw);
+      reportAccuracy(evaluateLetter(analysis, expected));
     }
   }
 
