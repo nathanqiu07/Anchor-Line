@@ -435,15 +435,20 @@ function assertProvenance(analysis: LetterAnalysis, transcription: string): Lett
     return [...leftCounts].every(([value, count]) => rightCounts.get(value) === count);
   }
 
+  // Report every uncovered line at once. A dense letter leaves several uncovered together,
+  // and there is only one corrective retry: naming the first spends that retry fixing one
+  // line and fails on the next, losing a readable letter to a fault never disclosed.
+  const uncoveredLines: string[] = [];
   for (const [line, expectedAmounts] of amountsByDollarLine) {
     const claimedAmounts = claims
       .filter((claim) => claim.sourceQuote === line)
       .flatMap((claim) => (claim.amount === null ? [] : [claim.amount]));
-    if (!sameMultiset(claimedAmounts, expectedAmounts)) {
-      throw provenanceError(
-        `dollar-bearing line monetary occurrences must be covered exactly: ${line}`,
-      );
-    }
+    if (!sameMultiset(claimedAmounts, expectedAmounts)) uncoveredLines.push(line);
+  }
+  if (uncoveredLines.length > 0) {
+    throw provenanceError(
+      `dollar-bearing line monetary occurrences must be covered exactly: ${uncoveredLines.join(" | ")}`,
+    );
   }
 
   for (const claim of claims) {

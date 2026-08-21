@@ -1111,6 +1111,58 @@ Federal Pell Grant $3,200`;
     ).rejects.toBeInstanceOf(ExtractionValidationError);
   });
 
+  test("names every uncovered dollar line so one retry can fix them together", async () => {
+    // A dense letter leaves several lines uncovered at once. Reporting only the first
+    // spends the single corrective retry fixing one line and fails on the next, so the
+    // student loses the letter to a fault the model was never told about.
+    const denseTranscription = [
+      "Northstar College",
+      "Financial Aid Offer",
+      "Tuition and fees $20,000",
+      "Housing and meals $9,000",
+      "Northstar Grant $5,000",
+      "All aid amounts are for the academic year.",
+    ].join("\n");
+    const missingBothCostLines = {
+      school_name: "Northstar College",
+      award_year: null,
+      cost_of_attendance: { amount: null, source_quote: null },
+      line_items: [
+        {
+          raw_label: "Northstar Grant",
+          category: "gift_aid",
+          normalized_name: "Northstar Grant",
+          amount: 5_000,
+          period: "year",
+          source_quote: "Northstar Grant $5,000",
+          explanation: "This is gift aid you do not repay.",
+        },
+      ],
+      transcription: denseTranscription,
+      missing_info: [],
+    };
+
+    const calls: { system?: string }[] = [];
+    const client: MessagesClient = {
+      create: async (request) => {
+        calls.push(request as { system?: string });
+        return response(JSON.stringify(missingBothCostLines));
+      },
+    };
+
+    await expect(
+      extractLetter(uploaded(denseTranscription), client),
+    ).rejects.toBeInstanceOf(ExtractionValidationError);
+    expect(calls).toHaveLength(2);
+    // Assert against the diagnostic block alone: the system prompt always carries the whole
+    // transcription, so searching all of it would pass no matter what the diagnostic said.
+    const diagnostic = /<untrusted_validation_feedback>([\s\S]*?)<\/untrusted_validation_feedback>/.exec(
+      calls[1].system ?? "",
+    )?.[1];
+    expect(diagnostic).toContain("Tuition and fees $20,000");
+    expect(diagnostic).toContain("Housing and meals $9,000");
+  });
+
   test("accepts two claims that exactly cover a two-dollar line", async () => {
     const twoAmountTranscription =
       "Northstar College\nFinancial Aid Offer\nsubsidized $3,500; unsubsidized $2,000\nAll aid amounts are for the academic year.";
