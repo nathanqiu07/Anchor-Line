@@ -35,6 +35,16 @@ function normalizeWithIndexMap(value: string): NormalizedText {
 }
 
 /**
+ * The same folding `anchorQuote` matches with, for callers that only need to know whether
+ * two pieces of text are the same line. Anything comparing a model's `source_quote` against
+ * the transcription must go through this: comparing raw strings instead calls a line absent
+ * that the anchor layer has already found, and the two answers then disagree in the UI.
+ */
+export function normalizeForMatch(value: string): string {
+  return normalizeWithIndexMap(value).text;
+}
+
+/**
  * Locates a quoted claim in a transcription, returning offsets into the original (not
  * normalized) transcription, or null when the quote is not present.
  *

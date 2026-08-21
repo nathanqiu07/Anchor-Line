@@ -321,6 +321,36 @@ describe("financial-aid pack", () => {
     ).toBe("unknown");
   });
 
+  test("finds the cost line the way anchoring does rather than by exact punctuation", () => {
+    // A model routinely quotes a line with punctuation or spacing the letter does not carry.
+    // anchorQuote() folds that away and still anchors the claim, so a period lookup that
+    // insists on raw equality reports "unknown" for a line the rest of the app calls found.
+    expect(
+      deriveCostOfAttendancePeriod({
+        ...analysis,
+        cost_of_attendance: {
+          amount: 42_000,
+          source_quote: "Estimated Cost of Attendance: $42,000",
+        },
+        transcription: "Costs per academic year\nEstimated Cost of Attendance   $42,000",
+      }),
+    ).toBe("year");
+  });
+
+  test("keeps the cost period unknown when two lines normalize to the same text", () => {
+    expect(
+      deriveCostOfAttendancePeriod({
+        ...analysis,
+        cost_of_attendance: {
+          amount: 42_000,
+          source_quote: "Cost of Attendance $42,000",
+        },
+        transcription:
+          "Costs per academic year\nCost of Attendance $42,000\nCost of attendance: $42,000",
+      }),
+    ).toBe("unknown");
+  });
+
   test("annualizes semester COA and semester gift aid onto the same basis", () => {
     const semesterCoa: LetterAnalysis = {
       ...analysis,

@@ -106,6 +106,13 @@ export function UploadPanel() {
         const message = (payload as { error?: unknown }).error;
         if (typeof message === "string") throw new Error(message);
       }
+      // A platform timeout answers with an HTML error page rather than this route's JSON, so
+      // the generic copy below would blame a file that is perfectly readable.
+      if (response.status === 504 || response.status === 408) {
+        throw new Error(
+          "The analysis took too long and the server cut it off. Try again, or try a shorter document.",
+        );
+      }
       throw new Error("We couldn't read that file. Please try again.");
     }
 

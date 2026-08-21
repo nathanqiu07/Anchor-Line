@@ -1,4 +1,5 @@
 import type { LetterAnalysis, LineItem } from "../lib/schema";
+import { normalizeForMatch } from "../lib/anchor";
 import {
   clauseTokens,
   hasDueBalanceOrRepayment,
@@ -342,8 +343,9 @@ export function deriveCostOfAttendancePeriod(
   if (hasUnmappablePeriod(sourceQuote)) return "unknown";
 
   const lines = analysis.transcription.split(/\r?\n/);
+  const normalizedQuote = normalizeForMatch(sourceQuote);
   const quoteIndexes = lines
-    .map((line, index) => (line === sourceQuote ? index : -1))
+    .map((line, index) => (normalizeForMatch(line) === normalizedQuote ? index : -1))
     .filter((index) => index >= 0);
   if (quoteIndexes.length !== 1 || quoteIndexes[0] === 0) return "unknown";
 

@@ -98,4 +98,28 @@ describe("upload panel helpers", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+
+  test("names a server timeout instead of blaming the uploaded file", async () => {
+    // A Vercel FUNCTION_INVOCATION_TIMEOUT answers with an HTML error page, so there is no
+    // JSON `error` to surface. Falling through to the generic copy tells a student their
+    // readable letter is unreadable, which sends them off fixing a file that is fine.
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("<!doctype html>FUNCTION_INVOCATION_TIMEOUT", {
+        status: 504,
+        headers: { "content-type": "text/html" },
+      }),
+    );
+    const { container, findByRole } = render(createElement(UploadPanel));
+    const dropTarget = container.querySelector(".upload-panel");
+
+    fireEvent.drop(dropTarget!, {
+      dataTransfer: {
+        files: [new File(["letter"], "letter.txt", { type: "text/plain" })],
+      },
+    });
+
+    const alert = await findByRole("alert");
+    expect(alert.textContent).toMatch(/took (?:too )?long/i);
+    expect(alert.textContent).not.toMatch(/couldn't read that file/i);
+  });
 });

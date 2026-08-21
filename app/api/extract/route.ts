@@ -34,11 +34,13 @@ function documentTypeFrom(value: unknown): DocumentType {
 }
 
 /**
- * Reasoning models are slow: one live text-layer extraction of a dense letter measured
- * 85.7s. 60 is the ceiling every Vercel plan allows, so it is the safe default here; raise
- * it toward 300 on a plan that permits it rather than leaving dense letters to time out.
+ * Reasoning models are slow: live text-layer extractions of the Thornfield fixture measured
+ * 85.7s and 83.7s, and a corrective retry doubles that. 60 is the ceiling on a plan without
+ * Fluid compute, but it is below the measured single-call cost, so every real upload timed
+ * out with FUNCTION_INVOCATION_TIMEOUT. 300 is the Fluid-compute ceiling on Hobby; drop this
+ * back to 60 only if a deployment rejects it, and expect timeouts again if you do.
  */
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 function error(message: string, status: number): Response {
   return Response.json({ error: message }, { status });

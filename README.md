@@ -153,11 +153,13 @@ build settings, and set `GEMINI_API_KEY` as a server-only production environment
 variable. Optionally set `EXTRACTION_MODEL`; otherwise `gemini-3.6-flash` applies.
 
 Extraction latency is the sharpest deployment constraint. Reasoning models spend real time
-before emitting anything: a live extraction of a dense letter measured **85.7
-seconds** for its single call. The
-route sets `maxDuration = 60` because that is the ceiling every Vercel plan allows, so a
-dense letter can still exceed it — raise the export toward 300 on a plan that permits it,
-or expect occasional timeouts. Sample mode is unaffected; it never calls the provider.
+before emitting anything: live extractions of a dense letter measured **85.7 seconds** and
+**83.7 seconds** for a single call, and a corrective retry doubles that. The route sets
+`maxDuration = 300`, the Fluid-compute ceiling on Hobby. It was 60 — the ceiling without
+Fluid compute — but 60 is below the measured cost of one call, so every real upload on the
+first deployment returned `FUNCTION_INVOCATION_TIMEOUT` after exactly 60s. Drop it back to
+60 only if a deployment rejects 300, and expect those timeouts to return if you do. Sample
+mode is unaffected; it never calls the provider.
 
 The 4 MiB file maximum is an intentional deployability limit: it leaves room
 for multipart overhead beneath Vercel Functions' 4.5 MB request-body limit.
