@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
 import type { LineItem } from "../lib/schema";
-import type { StoredLetterAnalysis } from "../lib/client-store";
+import type { SourceBox, StoredLetterAnalysis } from "../lib/client-store";
 
 import { ClaimCard } from "./claim-card";
 import { LetterWorkspace } from "./letter-workspace";
@@ -364,38 +364,71 @@ describe("LetterWorkspace", () => {
 });
 
 describe("original view", () => {
-  test("points at the transcription instead of guessing a position on the image", () => {
-    // The old band placed itself at the claim's character-offset midpoint scaled to image
-    // height. Character density per line and the image's own header, padding, and margins
-    // make those two scales unrelated: Cedar's loan sits 87.5% down the text, 70% down the
-    // band scale, and ~56% down the rendered page. A confident pointer at the wrong line is
-    // the exact failure this product exists to prevent, so there is no pointer.
-    const transcription = [
-      "Overlap College",
-      "Financial Aid Offer",
-      "Mystery Award $1,250",
-      "This closing paragraph is deliberately far longer than any other line so that character offsets and vertical position disagree.",
-    ].join("\n");
+  const transcription = [
+    "Overlap College",
+    "Financial Aid Offer",
+    "Mystery Award $1,250 Accepted",
+    "This closing paragraph is deliberately far longer than any other line so that character offsets and vertical position disagree.",
+  ].join("\n");
+
+  function offerWithBoxes(mediaBoxes?: SourceBox[]): StoredLetterAnalysis {
     const offer = offerWith(transcription, [
       { ...item, source_quote: "Mystery Award $1,250" },
     ]);
-    const withImage: StoredLetterAnalysis = {
+    return {
       ...offer,
       source: {
         kind: "sample",
         label: "Overlap sample",
         mediaUrl: "/samples/overlap.png",
         mediaType: "image/png",
+        ...(mediaBoxes ? { mediaBoxes } : {}),
       },
     };
+  }
 
-    const { container } = render(<LetterWorkspace offer={withImage} />);
+  test("draws the band on the measured line, not at a character-offset guess", () => {
+    // The quote stops at the amount while the rendered row continues into "Accepted", so an
+    // equality lookup finds nothing. The band must still land on that row, and on the
+    // coordinates the renderer measured rather than anywhere derived from the text.
+    const { container } = render(
+      <LetterWorkspace
+        offer={offerWithBoxes([
+          { text: "Overlap College", top: 2, height: 5, left: 10, width: 80 },
+          { text: "Mystery Award\t$1,250\tAccepted", top: 41.5, height: 3.25, left: 10, width: 80 },
+        ])}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /original/i }));
+
+    const band = container.querySelector<HTMLElement>(".source-image__highlight");
+    expect(band).not.toBeNull();
+    expect(band?.style.top).toBe("41.5%");
+    expect(band?.style.height).toBe("3.25%");
+    expect(container.textContent).not.toMatch(/approx/i);
+  });
+
+  test("draws no band when the line was never measured", () => {
+    const { container } = render(<LetterWorkspace offer={offerWithBoxes()} />);
     fireEvent.click(screen.getByRole("button", { name: /original/i }));
 
     expect(container.querySelector(".source-image__highlight")).toBeNull();
-    expect(container.textContent).not.toMatch(/approx/i);
     expect(container.querySelector(".source-image__note")?.textContent).toMatch(
       /switch to transcription/i,
     );
+  });
+
+  test("draws no band when a quote could match more than one measured line", () => {
+    const { container } = render(
+      <LetterWorkspace
+        offer={offerWithBoxes([
+          { text: "Mystery Award\t$1,250\tAccepted", top: 41.5, height: 3.25, left: 10, width: 80 },
+          { text: "Mystery Award\t$1,250\tDeclined", top: 60, height: 3.25, left: 10, width: 80 },
+        ])}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /original/i }));
+
+    expect(container.querySelector(".source-image__highlight")).toBeNull();
   });
 });

@@ -3,7 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useState, type ChangeEvent, type DragEvent } from "react";
 
-import { saveAnalysis, type AnalysisSource, type StoredAnalysis } from "../lib/client-store";
+import {
+  saveAnalysis,
+  type AnalysisSource,
+  type SourceBox,
+  type StoredAnalysis,
+} from "../lib/client-store";
 import { AnalysisSchema, type Analysis, type DocumentType } from "../lib/schema";
 import {
   isAcceptedUploadType,
@@ -11,7 +16,17 @@ import {
   MAX_UPLOAD_MIB,
 } from "../lib/upload-contract";
 
+import cedarBoxes from "../eval/letter-boxes/cedar-ridge.json";
+import juniperBoxes from "../eval/letter-boxes/juniper-tech.json";
+import morrowBoxes from "../eval/letter-boxes/morrow-bay.json";
+
 export const NON_LETTER_MESSAGE = "This doesn't look like an award letter";
+
+const sampleBoxes: Record<string, SourceBox[]> = {
+  "offer-1": cedarBoxes,
+  "offer-2": juniperBoxes,
+  "offer-3": morrowBoxes,
+};
 
 const letterSamples = [
   {
@@ -144,7 +159,11 @@ export function UploadPanel() {
         kind: "sample",
         label: `${sample.title} sample`,
         ...(sample.mediaUrl
-          ? { mediaUrl: sample.mediaUrl, mediaType: "image/png" as const }
+          ? {
+              mediaUrl: sample.mediaUrl,
+              mediaType: "image/png" as const,
+              ...(sampleBoxes[sample.id] ? { mediaBoxes: sampleBoxes[sample.id] } : {}),
+            }
           : {}),
       });
     } catch (caught) {

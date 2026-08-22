@@ -1,0 +1,100 @@
+[
+  {
+    "text": "Cedar Ridge University",
+    "top": 7.530647985989491,
+    "height": 3.427375218914186,
+    "left": 10,
+    "width": 35.45659722222222
+  },
+  {
+    "text": "Dear Avery: based on your current application, this is your estimated financial aid offer.",
+    "top": 15.97115805604203,
+    "height": 1.7732049036777584,
+    "left": 10,
+    "width": 80
+  },
+  {
+    "text": "Estimated cost of attendance",
+    "top": 20.108636164623466,
+    "height": 2.945764010507881,
+    "left": 10,
+    "width": 80
+  },
+  {
+    "text": "Tuition and required fees\t$29,600",
+    "top": 23.842491243432573,
+    "height": 3.2180385288966726,
+    "left": 10,
+    "width": 80
+  },
+  {
+    "text": "Housing and meals\t$9,400",
+    "top": 27.060529772329247,
+    "height": 3.2618213660245186,
+    "left": 10,
+    "width": 80
+  },
+  {
+    "text": "Books, transportation, and personal expenses\t$3,000",
+    "top": 30.322351138353763,
+    "height": 3.2618213660245186,
+    "left": 10,
+    "width": 80
+  },
+  {
+    "text": "Estimated Cost of Attendance\t$42,000",
+    "top": 33.58417250437829,
+    "height": 3.2618213660245186,
+    "left": 10,
+    "width": 80
+  },
+  {
+    "text": "Your offered financial aid",
+    "top": 39.254049912434326,
+    "height": 2.945764010507881,
+    "left": 10,
+    "width": 80
+  },
+  {
+    "text": "Award\tOffered amount\tAccept?",
+    "top": 42.98790499124343,
+    "height": 2.818520140105079,
+    "left": 10,
+    "width": 80
+  },
+  {
+    "text": "Cedar Ridge Presidential Scholarship\t$16,000\tAccepted",
+    "top": 45.80642513134851,
+    "height": 3.2180385288966726,
+    "left": 10,
+    "width": 80
+  },
+  {
+    "text": "Federal Pell Grant\t$3,200\tAccepted",
+    "top": 49.02446366024518,
+    "height": 3.2618213660245186,
+    "left": 10,
+    "width": 80
+  },
+  {
+    "text": "Direct Unsubsidized Loan\t$5,500\tOffered",
+    "top": 52.28628502626971,
+    "height": 3.2618213660245186,
+    "left": 10,
+    "width": 80
+  },
+  {
+    "text": "Federal Work-Study\t$2,500\tOffered",
+    "top": 55.548106392294216,
+    "height": 3.2618213660245186,
+    "left": 10,
+    "width": 80
+  },
+  {
+    "text": "Amounts are for the academic year. Loans may be accepted, reduced, or declined. Work-study is earned through employment and is not applied directly to your bill.",
+    "top": 60.42989273204904,
+    "height": 2.834938704028021,
+    "left": 10,
+    "width": 80
+  }
+]

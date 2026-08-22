@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { anchorQuote, type AnchorMatch } from "../lib/anchor";
+import { anchorQuote, normalizeForMatch, type AnchorMatch } from "../lib/anchor";
 import type { StoredLetterAnalysis } from "../lib/client-store";
 import type { AidCategory } from "../lib/schema";
 import { calculateOffer } from "../packs/financial-aid";
@@ -84,6 +84,26 @@ export function LetterWorkspace({ offer }: LetterWorkspaceProps) {
     "transcription",
   );
   const activeMatch = activeKey ? (anchorByKey.get(activeKey) ?? null) : null;
+  // The matched span is the letter's own text, so normalising it the way anchoring does
+  // finds the rendered line the fixture renderer measured. No estimate is involved: either
+  // this claim's line was measured or it was not, and an unmeasured line gets no band.
+  const measuredLines = useMemo(
+    () => (source.mediaBoxes ?? []).map((box) => ({ box, needle: normalizeForMatch(box.text) })),
+    [source.mediaBoxes],
+  );
+  // A quote is usually part of its rendered line rather than all of it: the letter's table
+  // row reads "Direct Unsubsidized Loan $5,500 Offered" while the claim quotes only through
+  // the amount. Containment finds that row; requiring a single hit keeps an ambiguous quote
+  // from picking one of several rows at random.
+  const activeBox = useMemo(() => {
+    if (!activeMatch) return null;
+    const quote = normalizeForMatch(
+      analysis.transcription.slice(activeMatch.start, activeMatch.end),
+    );
+    if (!quote) return null;
+    const hits = measuredLines.filter((line) => line.needle.includes(quote));
+    return hits.length === 1 ? hits[0].box : null;
+  }, [activeMatch, analysis.transcription, measuredLines]);
   const sourceRefs = useRef<Record<string, HTMLElement | null>>({});
 
   function scrollToSource(mode: string, key: string) {
@@ -173,7 +193,18 @@ export function LetterWorkspace({ offer }: LetterWorkspaceProps) {
                   unoptimized
                   priority
                 />
-                {activeKey ? (
+                {activeKey && activeBox ? (
+                  <div
+                    className="source-image__highlight"
+                    style={{
+                      top: `${activeBox.top}%`,
+                      height: `${activeBox.height}%`,
+                      left: `${activeBox.left}%`,
+                      width: `${activeBox.width}%`,
+                    }}
+                    ref={(element) => registerSourceRef("original", activeKey, element)}
+                  />
+                ) : activeKey ? (
                   <p className="source-image__note">
                     Switch to Transcription to see the exact line this claim came from.
                   </p>

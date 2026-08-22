@@ -9,11 +9,26 @@ import {
 
 export const STORAGE_KEY = "anchor-lines:analyses";
 
+/**
+ * Where one line of the rendered original actually sits, as percentages of the rendered
+ * page box. Captured by `eval/make-fixtures.ts` from the browser that rendered the image,
+ * which is the only place this geometry exists: a transcription carries no coordinates and
+ * no character offset can recover them.
+ */
+export interface SourceBox {
+  text: string;
+  top: number;
+  height: number;
+  left: number;
+  width: number;
+}
+
 export interface AnalysisSource {
   kind: "sample" | "upload";
   label: string;
   mediaUrl?: string;
   mediaType?: "image/png" | "application/pdf";
+  mediaBoxes?: SourceBox[];
 }
 
 export interface StoredAnalysis {
@@ -43,6 +58,19 @@ const StoredAnalysisSchema: z.ZodType<StoredAnalysis> = z.object({
     label: z.string().min(1),
     mediaUrl: z.string().optional(),
     mediaType: z.enum(["image/png", "application/pdf"]).optional(),
+    // Without this the parse silently drops measured geometry, and the original view
+    // quietly loses its highlight while every other check still passes.
+    mediaBoxes: z
+      .array(
+        z.object({
+          text: z.string(),
+          top: z.number(),
+          height: z.number(),
+          left: z.number(),
+          width: z.number(),
+        }),
+      )
+      .optional(),
   }),
   analysis: AnalysisSchema,
 });

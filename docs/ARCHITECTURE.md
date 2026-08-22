@@ -307,31 +307,43 @@ A claim whose quote can't be matched (no exact match, or `source_quote` is `null
 renders as an explicit **"not stated in letter"** badge rather than a blank or misleading
 highlight.
 
-### The original document view does not highlight
+### Highlighting the original document (measured)
 
-The **Transcription** view highlights the exact matched text span using the anchor above:
-a precise, byte-accurate highlight. The **Original** view (a bundled sample's rendered
-image) deliberately shows no highlight at all.
+The **Transcription** view highlights the exact matched span using the anchor above. The
+**Original** view highlights the same claim on the rendered image, using coordinates
+measured by the browser that produced that image.
 
-An earlier version drew an amber band there, labelled "Approx. match", positioned at the
-claim's character-offset midpoint within the transcription scaled to image height. It was
-removed because those two scales are unrelated, and the error was large enough to point at
-the wrong row. Cedar Ridge's Direct Unsubsidized Loan sits on line 14 of 16, which is 87.5%
-of the way down the text, 70.0% of the way down the character-offset scale, and roughly 56%
-of the way down the rendered page. Three numbers, none derivable from the others, because
-character density per line varies by an order of magnitude (that letter's closing paragraph
-is 168 characters, 23% of the whole transcription, and renders as two lines of fine print)
-and because the image carries a header, table padding, and trailing whitespace that no
-character offset knows about.
+`eval/make-fixtures.ts` screenshots each sample letter and, in the same page, records every
+rendered line's box (`h1, h2, h3, p, tr, li, blockquote`) as percentages of the full-page
+box into `eval/letters/<name>.boxes.json`. Those files ship with the samples through
+`AnalysisSource.mediaBoxes`, and `letter-workspace.tsx` positions the band directly from
+them. Nothing is estimated: either a claim's line was measured or it was not.
 
-Labelling it "approximate" did not make it honest. A band that confidently underlines the
-wrong award is the same failure as an anchor pointing at a line that does not say what the
-claim says, and `lib/anchor.ts` already refuses to do that. The Original view now shows a
-note directing the reader to the Transcription view, where the match is exact.
+Matching is by containment, not equality, because a quote is usually part of its rendered
+line rather than all of it. The letter's table row reads `Direct Unsubsidized Loan $5,500
+Offered` while the claim quotes only through the amount. Both sides go through
+`normalizeForMatch`, the same folding `anchorQuote` matches with. A quote contained in more
+than one measured line is ambiguous and gets no band, and a claim with no anchor at all
+(Juniper's absent cost of attendance) gets none either. In both cases the view falls back to
+a note pointing at the Transcription pane.
 
-Restoring a highlight here means real geometry: asking the extraction pass for per-line
-bounding boxes and validating them the way `assertProvenance` validates text. That is an
-extraction-contract change, not a UI change.
+An earlier version instead drew the band at the claim's character-offset midpoint scaled to
+image height, labelled "Approx. match". It was removed because those two scales are
+unrelated: Cedar Ridge's Direct Unsubsidized Loan sits 87.5% down the transcription, 70.0%
+down that character-offset scale, and 52.3% down the rendered page, since per-line character
+density varies by an order of magnitude and the image carries a header, table padding, and
+trailing whitespace that no character offset knows about. Labelling a band approximate does
+not make it honest when it underlines the wrong award.
+
+Two constraints keep this correct. The screenshot and the boxes describe one specific
+rendering and must always be regenerated together by `npm run make-fixtures`; keeping a
+previously committed image alongside freshly measured boxes silently misaligns every band.
+That includes fonts, which is the subtle half. `cedar-ridge.html` and `juniper-tech.html`
+set Arial and `morrow-bay.html` sets Georgia, so a renderer without those faces substitutes
+metric-incompatible ones and shifts rows by a couple of percent while total page height can
+still match. Render fixtures on a machine that actually has them. And the band is still not applied to an
+uploaded PDF's original view, where the browser's own PDF renderer owns the layout and no
+measurement of ours applies.
 
 ## Independent pane scrolling
 
