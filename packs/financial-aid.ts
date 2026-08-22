@@ -273,10 +273,12 @@ export function classifyAidItem(rawLabel: string, sourceQuote: string): AidClass
  * Period wording this pack deliberately will not map. A term or quarter is not reliably
  * half a year — quarter systems run three — and a monthly or per-payment figure is a
  * disbursement cadence. "term" must stay singular and quantified, because "award terms"
- * and "renewal terms" are ordinary prose on these letters.
+ * and "renewal terms" are ordinary prose on these letters. A one-time payment has no
+ * period to repeat, and an hourly rate is a wage, not an award: annualizing either would
+ * project a figure the letter never offered.
  */
 const unmappablePeriodPattern =
-  /\b(?:per|each|every|a)\s+(?:academic\s+)?(?:term|quarter|trimester|month|payment\s+period)\b|\b(?:quarterly|monthly|biweekly|bi\s*weekly)\b/;
+  /\b(?:per|each|every|a)\s+(?:academic\s+)?(?:term|quarter|trimester|month|payment\s+period)\b|\b(?:quarterly|monthly|biweekly|bi\s*weekly)\b|\bone\s*time\b|\b(?:per|an|each)\s+hour\b|\bhourly\b/;
 
 function hasUnmappablePeriod(text: string): boolean {
   return unmappablePeriodPattern.test(searchable(text));
@@ -284,8 +286,14 @@ function hasUnmappablePeriod(text: string): boolean {
 
 function explicitPeriods(text: string, global: boolean): Set<LineItem["period"]> {
   const periods = new Set<LineItem["period"]>();
+  // A letter-wide period statement is a sentence about amounts in general. A line carrying
+  // its own dollar figure is a line item stating its own period, and lending that period to
+  // every silent line elsewhere reports figures the letter never dated.
   const sources = global
-    ? text.split(/\r?\n/).map(searchable)
+    ? text
+        .split(/\r?\n/)
+        .filter((line) => !/\$\s*\d/.test(line))
+        .map(searchable)
     : [searchable(text)];
 
   for (const normalized of sources) {

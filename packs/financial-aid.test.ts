@@ -321,6 +321,52 @@ describe("financial-aid pack", () => {
     ).toBe("unknown");
   });
 
+  test("refuses to map one-time and hourly wording onto a year", () => {
+    // Thornfield states "$1,500.00 one time" and "Earned at $15.50 per hour". Both were
+    // reported as per-academic-year, which contradicts the letter on its own page and
+    // invites a four-year projection of a wage rate.
+    const letter = [
+      "Thornfield Merit Distinction Award .............. $18,000 per academic year",
+      "Chandler Family Endowed Scholarship (outside) ...  $1,500.00 one time,",
+      "A one-time enrollment deposit of $450 is due May 1",
+      "Earned at $15.50 per hour through approved on-campus positions.",
+    ].join("\n");
+    expect(
+      deriveAidPeriod("Chandler Family Endowed Scholarship (outside) ...  $1,500.00 one time,", letter),
+    ).toBe("unknown");
+    expect(deriveAidPeriod("A one-time enrollment deposit of $450 is due May 1", letter)).toBe(
+      "unknown",
+    );
+    expect(
+      deriveAidPeriod("Earned at $15.50 per hour through approved on-campus positions.", letter),
+    ).toBe("unknown");
+  });
+
+  test("does not spread one award's stated period across the whole letter", () => {
+    // The letter-wide fallback exists for a sentence like "Amounts are for the academic
+    // year". A line item carrying its own dollar amount states its own period, not the
+    // letter's, so it must not lend that period to every silent line.
+    const letter = [
+      "Thornfield Merit Distinction Award .............. $18,000 per academic year",
+      "Federal Pell Grant ..............................  $3,698",
+      "Prior-year account adjustment ...................  -$300",
+    ].join("\n");
+    expect(deriveAidPeriod("Federal Pell Grant ..............................  $3,698", letter)).toBe(
+      "unknown",
+    );
+    expect(deriveAidPeriod("Prior-year account adjustment ...................  -$300", letter)).toBe(
+      "unknown",
+    );
+  });
+
+  test("still takes a period from a letter-wide sentence that carries no amount", () => {
+    const letter = [
+      "Northstar Grant $10,000",
+      "All aid amounts are for the academic year.",
+    ].join("\n");
+    expect(deriveAidPeriod("Northstar Grant $10,000", letter)).toBe("year");
+  });
+
   test("finds the cost line the way anchoring does rather than by exact punctuation", () => {
     // A model routinely quotes a line with punctuation or spacing the letter does not carry.
     // anchorQuote() folds that away and still anchors the claim, so a period lookup that
