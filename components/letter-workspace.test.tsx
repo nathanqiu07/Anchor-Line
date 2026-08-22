@@ -362,3 +362,40 @@ describe("LetterWorkspace", () => {
     ).toBe("item-0");
   });
 });
+
+describe("original view", () => {
+  test("points at the transcription instead of guessing a position on the image", () => {
+    // The old band placed itself at the claim's character-offset midpoint scaled to image
+    // height. Character density per line and the image's own header, padding, and margins
+    // make those two scales unrelated: Cedar's loan sits 87.5% down the text, 70% down the
+    // band scale, and ~56% down the rendered page. A confident pointer at the wrong line is
+    // the exact failure this product exists to prevent, so there is no pointer.
+    const transcription = [
+      "Overlap College",
+      "Financial Aid Offer",
+      "Mystery Award $1,250",
+      "This closing paragraph is deliberately far longer than any other line so that character offsets and vertical position disagree.",
+    ].join("\n");
+    const offer = offerWith(transcription, [
+      { ...item, source_quote: "Mystery Award $1,250" },
+    ]);
+    const withImage: StoredLetterAnalysis = {
+      ...offer,
+      source: {
+        kind: "sample",
+        label: "Overlap sample",
+        mediaUrl: "/samples/overlap.png",
+        mediaType: "image/png",
+      },
+    };
+
+    const { container } = render(<LetterWorkspace offer={withImage} />);
+    fireEvent.click(screen.getByRole("button", { name: /original/i }));
+
+    expect(container.querySelector(".source-image__highlight")).toBeNull();
+    expect(container.textContent).not.toMatch(/approx/i);
+    expect(container.querySelector(".source-image__note")?.textContent).toMatch(
+      /switch to transcription/i,
+    );
+  });
+});

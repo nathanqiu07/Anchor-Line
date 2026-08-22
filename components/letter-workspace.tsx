@@ -84,9 +84,6 @@ export function LetterWorkspace({ offer }: LetterWorkspaceProps) {
     "transcription",
   );
   const activeMatch = activeKey ? (anchorByKey.get(activeKey) ?? null) : null;
-  const matchMidpointPercent = activeMatch
-    ? ((activeMatch.start + activeMatch.end) / 2 / Math.max(analysis.transcription.length, 1)) * 100
-    : null;
   const sourceRefs = useRef<Record<string, HTMLElement | null>>({});
 
   function scrollToSource(mode: string, key: string) {
@@ -176,14 +173,10 @@ export function LetterWorkspace({ offer }: LetterWorkspaceProps) {
                   unoptimized
                   priority
                 />
-                {activeKey && matchMidpointPercent !== null ? (
-                  <div
-                    className="source-image__highlight"
-                    style={{ top: `${matchMidpointPercent}%` }}
-                    ref={(element) => registerSourceRef("original", activeKey, element)}
-                  >
-                    <span className="source-image__highlight-label">Approx. match</span>
-                  </div>
+                {activeKey ? (
+                  <p className="source-image__note">
+                    Switch to Transcription to see the exact line this claim came from.
+                  </p>
                 ) : null}
               </div>
             </div>

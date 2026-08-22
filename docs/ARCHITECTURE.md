@@ -307,30 +307,31 @@ A claim whose quote can't be matched (no exact match, or `source_quote` is `null
 renders as an explicit **"not stated in letter"** badge rather than a blank or misleading
 highlight.
 
-### Highlighting the original document (approximate)
+### The original document view does not highlight
 
-The **Transcription** view highlights the exact matched text span using the
-anchor above — that's a precise, byte-accurate highlight. The **Original**
-view (a bundled sample's rendered image) is different: the extraction pipeline never
-asks the model for bounding-box/coordinate data, only transcribed text, so
-there is no ground-truth pixel location for a claim.
+The **Transcription** view highlights the exact matched text span using the anchor above:
+a precise, byte-accurate highlight. The **Original** view (a bundled sample's rendered
+image) deliberately shows no highlight at all.
 
-To still give a visual cue in Original mode, `components/letter-workspace.tsx`
-computes each claim's *character offset midpoint* within the transcription
-and maps that proportionally to a vertical position in the rendered image
-(`matchMidpointPercent`), drawing a horizontal amber band there. This is
-deliberately labeled **"Approx. match"** in the UI — it is a text-position
-heuristic, not OCR geometry, and will drift on multi-column layouts or pages
-where line density varies. It is intentionally *not* applied to PDF original
-view, since the band would sit on top of the browser's native PDF renderer
-(a separate engine with its own independent scroll/zoom state) where a fixed
-overlay would be actively misleading rather than approximate.
+An earlier version drew an amber band there, labelled "Approx. match", positioned at the
+claim's character-offset midpoint within the transcription scaled to image height. It was
+removed because those two scales are unrelated, and the error was large enough to point at
+the wrong row. Cedar Ridge's Direct Unsubsidized Loan sits on line 14 of 16, which is 87.5%
+of the way down the text, 70.0% of the way down the character-offset scale, and roughly 56%
+of the way down the rendered page. Three numbers, none derivable from the others, because
+character density per line varies by an order of magnitude (that letter's closing paragraph
+is 168 characters, 23% of the whole transcription, and renders as two lines of fine print)
+and because the image carries a header, table padding, and trailing whitespace that no
+character offset knows about.
 
-A future correct version of this would ask the transcription pass for
-per-line bounding boxes and validate them the same way `assertProvenance`
-validates text — that's a real (and non-trivial) extraction-contract change,
-not a UI change, so it's left as a known limitation rather than done
-half-way.
+Labelling it "approximate" did not make it honest. A band that confidently underlines the
+wrong award is the same failure as an anchor pointing at a line that does not say what the
+claim says, and `lib/anchor.ts` already refuses to do that. The Original view now shows a
+note directing the reader to the Transcription view, where the match is exact.
+
+Restoring a highlight here means real geometry: asking the extraction pass for per-line
+bounding boxes and validating them the way `assertProvenance` validates text. That is an
+extraction-contract change, not a UI change.
 
 ## Independent pane scrolling
 
