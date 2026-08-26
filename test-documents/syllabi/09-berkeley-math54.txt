@@ -1,0 +1,257 @@
+Math 54 Syllabus
+Fall 2026
+Syllabus Homework Calendar Instructor/GSIs
+Course: Math 54, Linear Algebra & Differential Equations (Course Catalog)
+Course Description: Basic linear algebra; matrix arithmetic and determinants.
+Vector spaces; inner product spaces. Eigenvalues and eigenvectors; linear
+transformations, symmetric matrices. Linear ordinary differential equations (ODE);
+systems of linear ODE. Fourier series.
+Credit Hours: 4
+Prerequisites: Math 1A-1B, Math 10A-10B or equivalent.
+Textbook: Linear Algebra and Differential Equations by Lay-Nagle-Saff-Snider,
+Pearson Learning Solutions; 2nd Custom Edition for UC Berkeley.
+This special version is prepared specifically for UC Berkeley Math 54, ISBN 10: 0-
+137-11403-6, ISBN 13: 978-0-137-11403-0. If you use a different edition, please
+be sure to match the assigned homework problems carefully, as exercise numbers
+may differ between editions.
+Homework: Homework assignments will be announced on the Homework page.
+Homework is generally due on Gradescope on Monday 11:59 pm (Pacific
+Time). Please see these submission instructions for information on how to
+upload your work.
+To accommodate unforeseen circumstances and technical difficulties, we will
+accept homework submitted within 24 hours from the due date without a
+penalty.
+Homework assignments must be handwritten.
+There will be 13 problem sets. Your cumulative homework grade will be based
+on the best 11 of 13 scores.
+In view of the above arrangement, NO late homework will be accepted more
+than 24 hours after the due date.
+If you experience problems submitting your work, please contact your GSI
+promptly.
+8/26/26, 9:36 AM Math 54 Syllabus — Fall 2026
+https://math.berkeley.edu/~kwohm/Syllabus54-FA26.html 1/8
+Homework will be graded for completeness, with 3 points awarded for
+completing all assigned problems.
+You are encouraged to discuss homework problems with your classmates, but
+the work you submit must be your own. Copying another person's solutions is
+not permitted and is considered academic misconduct.
+A good portion of the quizzzes and exams will be based on the weekly
+hoemework sets, so it is essential that you understand how to solve each
+problem.
+Discussion sections and Quizzes: Discussion sections take place Monday,
+Wednesday, and Friday. You are expected to attend the discussion section that you
+are enrolled in. If you need to switch discussion sections, then please contact
+enrollment@math.berkeley.edu. We (the instructor and GSIs) have no influence on
+the enrollment process.
+Quizzes will take place during your discussion sections, typically on
+Wednesdays. Please refer to the course calendar for the quiz schedule.
+Your cumulative quiz grade will be based on the best 7 out of 10.
+There will be no makeup quizzes. If a student misses a quiz for any reason, it
+will count as one of the dropped quizzes.
+Cheat sheets and electronic devices, including calculators, are NOT allowed
+during quizzes.
+Each quiz will last approximately 15 minutes and will be closely related to the
+homework due on Monday of the same week.
+You are not allowed to share quiz content or solutions with classmates until
+after Thursday of the same week.
+To ensure fairness across all discussion sections, quiz grades may be
+normalized across sections at the end of the semester.
+Exams: There will be two midterm exams and a final exam. All exams will be held
+in person.
+Midterm 1 is scheduled for Wednesday, September 30 (45 minutes during
+lecture)
+Midterm 2 is scheduled for Wednesday, November 4 (45 minutes during
+lecture)
+8/26/26, 9:36 AM Math 54 Syllabus — Fall 2026
+https://math.berkeley.edu/~kwohm/Syllabus54-FA26.html 2/8
+Final Exam for LEC 001 (8 am on MWF lecture) is scheduled for Monday,
+December 14, 7:00-10:00 pm (Location: TBA)
+Final Exam for LEC 002 (10 am on MWF lecture) is scheduled for Monday,
+December 14, 8:00-11:00 am (Location: TBA)
+It is your responsibility to make sure that you do not have any scheduling
+conflicts with the exams. Makeup exams will not be offered. As per university
+policy, if you do not take the final exam, you automatically fail the course. Please
+check the dates now to make sure that you have no unavoidable conflicts.
+You may use one 3 x 5-inch index card (front and back) of handwritten notes
+for the midterm exams. Electronic devices may not be used to prepare the
+notes unless you have a registered disability that permits typed or otherwise
+specially prepared notes.
+Details regarding permitted notes for the final exam will be announced in Week
+13.
+Calculators or electronic devices of any kind are NOT allowed during
+exams and quizzes.
+Please bring your student ID to the exams.
+Academic Integrity violations will be taken seriously, and will be reported to the
+Center for Student Conduct for disciplinary action.
+Please check the announcement on bCourses for more details regarding exams.
+Grading: There are two methods to determine your course grade.
+Method 1: 7% Homework (Best 11 out of 13), 13% Quizzes (Best 7 out of
+10), 22% Midterm 1, 22% Midterm 2, 36% Final Exam
+Method 2: 7% Homework (Best 11 out of 13), 13% Quizzes (Best 7 out of
+10), 30% Better Midterm, 50% Final Exam
+Your grade will be calculated under both methods, and the better grade will be
+used to determine your course grade.
+Grade Adjustment:
+If the class median M is below 81% on a midterm exam or the final exam, we will
+apply the following method to curve the exam. Your exam score S (%) will be
+adjusted to a new score S* to shift the median to 81%.
+8/26/26, 9:36 AM Math 54 Syllabus — Fall 2026
+https://math.berkeley.edu/~kwohm/Syllabus54-FA26.html 3/8
+If , then
+If , then
+Extra Credit:
+We will use Poll Everywhere occasionally during lectures. If you participate in
+more than 60% of the Poll Everywhere activities, you will receive 1% extra
+credit toward your final course grade. If your participation is below 40%, no
+extra credit will be awarded. For participation between 40% and 60%, extra
+credit will be awarded proportionally. The Poll Everywhere extra-credit
+opportunity may be reconsidered or discontinued if participation does not
+accurately reflect class attendance (for example, if students submit responses
+without attending lecture).
+Also, if at least 75% of the class completes the course evaluation, you will all
+receive 1% extra credit.
+After your weighted average is calculated, approximate final grade cut-offs are given
+in the table below.
+A+ A A- B+ B B- C+ C C- D+ D D- F
+98 93 90 87 83 80 77 73 70 67 63 60 < 60
+The exact final grade cut-offs will be finalized by the instructor at the end of the
+semester.
+Please note that external considerations-such as the need for a particular grade for
+admission or retention in an academic program, scholarship eligibility, transfer
+credit, graduation requirements, or personal preference-are not part of the grade
+criteria and therefore do not affect your final course grade.
+Students who have substantially completed the course but are unable to complete
+the remaining course activities due to serious extenuating circumstances may
+request an Incomplete grade. This request must be submitted in writing to the GSI
+and instructor. You must provide verifiable documentation for the seriousness of the
+extenuating circumstances. Refer to the Office of the Registrar's website for more
+information on the university's policy on Incomplete Grades.
+Accommodations:
+If you require course accommodations due to a physical, emotional, or learning
+disability, contact UC Berkeley's Disabled Students' Program (DSP). Notify the
+8/26/26, 9:36 AM Math 54 Syllabus — Fall 2026
+https://math.berkeley.edu/~kwohm/Syllabus54-FA26.html 4/8
+instructor and GSI through course email of the accommodations you would like to
+use. You must have a Letter of Accommodation on file with UC Berkeley to have
+accommodations made in the course. UC Berkeley is committed to providing robust
+educational experiences for all learners. With this goal in mind, we have enabled the
+ALLY tool for this course. You can now automatically generate "Alternative Formats"
+for course files and bCourses Pages. Depending on the context, these formats can
+include Tagged PDF, HTML, BeeLine Reader, Electronic Braille, ePub, Immersive
+Reader, MP3, and translated versions. For more information, watch the video
+entitled, "Ally Tutorial for Students at UC Berkeley."
+Questions about your DSP accommodations:
+HW and Quizzes: Contact your GSI in advance.
+Exams: We will make sure that you can take advantage of the extended time
+for midterm and final exams as specified in your Letter of Accommodation. This
+means that you can either take your midterm or final exam with the DSP
+proctoring service or that we will provide an additional room where you can
+take your exam. Our HGSI, Robert Schütz (rschuetz@berkeley.edu) will provide
+more information in Week 2. If you want to take advantage of any
+accommodation beyond this, then please contact the Head GSI at least two
+weeks before each exam.
+If your accommodation concerns have not been resolved, contact the professor.
+Regrades:
+Regrade requests will be made using the built-in regrade request feature in
+Gradescope. There will be a limited window of time after your graded work is made
+available during which the regrade request feature will be active. This time window
+will be announced when the scores are released to the students. Please be advised
+that the regrade request window is usually brief, and if you want to request a
+regrade, it is your responsibility to make the request during the allowed time. Please
+understand that while we will correct errors in the grading, we will not modify the
+grading rubric or negotiate over partial credit after graded papers are returned to
+students.
+Ed Discussion:
+The GSIs, the Head GSI, and I will be offering help on Ed Discussion Monday
+through Friday. Only comments/questions pertaining to the mathematical
+content of the course are allowed. Any postings that do not meet these criteria
+will be deleted and Ed Discussion privileges may be removed. However, during the
+first two weeks of the course, we will also do our best to answer logistical questions.
+8/26/26, 9:36 AM Math 54 Syllabus — Fall 2026
+https://math.berkeley.edu/~kwohm/Syllabus54-FA26.html 5/8
+As a diverse community of learners, students must strive to work together in a
+setting of civility, tolerance, and respect for each other and for the instructor.
+Conflicting opinions among members of a class are to be respected and responded
+to in a professional manner. There are to be no offensive comments or language.
+Late Add Policy:
+If you are on the waitlist for a course, you are expected to attend class and
+complete assignments. If a student does not take a quiz or does not turn in
+assignments before the due dates, the student will receive a 0 on all missed
+assignments. No exceptions will be made. Similarly, a student not on a waitlist who
+adds the class late will not be given additional time, nor will they be excused from
+the assigned work.
+Rules regarding absences and missed exams, assignments, etc.:
+Attendance in class or in the discussion section is highly recommended, but not
+required. If you miss a class, then you can catch up by watching the Course Capture
+recordings. If you miss a discussion section, then we recommend asking a classmate
+for the missed material. If you miss one of the midterm exams (for example due to
+illness or family emergency), then your course grade will be computed using grading
+method 2.
+We will also drop a few of the lowest quiz and homework grades. These rules will be
+applied automatically and you do not need to inform us about your absences.
+We are aware that a number of students will miss a midterm exam, quiz or a
+homework assignment due to a variety of reasons. This is why we have
+implemented generous replacement or dropping rules. The purpose of these rules is
+precisely to alleviate the impact of such absences. So we will not be able to offer
+further accommodations like make-up exams or further drops. If you think that
+these rules did not fully cover your absences, then you can email us at the end of
+the semester and we will review your case.
+Please do not share doctor's notes with us or any other documents containing
+private information. For privacy reasons we cannot ask for doctor's notes. Therefore,
+we also cannot accept them for equity reasons. Otherwise your classmates would be
+forced to release private information in order to receive the same accommodations.
+The only document that we accept is your official Letter of Accommodation issued by
+the DSP office.
+Math 49:
+If you are a student who wants to complete only part of this course (Math 49),
+please review the Math 54-49 instructions.
+8/26/26, 9:36 AM Math 54 Syllabus — Fall 2026
+https://math.berkeley.edu/~kwohm/Syllabus54-FA26.html 6/8
+Academic Integrity:
+Academic integrity is a cornerstone of scholarship at UC Berkeley. Upholding honesty
+in your work reflects your personal values and sustains the trust essential to our
+academic community. Acts of dishonesty undermine these principles and may lead
+to serious consequences under university policy, including administrative sanctions
+such as suspension or expulsion. By committing to integrity, you help foster a fair
+and meaningful learning environment for yourself and others. For more information
+about university policies on academic integrity, check UC Berkeley Center for
+Student Conduct.
+Use of GenAI Tools:
+In this course, our goal is to support your active learning, deepen your
+understanding of the material, and develop your mathematical reasoning and critical
+thinking skills. GenAI tools may be used as a learning aid-for example, to review
+concepts from lecture, ask for additional explanations or examples, or help clarify
+ideas related to homework. However, these tools should not be used to complete
+graded work for you. All submitted work should reflect your own understanding and
+reasoning. If the use of AI or other unauthorized online resources is suspected, the
+instructor may ask you to complete a brief oral or written follow-up to demonstrate
+your understanding of the relevant material. If you are unable to demonstrate that
+understanding, a zero may be assigned for the work in question.
+Practical Study Advice:
+Teach to Learn: One of the most effective ways to master a topic is to teach
+it. Try explaining the material to a classmate, a family member, or a friend.
+Anticipate the questions they might ask -it is a great way to check your
+understanding and identify any gaps in your knowledge.
+Master the Details: True understanding comes from paying attention to the
+finer points. A superficial understanding of a topic is not sufficient; success
+comes from noticing the subtleties and understanding how they show up in
+problem-solving.
+Invest Your Time: Success in this course requires consistent effort. A 4-unit
+class typically translates to about 12 hours of work per week-time that will help
+you keep up with material, practice skills regularly, and deepen your
+understanding. Think of this time as an investment in mastering the subject.
+Practice for Success: I will provide practice problems and a practice test
+approximately 10 days before each exam. You may use them for additional
+preparation. Start working on them at least one week in advance.
+8/26/26, 9:36 AM Math 54 Syllabus — Fall 2026
+https://math.berkeley.edu/~kwohm/Syllabus54-FA26.html 7/8
+External Support:
+For questions about enrollment, contact Marsha Snow or email
+enrollment@math.berkeley.edu.
+The Student Learning Center provides support for this class, including full
+adjunct courses, review sessions for exams, and drop-in tutoring.
+Acknowledgement: I would like to thank the previous instructors of Math 54 for
+making their course webpages publicly available.
+Ko Ohm (kwohm@berkeley.edu)
+8/26/26, 9:36 AM Math 54 Syllabus — Fall 2026
+https://math.berkeley.edu/~kwohm/Syllabus54-FA26.html 8/8
