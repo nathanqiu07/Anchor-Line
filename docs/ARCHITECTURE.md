@@ -199,9 +199,24 @@ the client:
   followed by the dollar amount — a bare annual tuition figure or a fee line
   doesn't qualify, enforced both in the extraction prompt and re-checked
   here against `costOfAttendanceLabel()`.
-- **Transcription immutability.** `analysis.transcription` returned by pass
-  2 must be byte-identical to the pass-1 transcription — the model isn't
-  allowed to "clean up" or re-transcribe the source text on the second pass.
+- **Transcription is never taken from the model at all.** The prompt still
+  asks pass 2 to echo the transcription back byte-for-byte, but
+  `analysis.transcription` is unconditionally overwritten with the
+  deterministic pass-1 transcription the instant the response parses,
+  before any check runs (`extractLetter()`, `extractSyllabus()`). This used
+  to be an equality check instead — reject the whole extraction if the
+  model's echoed copy differed at all — but a live syllabus surfaced why
+  that was too strict: `unpdf` renders a PDF-mangled math fraction as four
+  disconnected lines, and the model, asked to reproduce it verbatim, quietly
+  dropped them as noise and added a trailing newline — a faithful model
+  failing a literal-photocopy requirement, not a hallucinated claim. Every
+  real check (`source_quote`, `value`, label/anchor binding) already binds
+  against the deterministic transcription passed into these functions, never
+  against what the model echoed, so the equality gate added no anti-hallucination
+  protection it wasn't already getting elsewhere — only fragility. Discarding
+  the model's copy outright removes that fragility and, as a side effect, means
+  the client always sees the complete, correct source text, even a formula the
+  model itself dropped.
 
 If any check fails, the failure message becomes the *next* prompt's
 `<untrusted_validation_feedback>` block and the model gets exactly one
@@ -263,8 +278,11 @@ and deliberate:
   percentages, counts, dates, and times uniformly, and is why the schema keeps
   `value: string`.
 - **Provenance binds per-claim but does not require full-line coverage.**
-  `assertSyllabusProvenance` checks transcription immutability, that each
-  `source_quote` is one exact transcription line, that `value` is a verbatim
+  `assertSyllabusProvenance` receives an analysis whose `transcription` has
+  already been overwritten with the deterministic text (see Transcription
+  immutability above — the model's own copy is discarded, not checked) and
+  verifies that each `source_quote` is one exact transcription line, that
+  `value` is a verbatim
   substring of it, that `raw_label` is a verbatim label substring containing a
   letter, and that the value is the nearest unambiguous occurrence of its kind to
   the label — scoped to `anchor_span` when the model supplies one, the same

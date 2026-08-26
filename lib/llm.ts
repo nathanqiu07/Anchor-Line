@@ -333,10 +333,6 @@ function amountBoundToLabel(item: LetterAnalysis["line_items"][number]): boolean
 }
 
 function assertProvenance(analysis: LetterAnalysis, transcription: string): LetterAnalysis {
-  if (analysis.transcription !== transcription) {
-    throw provenanceError("transcription must exactly match the letter text");
-  }
-
   const hasEmptyLineQuote = analysis.line_items.some(
     (item) => item.source_quote.length === 0,
   );
@@ -589,9 +585,15 @@ export async function extractLetter(
     });
 
     try {
-      const parsed = LetterAnalysisSchema.parse(
-        parseJson(textFrom(extractionResponse)),
-      );
+      // The model's own copy of the transcription is never trusted, even to the extent of
+      // requiring it be typed back correctly: a 99%-faithful model can still drop a line it
+      // mistakes for noise (a PDF-mangled formula, an odd ligature) or add stray whitespace
+      // when asked to reproduce a long block of text verbatim, and none of that reflects a
+      // hallucinated claim. Every real check below anchors against the deterministic
+      // `transcription` already in scope, never against what the model echoed back, so
+      // substituting it here can only improve fidelity for the student — the complete,
+      // correct source text is always what gets shown and anchored against.
+      const parsed = { ...LetterAnalysisSchema.parse(parseJson(textFrom(extractionResponse))), transcription };
       const proven = assertProvenance(parsed, transcription);
       const award = assertAwardLetter(proven, transcription);
       return normalizeSemantics(award, transcription);
@@ -714,19 +716,19 @@ function syllabusItemProvenanceIssue(
  * Verifies every claimed item is anchored to real text, but a single unverifiable item no
  * longer sinks the whole extraction: it's dropped and recorded in missing_info instead of
  * thrown, so one stray line (a genuinely ambiguous phrasing, an odd label) doesn't cost the
- * student every other correctly-anchored number on the page. The transcription mismatch check
- * stays a hard failure — it undermines every item's anchor, not just one — and so does the case
- * where nothing at all survives, since an empty result isn't useful and is worth one retry with
- * feedback before giving up.
+ * student every other correctly-anchored number on the page. `analysis.transcription` has
+ * already been overwritten with the deterministic transcription by the caller before this
+ * runs (see extractSyllabus) — the model's own copy is never trusted or checked, since a
+ * faithful model can still drop a line it mistakes for noise or add stray whitespace when
+ * asked to reproduce a long block of text verbatim, and none of that is a hallucinated claim.
+ * Every check here binds against this same authoritative text either way. The one remaining
+ * hard failure is nothing at all surviving, since an empty result isn't useful and is worth
+ * one retry with feedback before giving up.
  */
 function assertSyllabusProvenance(
   analysis: SyllabusAnalysis,
   transcription: string,
 ): SyllabusAnalysis {
-  if (analysis.transcription !== transcription) {
-    throw provenanceError("transcription must exactly match the syllabus text");
-  }
-
   const transcriptionLines = transcription.split(/\r?\n/);
   const kept: SyllabusItem[] = [];
   const dropped: string[] = [];
@@ -787,9 +789,13 @@ export async function extractSyllabus(
     });
 
     try {
-      const parsed = SyllabusAnalysisSchema.parse(
-        parseJson(textFrom(extractionResponse)),
-      );
+      // See assertSyllabusProvenance: the model's own copy of the transcription is discarded
+      // in favor of the deterministic one already in scope, so a faithful model dropping one
+      // garbled line (a PDF-mangled formula, an odd ligature) can't sink the whole extraction.
+      const parsed = {
+        ...SyllabusAnalysisSchema.parse(parseJson(textFrom(extractionResponse))),
+        transcription,
+      };
       if (process.env.DEBUG_SYLLABUS) {
         console.error(`\n--- attempt ${attempt} raw items ---`);
         console.error(JSON.stringify(parsed.items, null, 2));

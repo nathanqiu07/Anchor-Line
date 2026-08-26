@@ -96,6 +96,26 @@ describe("syllabus extraction pipeline", () => {
     expect(byLabel.get("Final exam date")).toMatchObject({ category: "schedule_date", kind: "date" });
   });
 
+  test("discards the model's echoed transcription instead of failing over it", async () => {
+    // A live syllabus surfaced exactly this: unpdf renders a PDF-mangled math fraction as
+    // disconnected lines, and the model — asked to reproduce the transcription verbatim —
+    // quietly dropped them as noise. That's a faithful model failing a literal-photocopy
+    // requirement, not a hallucinated claim, so the model's copy is discarded and replaced
+    // with the deterministic one rather than trusted or checked at all.
+    const mangled: SyllabusAnalysis = {
+      ...analysis,
+      transcription: "not the real syllabus text",
+    };
+
+    const result = await extractSyllabus(
+      uploaded(transcription),
+      fakeClient(response(JSON.stringify(mangled))),
+    );
+
+    expect(result.transcription).toBe(transcription);
+    expect(result.items).toHaveLength(10);
+  });
+
   test("rejects a value that is not present verbatim in its source line", async () => {
     const tampered: SyllabusAnalysis = {
       ...analysis,

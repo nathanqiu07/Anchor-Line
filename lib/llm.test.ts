@@ -461,22 +461,24 @@ Prior-year account adjustment -$300`;
     ).rejects.toBeInstanceOf(ExtractionValidationError);
   });
 
-  test("retries when an extraction changes the letter text", async () => {
+  test("discards the model's echoed transcription instead of retrying over it", async () => {
+    // The model's own copy of the transcription is never trusted or checked — every real
+    // claim already binds against the deterministic transcription passed into these
+    // functions, not against what the model typed back. So a response that mangles its own
+    // "transcription" field (a dropped line, added whitespace, or here, something unrelated
+    // entirely) still succeeds on the first call, with the true source text substituted in.
     const calls: unknown[] = [];
     const client: MessagesClient = {
       create: async (request) => {
         calls.push(request);
-        return calls.length === 1
-            ? response(JSON.stringify({ ...analysis, transcription: "different letter" }))
-            : response(JSON.stringify(analysis));
+        return response(JSON.stringify({ ...analysis, transcription: "not the real letter" }));
       },
     };
 
     await expect(
       extractLetter(uploaded(transcription), client),
     ).resolves.toEqual(analysis);
-    expect(calls).toHaveLength(2);
-    expect(calls[1]).toMatchObject({ system: expect.stringContaining("transcription") });
+    expect(calls).toHaveLength(1);
   });
 
   test("throws after a second extraction uses a quote absent from the letter", async () => {
