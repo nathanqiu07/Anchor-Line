@@ -108,41 +108,60 @@ or 404, the error names the model and tells you to set `EXTRACTION_MODEL`.
 
 ## Architecture
 
-- Next.js App Router provides the responsive interface and `/api/extract`
-  server route.
-- The server extracts a schema-validated award-letter analysis from an exact
-  transcription. That transcription is delimited as untrusted data. Deterministic
-  pack logic verifies each exact source line, monetary occurrence, raw label,
-  aid category, normalized name, explanation, and explicit period before a
-  result can be returned. A failed validation gets one corrective retry.
-- No model ever reads the letter. A `.txt` upload is already the transcription. A digital
-  PDF carries one in its text layer, which `lib/pdf-text.ts` reads with `unpdf`. A PDF with
-  no text layer, or one whose layer fails the gate in `isUsableTextLayer`, is refused with
-  `UnreadableLetterError` before any call is spent — it is not read by vision.
-- The gate is pure text and costs nothing: it rejects a layer whose dollar-bearing lines
-  carry more than one amount (collapsed columns), that never reads as an award letter, or
-  that yields fewer than two lines `classifyAidItem` recognizes (truncated labels). Each
-  check mirrors an invariant the pipeline enforces later, so an unusable layer is caught
-  before it spends a call rather than after.
-- `lib/provider.ts` defines the provider-agnostic message contract. `lib/gemini.ts`
-  adapts it to Gemini's REST `generateContent` endpoint through `fetch`, with no vendor
-  SDK. It translates text parts only; attachment translation was removed with the vision
-  pass, so an image cannot reach the provider even by mistake. A quota refusal surfaces as a distinct error so the corrective retry is not spent
-  on an exhausted quota.
-- `lib/anchor.ts` normalizes case and whitespace, then requires an exact match. There is
-  no fuzzy fallback: since every accepted format yields the letter's own characters, a
-  quote that is not present verbatim is a fabricated quote rather than a misread one, and
-  approximating it would anchor a claim to a line that does not say what the claim says.
-  Each card highlights its source span; an unmatched claim is labeled
-  **not stated in letter**.
-- `packs/financial-aid.ts` separates gift aid, loans, work-study, and other
-  items. It derives the COA period without changing the extraction schema and
-  annualizes stated yearly amounts as-is and semester amounts ×2 for both cost
-  and aid. Total and unknown periods remain unprojected. Net price and four-year
-  debt stay not comparable when their periods are unclear; work-study stays out
-  of bill reduction.
-- Browser session state uses `sessionStorage`; there is no account, database,
-  authentication system, or persistent document storage.
+Next.js App Router provides the responsive interface and the `/api/extract` server
+route. Behind that route, extraction is a four-stage pipeline: two deterministic
+stages bracket a single model call, and a deterministic check gates what the model
+returns before a student ever sees it.
+
+1. **Transcription — deterministic, no model call.** A `.txt` upload is already the
+   transcription. A digital PDF carries one in its text layer, which `lib/pdf-text.ts`
+   reads with `unpdf`. A PDF with no text layer, or one whose layer fails the gate in
+   `isUsableTextLayer` (or `isUsableSyllabusTextLayer` for syllabi), is refused with
+   `UnreadableLetterError` before any call is spent. No model ever reads the *raw
+   file* — the image or PDF bytes are never sent to the provider, and nothing is read
+   by vision or OCR. The gate is pure text and costs nothing: it rejects a layer whose
+   dollar-bearing lines carry more than one amount (collapsed columns), that never
+   reads as an award letter, or that yields fewer than two lines the relevant pack
+   recognizes (truncated labels) — each check mirrors an invariant the pipeline
+   enforces later, so an unusable layer is caught before it spends a call rather than
+   after.
+2. **Extraction — the model reads the transcription text.** This is the one step
+   where an LLM actually reads content. The transcription — delimited as untrusted
+   data, never as instructions — and a schema prompt (`lib/prompts.ts`) are sent to
+   the configured provider in one call. `lib/provider.ts` defines the provider-agnostic
+   message contract; `lib/gemini.ts` adapts it to Gemini's REST `generateContent`
+   endpoint through `fetch`, with no vendor SDK, and translates text parts only —
+   attachment translation was removed with the vision pass, so an image cannot reach
+   the provider even by mistake. The model returns structured JSON: line items or
+   syllabus items, each with a category, a value, and the exact source line and label
+   it claims that value came from. Every field here is an unverified claim until the
+   next stage confirms it. A quota refusal surfaces as a distinct error so the
+   corrective retry (stage 3) is never spent on an exhausted quota.
+3. **Provenance / anchor verification — deterministic.** Nothing the model returns is
+   trusted just because it said so. `lib/anchor.ts` normalizes case and whitespace,
+   then requires an exact match against the transcription — no fuzzy fallback, since
+   every accepted format yields the letter's own characters, so a quote that isn't
+   present verbatim is a fabricated quote, not a misread one. `lib/measures.ts` checks
+   that a claimed value is the unambiguous nearest occurrence of its kind to its own
+   label, the same rule for dollar amounts on award letters and for percentages,
+   counts, dates, and times on syllabi. A claim that fails this check is dropped (and
+   noted in `missing_info` on syllabi) rather than shown as fact; a whole-document
+   failure (transcription mismatch, or nothing verifiable at all) triggers one
+   corrective retry with the validation diagnostic as feedback, and a second failure
+   surfaces to the student instead of retrying indefinitely. Each card highlights its
+   source span; an unmatched claim is labeled **not stated in letter**.
+4. **Normalization — deterministic.** Category, kind, normalized name, and
+   explanation are re-derived from deterministic pack logic
+   (`packs/financial-aid.ts`, `packs/syllabus.ts`) rather than trusted from the
+   model's own labeling, so display fields come from verified data, not a model's
+   self-report. `packs/financial-aid.ts` also separates gift aid, loans, work-study,
+   and other items, and derives the COA period: it annualizes stated yearly amounts
+   as-is and semester amounts ×2 for both cost and aid, while total and unknown
+   periods remain unprojected. Net price and four-year debt stay not comparable when
+   their periods are unclear; work-study stays out of bill reduction.
+
+Browser session state uses `sessionStorage`; there is no account, database,
+authentication system, or persistent document storage.
 
 ## Vercel deployment
 
