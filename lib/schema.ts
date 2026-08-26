@@ -13,6 +13,10 @@ export interface LineItem {
   amount: number | null;
   period: "year" | "semester" | "total" | "unknown";
   source_quote: string;
+  // The shortest verbatim substring of source_quote that pins this claim's amount to this
+  // claim's label, disambiguating a line that repeats a label or carries more than one dollar
+  // figure. Optional: omitted, provenance falls back to binding within the whole source_quote.
+  anchor_span?: string;
   explanation: string;
 }
 
@@ -49,6 +53,11 @@ export interface SyllabusItem {
   /** The important number, copied verbatim from its source line (e.g. "25%", "3", "March 12"). */
   value: string;
   source_quote: string;
+  // The shortest verbatim substring of source_quote that pins this value to this label,
+  // disambiguating a line that repeats a label (e.g. "Best" qualifying two different scores)
+  // or carries more than one number of the same kind. Optional: omitted, provenance falls back
+  // to binding within the whole source_quote.
+  anchor_span?: string;
   explanation: string;
 }
 
@@ -99,6 +108,7 @@ export const LineItemSchema: z.ZodType<LineItem> = z
     amount: z.number().nullable(),
     period: AidPeriodSchema,
     source_quote: z.string(),
+    anchor_span: z.string().optional(),
     explanation: z.string(),
   })
   .strict();
@@ -110,6 +120,7 @@ export const SyllabusItemSchema: z.ZodType<SyllabusItem> = z
     kind: MeasureKindSchema,
     value: z.string(),
     source_quote: z.string(),
+    anchor_span: z.string().optional(),
     explanation: z.string(),
   })
   .strict();

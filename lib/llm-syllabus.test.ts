@@ -31,6 +31,7 @@ function item(
   raw_label: string,
   value: string,
   source_quote: string,
+  anchor_span?: string,
 ): SyllabusAnalysis["items"][number] {
   // category/kind are re-derived downstream, so the model's guesses here are intentionally
   // loose — the pipeline should overwrite them from the value and the source context.
@@ -40,6 +41,7 @@ function item(
     kind: "number",
     value,
     source_quote,
+    ...(anchor_span === undefined ? {} : { anchor_span }),
     explanation: "Model-authored explanation.",
   };
 }
@@ -121,6 +123,51 @@ describe("syllabus extraction pipeline", () => {
     await expect(
       extractSyllabus(uploaded(source), fakeClient(response(JSON.stringify(misbound)))),
     ).rejects.toBeInstanceOf(ExtractionValidationError);
+  });
+
+  test("an anchor_span rescues a claim that whole-line nearest-distance alone would reject", async () => {
+    // Syntax puts "30%" before its own label here, so plain nearest-distance would bind
+    // "Final Exam" to the physically closer "25%" and reject the true 30% claim. Scoping to a
+    // model-chosen anchor_span containing only "30%" lets the true claim through.
+    const quirkyLine = "30% will come from the Final Exam, and 25% from the Midterm.";
+    const source = [transcription, quirkyLine].join("\n");
+    const rescued: SyllabusAnalysis = {
+      ...analysis,
+      items: [item("Final Exam", "30%", quirkyLine, "30% will come from the Final Exam")],
+      transcription: source,
+    };
+
+    const result = await extractSyllabus(
+      uploaded(source),
+      fakeClient(response(JSON.stringify(rescued))),
+    );
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toMatchObject({ raw_label: "Final Exam", value: "30%" });
+  });
+
+  test("drops an item whose anchor_span is not real text, instead of trusting it", async () => {
+    const twoWeights = "Midterm Exam 25% Final Exam 30%";
+    const source = [transcription, twoWeights].join("\n");
+    const fabricated: SyllabusAnalysis = {
+      ...analysis,
+      items: [
+        item("Attendance policy", "2%", "Attendance policy: 2% deducted per absence"),
+        // "Midterm Exam 30%" never appears contiguously in twoWeights — "25% Final Exam" sits
+        // between them — so this span is fabricated, not a genuine disambiguating quote.
+        item("Midterm Exam", "30%", twoWeights, "Midterm Exam 30%"),
+      ],
+      transcription: source,
+    };
+
+    const result = await extractSyllabus(
+      uploaded(source),
+      fakeClient(response(JSON.stringify(fabricated))),
+    );
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].raw_label).toBe("Attendance policy");
+    expect(result.missing_info.some((note) => note.includes("Midterm Exam"))).toBe(true);
   });
 
   test("drops one unverifiable item instead of failing the whole extraction", async () => {

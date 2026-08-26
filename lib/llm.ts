@@ -23,7 +23,12 @@ import {
 import { classifySyllabusItem, deriveMeasureKind } from "../packs/syllabus";
 import { createGeminiClient } from "./gemini";
 import { extractPdfText } from "./pdf-text";
-import { measureOccurrences, measureValuesEqual, valueBoundToLabel } from "./measures";
+import {
+  measureOccurrences,
+  measureValuesEqual,
+  resolveAnchorScope,
+  valueBoundToLabel,
+} from "./measures";
 import {
   ExtractionQuotaError,
   type MessageResponse,
@@ -322,9 +327,9 @@ function amountBoundToTextLabel(
 }
 
 function amountBoundToLabel(item: LetterAnalysis["line_items"][number]): boolean {
-  return item.amount === null
-    ? true
-    : amountBoundToTextLabel(item.source_quote, item.raw_label, item.amount);
+  if (item.amount === null) return true;
+  const scope = resolveAnchorScope(item.source_quote, item.raw_label, item.anchor_span);
+  return scope !== null && amountBoundToTextLabel(scope, item.raw_label, item.amount);
 }
 
 function assertProvenance(analysis: LetterAnalysis, transcription: string): LetterAnalysis {
@@ -690,19 +695,16 @@ function syllabusItemProvenanceIssue(
     return "raw_label is not a verbatim label substring of source_quote";
   }
 
-  const occurrences = measureOccurrences(item.source_quote, item.kind);
-  if (!occurrences.some((occurrence) => measureValuesEqual(occurrence.value, item.value))) {
-    return `value is not a ${item.kind} present in its source_quote`;
+  const scope = resolveAnchorScope(item.source_quote, item.raw_label, item.anchor_span);
+  if (scope === null) {
+    return "anchor_span is not a verbatim substring of source_quote containing its label";
   }
-  if (
-    !valueBoundToLabel(
-      item.source_quote,
-      item.raw_label,
-      occurrences,
-      item.value,
-      measureValuesEqual,
-    )
-  ) {
+
+  const occurrences = measureOccurrences(scope, item.kind);
+  if (!occurrences.some((occurrence) => measureValuesEqual(occurrence.value, item.value))) {
+    return `value is not a ${item.kind} present in its ${item.anchor_span === undefined ? "source_quote" : "anchor_span"}`;
+  }
+  if (!valueBoundToLabel(scope, item.raw_label, occurrences, item.value, measureValuesEqual)) {
     return "value is not the nearest unambiguous match to its label";
   }
   return null;

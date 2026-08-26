@@ -5,6 +5,7 @@ import {
   measureOccurrences,
   measureValuesEqual,
   normalizeMeasureValue,
+  resolveAnchorScope,
   valueBoundToLabel,
 } from "./measures";
 
@@ -78,6 +79,30 @@ describe("valueBoundToLabel", () => {
     expect(valueBoundToLabel("no numbers here", "Label", [], "25%", measureValuesEqual)).toBe(false);
   });
 
+  test("an anchor_span lets the model correct a case where nearest-distance is wrong", () => {
+    // Syntax, not proximity, ties "30%" to "Final Exam" here: the modifier comes before its
+    // subject. A pure distance check picks "25%" (physically closer) and would reject the true
+    // claim; scoping to a model-chosen anchor_span that contains only "30%" fixes that.
+    const line = "30% will come from the Final Exam, and 25% from the Midterm.";
+    const wholeLine = measureOccurrences(line, "percent");
+    expect(valueBoundToLabel(line, "Final Exam", wholeLine, "30%", measureValuesEqual)).toBe(
+      false,
+    );
+
+    const anchorSpan = "30% will come from the Final Exam";
+    const scope = resolveAnchorScope(line, "Final Exam", anchorSpan);
+    expect(scope).toBe(anchorSpan);
+    expect(
+      valueBoundToLabel(
+        scope!,
+        "Final Exam",
+        measureOccurrences(scope!, "percent"),
+        "30%",
+        measureValuesEqual,
+      ),
+    ).toBe(true);
+  });
+
   test("binds each value to its own occurrence of a label repeated for two different figures", () => {
     // "Best" qualifies two separate counts here, once per assessment. Pooling distances across
     // both "Best"s would make 11 and 7 look tied for nearest-to-"Best"; each is actually the
@@ -89,5 +114,31 @@ describe("valueBoundToLabel", () => {
     expect(valueBoundToLabel(bestOfLine, "Best", counts, "7", measureValuesEqual)).toBe(true);
     expect(valueBoundToLabel(bestOfLine, "Best", counts, "13", measureValuesEqual)).toBe(false);
     expect(valueBoundToLabel(bestOfLine, "Best", counts, "10", measureValuesEqual)).toBe(false);
+  });
+});
+
+describe("resolveAnchorScope", () => {
+  const line = "Midterm Exam 25% Final Exam 30%";
+
+  test("falls back to the whole source_quote when anchor_span is omitted", () => {
+    expect(resolveAnchorScope(line, "Midterm Exam", undefined)).toBe(line);
+  });
+
+  test("accepts a real substring that contains its label", () => {
+    expect(resolveAnchorScope(line, "Midterm Exam", "Midterm Exam 25%")).toBe(
+      "Midterm Exam 25%",
+    );
+  });
+
+  test("rejects a span that is not actually present in source_quote", () => {
+    expect(resolveAnchorScope(line, "Midterm Exam", "Midterm Exam 40%")).toBeNull();
+  });
+
+  test("rejects a span that does not contain its own label", () => {
+    expect(resolveAnchorScope(line, "Midterm Exam", "Final Exam 30%")).toBeNull();
+  });
+
+  test("rejects an empty span", () => {
+    expect(resolveAnchorScope(line, "Midterm Exam", "")).toBeNull();
   });
 });

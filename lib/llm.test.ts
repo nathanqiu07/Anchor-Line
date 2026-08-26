@@ -585,6 +585,98 @@ Prior-year account adjustment -$300`;
     ).resolves.toEqual(analysis);
   });
 
+  test("an anchor_span lets a genuinely correct claim survive a case nearest-distance alone would reject", async () => {
+    // The dollar figure comes before its own label here, so plain nearest-distance would bind
+    // "Federal Pell Grant" to the physically closer $500 (the Origination Fee's amount) and
+    // reject the true $1,600 claim. Scoping to a model-chosen anchor_span containing only
+    // $1,600 lets the true claim through, while the Origination Fee item still needs no
+    // anchor_span since $500 is already its unambiguous nearest amount.
+    const line =
+      "$1,600 covers your Federal Pell Grant, and $500 covers your Origination Fee.";
+    const letter = `Northstar College\nFinancial Aid Offer\n${line}`;
+    const rescued = {
+      school_name: "Northstar College",
+      award_year: null,
+      cost_of_attendance: { amount: null, source_quote: null },
+      line_items: [
+        {
+          raw_label: "Federal Pell Grant",
+          category: "gift_aid",
+          normalized_name: "Federal Pell Grant",
+          amount: 1_600,
+          period: "unknown",
+          source_quote: line,
+          anchor_span: "$1,600 covers your Federal Pell Grant",
+          explanation: "Model-authored explanation.",
+        },
+        {
+          raw_label: "Origination Fee",
+          category: "other",
+          normalized_name: "Origination Fee",
+          amount: 500,
+          period: "unknown",
+          source_quote: line,
+          explanation: "Model-authored explanation.",
+        },
+      ],
+      transcription: letter,
+      missing_info: [],
+    };
+
+    const result = await extractLetter(
+      uploaded(letter),
+      fakeClient(response(JSON.stringify(rescued))),
+    );
+
+    expect(result.line_items).toMatchObject([{ amount: 1_600 }, { amount: 500 }]);
+  });
+
+  test("rejects a claim whose anchor_span is not real text, instead of trusting it", async () => {
+    const line = "Federal Pell Grant $3,200 (Fall), Federal Pell Grant $1,800 (Spring)";
+    const letter = `Northstar College\nFinancial Aid Offer\n${line}`;
+    const fabricated = {
+      school_name: "Northstar College",
+      award_year: null,
+      cost_of_attendance: { amount: null, source_quote: null },
+      line_items: [
+        {
+          raw_label: "Federal Pell Grant",
+          category: "gift_aid",
+          normalized_name: "Federal Pell Grant",
+          amount: 3_200,
+          period: "unknown",
+          source_quote: line,
+          // Never a contiguous run in the source line — "(Spring)" only ever follows
+          // "$1,800" there — so this span is fabricated, not a genuine disambiguating quote.
+          anchor_span: "Federal Pell Grant $3,200 (Spring)",
+          explanation: "Model-authored explanation.",
+        },
+        {
+          raw_label: "Federal Pell Grant",
+          category: "gift_aid",
+          normalized_name: "Federal Pell Grant",
+          amount: 1_800,
+          period: "unknown",
+          source_quote: line,
+          anchor_span: "Federal Pell Grant $1,800 (Spring)",
+          explanation: "Model-authored explanation.",
+        },
+      ],
+      transcription: letter,
+      missing_info: [],
+    };
+
+    await expect(
+      extractLetter(
+        uploaded(letter),
+        fakeClient(
+          response(JSON.stringify(fabricated)),
+          response(JSON.stringify(fabricated)),
+        ),
+      ),
+    ).rejects.toBeInstanceOf(ExtractionValidationError);
+  });
+
   test("rejects a Direct Loan amount claimed as cost of attendance", async () => {
     const loanAsCoaTranscription = `Northstar College
 Financial Aid Offer

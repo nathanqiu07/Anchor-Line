@@ -134,3 +134,36 @@ export function valueBoundToLabel<T>(
     return nearest.length === 1 && equals(nearest[0].occurrence.value, target);
   });
 }
+
+/**
+ * Resolves the text a claim's value must be found and bound within. `valueBoundToLabel` still
+ * decides ambiguity by nearest-occurrence distance — that check doesn't go away — but distance
+ * is a proxy for what the source actually means, and some phrasing defeats the proxy no matter
+ * how it's computed (a repeated label, a value sandwiched between two same-kind numbers with
+ * no lexical difference). Rather than only ever guessing that from geometry, the model itself
+ * may supply `anchorSpan`: a short verbatim substring of `sourceQuote` it chose specifically to
+ * scope out every number and label instance except the one it means. Verification then runs
+ * `valueBoundToLabel` against that narrower span instead of the whole line, so the model — which
+ * actually read the sentence — does the disambiguation, while the deterministic check still
+ * confirms the span is real text and still requires the value to be the unambiguous nearest
+ * match within it. A span that isn't genuinely present in the source, or that doesn't even
+ * contain the label it's supposed to scope, is rejected outright rather than silently widened
+ * back out to the whole line — that would let a fabricated span smuggle in an unverified claim.
+ * Omitting the span entirely (older data, or a line simple enough not to need one) falls back to
+ * the whole `sourceQuote`, unchanged from before this existed.
+ */
+export function resolveAnchorScope(
+  sourceQuote: string,
+  label: string,
+  anchorSpan: string | undefined,
+): string | null {
+  if (anchorSpan === undefined) return sourceQuote;
+  if (
+    anchorSpan.length === 0 ||
+    !sourceQuote.includes(anchorSpan) ||
+    !anchorSpan.includes(label)
+  ) {
+    return null;
+  }
+  return anchorSpan;
+}

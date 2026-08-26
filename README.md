@@ -134,17 +134,24 @@ returns before a student ever sees it.
    attachment translation was removed with the vision pass, so an image cannot reach
    the provider even by mistake. The model returns structured JSON: line items or
    syllabus items, each with a category, a value, and the exact source line and label
-   it claims that value came from. Every field here is an unverified claim until the
-   next stage confirms it. A quota refusal surfaces as a distinct error so the
-   corrective retry (stage 3) is never spent on an exhausted quota.
+   it claims that value came from — plus, optionally, a short `anchor_span`: a
+   verbatim snippet the model itself chooses to pin a value to its label when a line
+   repeats a label or carries more than one number of the same kind, cases where a
+   distance heuristic alone can't tell which one it means. Every field here is an
+   unverified claim until the next stage confirms it. A quota refusal surfaces as a
+   distinct error so the corrective retry (stage 3) is never spent on an exhausted
+   quota.
 3. **Provenance / anchor verification — deterministic.** Nothing the model returns is
    trusted just because it said so. `lib/anchor.ts` normalizes case and whitespace,
    then requires an exact match against the transcription — no fuzzy fallback, since
    every accepted format yields the letter's own characters, so a quote that isn't
    present verbatim is a fabricated quote, not a misread one. `lib/measures.ts` checks
    that a claimed value is the unambiguous nearest occurrence of its kind to its own
-   label, the same rule for dollar amounts on award letters and for percentages,
-   counts, dates, and times on syllabi. A claim that fails this check is dropped (and
+   label — scoped to the model's `anchor_span` when it supplied one, so the model's
+   own disambiguation still has to be a real, label-containing substring of the source
+   line or it's rejected outright, never trusted on its say-so — the same rule for
+   dollar amounts on award letters and for percentages, counts, dates, and times on
+   syllabi. A claim that fails this check is dropped (and
    noted in `missing_info` on syllabi) rather than shown as fact; a whole-document
    failure (transcription mismatch, or nothing verifiable at all) triggers one
    corrective retry with the validation diagnostic as feedback, and a second failure

@@ -179,6 +179,20 @@ the client:
   dollar figure, the claimed amount must be the *unambiguously nearest*
   occurrence to the label (`amountBoundToTextLabel`) — this stops the model
   from attaching a scholarship's label to a nearby, unrelated fee amount.
+  Nearest-occurrence distance is a proxy for what the line actually means,
+  and some phrasing defeats any way of computing that proxy — a label
+  repeated for two different figures, or a figure that syntactically
+  precedes the label it belongs to rather than following it. For those
+  cases the model may set `anchor_span`: a short verbatim substring of
+  `source_quote` it chooses itself to scope out every other same-kind
+  number and label instance, so the binding check runs against that
+  narrower, disambiguated text instead of the whole line
+  (`resolveAnchorScope` in `lib/measures.ts`). A span that isn't a real
+  substring of `source_quote`, or that doesn't even contain the label it's
+  supposed to scope, is rejected outright rather than trusted — the model
+  proposes *where* to look, it never gets to skip the check itself.
+  Omitting `anchor_span` (the common case) falls back to binding within
+  the whole `source_quote`, unchanged from before this existed.
 - **Cost-of-attendance discipline.** COA is only ever set when a
   transcription line uses an explicit full-budget label ("cost of
   attendance," "student budget," "total education cost") immediately
@@ -253,10 +267,20 @@ and deliberate:
   `source_quote` is one exact transcription line, that `value` is a verbatim
   substring of it, that `raw_label` is a verbatim label substring containing a
   letter, and that the value is the nearest unambiguous occurrence of its kind to
-  the label. Unlike `assertProvenance`, it does **not** require every numeric
+  the label — scoped to `anchor_span` when the model supplies one, the same
+  mechanism described in the award-letter Label-ownership section above.
+  Unlike `assertProvenance`, it does **not** require every numeric
   occurrence on a line to be claimed — a syllabus line legitimately carries
   numbers we intentionally skip ("Week 3", a room number), so exhaustive coverage
   would fail almost every real syllabus.
+- **A failing item is dropped, not fatal.** Unlike the award-letter path, one
+  item failing provenance does not sink the whole extraction: it's removed
+  from `items` and a note explaining why is appended to `missing_info`
+  instead of throwing. Only a transcription mismatch, or an attempt where
+  *nothing* survives, is treated as a hard failure worth the one corrective
+  retry — a syllabus is a long list of independent claims, so losing one
+  genuinely ambiguous line shouldn't cost the student every other correctly
+  anchored number on the page.
 - **Kind and category are re-derived, not trusted.** `normalizeSyllabusSemantics`
   runs *before* provenance and sets each item's `kind` from the value's own token
   shape (`deriveMeasureKind`) and its `category`/`explanation` from
