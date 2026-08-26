@@ -10,11 +10,15 @@ import type { NextConfig } from "next";
  * which needs `frame-src blob:`, and the bundled sample originals are PNGs, which need
  * `img-src data: blob:`. Script and style stay `'unsafe-inline'` because the App Router
  * emits inline bootstrap script and inline style without a nonce; tightening that means
- * adopting nonces in middleware, not editing this list.
+ * adopting nonces in middleware, not editing this list. React's development runtime also
+ * uses eval for debugging, so development alone adds `'unsafe-eval'` below.
  */
+const developmentScriptSources =
+  process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : "";
+
 const contentSecurityPolicy = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  `script-src 'self' 'unsafe-inline'${developmentScriptSources}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self'",
