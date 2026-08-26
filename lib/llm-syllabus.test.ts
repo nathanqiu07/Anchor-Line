@@ -123,6 +123,51 @@ describe("syllabus extraction pipeline", () => {
     ).rejects.toBeInstanceOf(ExtractionValidationError);
   });
 
+  test("drops one unverifiable item instead of failing the whole extraction", async () => {
+    const twoWeights = "Midterm Exam 25% Final Exam 30%";
+    const source = [transcription, twoWeights].join("\n");
+    const mixed: SyllabusAnalysis = {
+      ...analysis,
+      // The Attendance policy item is genuinely anchored; the appended item claims a value
+      // the provenance check cannot bind to its label. Losing that one item shouldn't cost
+      // the rest of an otherwise-good extraction.
+      items: [
+        item("Attendance policy", "2%", "Attendance policy: 2% deducted per absence"),
+        item("Midterm Exam", "30%", twoWeights),
+      ],
+      transcription: source,
+    };
+
+    const result = await extractSyllabus(
+      uploaded(source),
+      fakeClient(response(JSON.stringify(mixed))),
+    );
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toMatchObject({ raw_label: "Attendance policy", value: "2%" });
+    expect(result.missing_info.some((note) => note.includes("Midterm Exam"))).toBe(true);
+  });
+
+  test("still fails when every item is unverifiable, after retrying once", async () => {
+    const twoWeights = "Midterm Exam 25% Final Exam 30%";
+    const source = [transcription, twoWeights].join("\n");
+    const allBad: SyllabusAnalysis = {
+      ...analysis,
+      items: [item("Midterm Exam", "30%", twoWeights)],
+      transcription: source,
+    };
+
+    await expect(
+      extractSyllabus(
+        uploaded(source),
+        fakeClient(
+          response(JSON.stringify(allBad)),
+          response(JSON.stringify(allBad)),
+        ),
+      ),
+    ).rejects.toBeInstanceOf(ExtractionValidationError);
+  });
+
   test("rejects a document with no syllabus context as not a syllabus", async () => {
     const notSyllabus = "Company Picnic Signup\nBring a dish to share by 12:00 PM";
     const output: SyllabusAnalysis = {

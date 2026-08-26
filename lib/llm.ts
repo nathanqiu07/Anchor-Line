@@ -5,6 +5,7 @@ import {
   type DocumentType,
   type LetterAnalysis,
   type SyllabusAnalysis,
+  type SyllabusItem,
 } from "./schema";
 import { extractionPrompt, syllabusExtractionPrompt } from "./prompts";
 import { decodeUploadText } from "./upload-contract";
@@ -663,6 +664,59 @@ function normalizeSyllabusSemantics(analysis: SyllabusAnalysis): SyllabusAnalysi
   };
 }
 
+/**
+ * Checks one item's provenance and returns why it fails, or null if it's clean. A plain
+ * string (not a thrown error) so a failure can be recorded and skipped instead of aborting
+ * every other item on the page — see assertSyllabusProvenance below.
+ */
+function syllabusItemProvenanceIssue(
+  item: SyllabusItem,
+  transcriptionLines: string[],
+): string | null {
+  if (item.source_quote.length === 0 || item.value.length === 0) {
+    return "empty source_quote or value";
+  }
+  if (!transcriptionLines.includes(item.source_quote)) {
+    return "source_quote is not one exact line in the transcription";
+  }
+  if (!item.source_quote.includes(item.value)) {
+    return "value does not appear verbatim in its source_quote";
+  }
+  if (
+    item.raw_label.length === 0 ||
+    !/\p{L}/u.test(item.raw_label) ||
+    !item.source_quote.includes(item.raw_label)
+  ) {
+    return "raw_label is not a verbatim label substring of source_quote";
+  }
+
+  const occurrences = measureOccurrences(item.source_quote, item.kind);
+  if (!occurrences.some((occurrence) => measureValuesEqual(occurrence.value, item.value))) {
+    return `value is not a ${item.kind} present in its source_quote`;
+  }
+  if (
+    !valueBoundToLabel(
+      item.source_quote,
+      item.raw_label,
+      occurrences,
+      item.value,
+      measureValuesEqual,
+    )
+  ) {
+    return "value is not the nearest unambiguous match to its label";
+  }
+  return null;
+}
+
+/**
+ * Verifies every claimed item is anchored to real text, but a single unverifiable item no
+ * longer sinks the whole extraction: it's dropped and recorded in missing_info instead of
+ * thrown, so one stray line (a genuinely ambiguous phrasing, an odd label) doesn't cost the
+ * student every other correctly-anchored number on the page. The transcription mismatch check
+ * stays a hard failure — it undermines every item's anchor, not just one — and so does the case
+ * where nothing at all survives, since an empty result isn't useful and is worth one retry with
+ * feedback before giving up.
+ */
 function assertSyllabusProvenance(
   analysis: SyllabusAnalysis,
   transcription: string,
@@ -672,50 +726,27 @@ function assertSyllabusProvenance(
   }
 
   const transcriptionLines = transcription.split(/\r?\n/);
+  const kept: SyllabusItem[] = [];
+  const dropped: string[] = [];
   for (const item of analysis.items) {
-    if (item.source_quote.length === 0 || item.value.length === 0) {
-      throw provenanceError("every syllabus item must have a non-empty source_quote and value");
-    }
-    if (!transcriptionLines.includes(item.source_quote)) {
-      throw provenanceError(
-        `source_quote must be one exact line in the transcription: ${item.source_quote}`,
-      );
-    }
-    if (!item.source_quote.includes(item.value)) {
-      throw provenanceError(`value must appear verbatim in its source_quote: ${item.value}`);
-    }
-    if (
-      item.raw_label.length === 0 ||
-      !/\p{L}/u.test(item.raw_label) ||
-      !item.source_quote.includes(item.raw_label)
-    ) {
-      throw provenanceError(
-        `raw_label must be a verbatim label substring of source_quote: ${item.raw_label}`,
-      );
-    }
-
-    const occurrences = measureOccurrences(item.source_quote, item.kind);
-    if (!occurrences.some((occurrence) => measureValuesEqual(occurrence.value, item.value))) {
-      throw provenanceError(
-        `value ${item.value} is not a ${item.kind} present in its source_quote`,
-      );
-    }
-    if (
-      !valueBoundToLabel(
-        item.source_quote,
-        item.raw_label,
-        occurrences,
-        item.value,
-        measureValuesEqual,
-      )
-    ) {
-      throw provenanceError(
-        `${item.raw_label} value must be the nearest unambiguous ${item.kind} to its label`,
-      );
+    const issue = syllabusItemProvenanceIssue(item, transcriptionLines);
+    if (issue) {
+      dropped.push(`Could not verify "${item.raw_label || item.value}": ${issue}`);
+    } else {
+      kept.push(item);
     }
   }
 
-  return analysis;
+  if (analysis.items.length > 0 && kept.length === 0) {
+    throw provenanceError(dropped[0] ?? "no syllabus item could be verified");
+  }
+
+  return {
+    ...analysis,
+    items: kept,
+    missing_info:
+      dropped.length > 0 ? [...analysis.missing_info, ...dropped] : analysis.missing_info,
+  };
 }
 
 function assertSyllabus(
@@ -757,6 +788,10 @@ export async function extractSyllabus(
       const parsed = SyllabusAnalysisSchema.parse(
         parseJson(textFrom(extractionResponse)),
       );
+      if (process.env.DEBUG_SYLLABUS) {
+        console.error(`\n--- attempt ${attempt} raw items ---`);
+        console.error(JSON.stringify(parsed.items, null, 2));
+      }
       // Normalize (kind derivation) before provenance so the anchored value is bound to the
       // kind implied by its own token, not the model's self-reported kind.
       const normalized = normalizeSyllabusSemantics(parsed);
@@ -766,6 +801,10 @@ export async function extractSyllabus(
       if (error instanceof NotSyllabusError) throw error;
       if (error instanceof ExtractionQuotaError) throw error;
       feedback = validationFeedback(error);
+      if (process.env.DEBUG_SYLLABUS) {
+        console.error(`--- attempt ${attempt} error ---`);
+        console.error(feedback);
+      }
     }
   }
 

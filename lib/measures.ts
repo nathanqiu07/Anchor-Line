@@ -93,11 +93,20 @@ export function labelOccurrences(text: string, label: string): number[] {
 }
 
 /**
- * True only when `target` is the single closest occurrence to some occurrence of `label`.
+ * True only when `target` is the single closest occurrence to *some* occurrence of `label`.
  * This is the exact binding rule the award-letter provenance check has always used for dollar
  * amounts, lifted here so both the money path and the syllabus path enforce it the same way:
  * a label that sits between two values of the same kind cannot silently claim the far one, and
- * a tie (two equally-near occurrences) is treated as ambiguous and rejected.
+ * a tie (two equally-near occurrences of the same label instance) is treated as ambiguous and
+ * rejected.
+ *
+ * Distance is checked per label occurrence, not pooled across every occurrence of a repeated
+ * label. A syllabus line like "7% Homework (Best 11 out of 13), 13% Quizzes (Best 7 out of 10)"
+ * uses the same label ("Best") twice, once for each figure it qualifies; pooling distances
+ * across both "Best"s made 11 and 7 look tied for nearest-to-"Best" even though each is
+ * unambiguously the closest count to its *own* "Best". Checking one label instance at a time
+ * lets a legitimately repeated label bind each of its values independently, while a single
+ * occurrence still rejects a genuine tie exactly as before.
  */
 export function valueBoundToLabel<T>(
   sourceQuote: string,
@@ -109,18 +118,19 @@ export function valueBoundToLabel<T>(
   const labels = labelOccurrences(sourceQuote, label);
   if (occurrences.length === 0 || labels.length === 0) return false;
 
-  const distances = occurrences.map((occurrence) => ({
-    occurrence,
-    distance: Math.min(
-      ...labels.map((labelStart) => {
-        const labelEnd = labelStart + label.length;
-        if (occurrence.end <= labelStart) return labelStart - occurrence.end;
-        if (occurrence.start >= labelEnd) return occurrence.start - labelEnd;
-        return 0;
-      }),
-    ),
-  }));
-  const minimumDistance = Math.min(...distances.map(({ distance }) => distance));
-  const nearest = distances.filter(({ distance }) => distance === minimumDistance);
-  return nearest.length === 1 && equals(nearest[0].occurrence.value, target);
+  return labels.some((labelStart) => {
+    const labelEnd = labelStart + label.length;
+    const distances = occurrences.map((occurrence) => ({
+      occurrence,
+      distance:
+        occurrence.end <= labelStart
+          ? labelStart - occurrence.end
+          : occurrence.start >= labelEnd
+            ? occurrence.start - labelEnd
+            : 0,
+    }));
+    const minimumDistance = Math.min(...distances.map(({ distance }) => distance));
+    const nearest = distances.filter(({ distance }) => distance === minimumDistance);
+    return nearest.length === 1 && equals(nearest[0].occurrence.value, target);
+  });
 }

@@ -77,4 +77,17 @@ describe("valueBoundToLabel", () => {
     );
     expect(valueBoundToLabel("no numbers here", "Label", [], "25%", measureValuesEqual)).toBe(false);
   });
+
+  test("binds each value to its own occurrence of a label repeated for two different figures", () => {
+    // "Best" qualifies two separate counts here, once per assessment. Pooling distances across
+    // both "Best"s would make 11 and 7 look tied for nearest-to-"Best"; each is actually the
+    // unambiguous nearest count to its own occurrence.
+    const bestOfLine =
+      "7% Homework (Best 11 out of 13), 13% Quizzes (Best 7 out of 10)";
+    const counts = measureOccurrences(bestOfLine, "count");
+    expect(valueBoundToLabel(bestOfLine, "Best", counts, "11", measureValuesEqual)).toBe(true);
+    expect(valueBoundToLabel(bestOfLine, "Best", counts, "7", measureValuesEqual)).toBe(true);
+    expect(valueBoundToLabel(bestOfLine, "Best", counts, "13", measureValuesEqual)).toBe(false);
+    expect(valueBoundToLabel(bestOfLine, "Best", counts, "10", measureValuesEqual)).toBe(false);
+  });
 });
