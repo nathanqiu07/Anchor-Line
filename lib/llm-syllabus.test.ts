@@ -215,6 +215,51 @@ describe("syllabus extraction pipeline", () => {
     expect(result.missing_info.some((note) => note.includes("Midterm Exam"))).toBe(true);
   });
 
+  test("accepts a value whose label and number sit on two consecutive lines (a cut-off table)", async () => {
+    const tableLines = ["A+ A A- B+ B B- C+ C C- D+ D D- F", "98 93 90 87 83 80 77 73 70 67 63 60 < 60"];
+    const source = [transcription, ...tableLines].join("\n");
+    const twoLineQuote = tableLines.join("\n");
+    const anchorSpan = "A+ A A- B+ B B- C+ C C- D+ D D- F\n98";
+    const cutoff: SyllabusAnalysis = {
+      ...analysis,
+      items: [item("A+", "98", twoLineQuote, anchorSpan)],
+      transcription: source,
+    };
+
+    const result = await extractSyllabus(
+      uploaded(source),
+      fakeClient(response(JSON.stringify(cutoff))),
+    );
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toMatchObject({ raw_label: "A+", value: "98" });
+  });
+
+  test("rejects a source_quote made of two non-adjacent lines", async () => {
+    const tableLines = ["A+ A A- B+ B B- C+ C C- D+ D D- F", "unrelated middle line", "98 93 90 87 83 80 77 73 70 67 63 60 < 60"];
+    const source = [transcription, ...tableLines].join("\n");
+    const fakeTwoLineQuote = `${tableLines[0]}\n${tableLines[2]}`;
+    const badCutoff: SyllabusAnalysis = {
+      ...analysis,
+      // The Attendance policy item is genuinely anchored; the A+ item claims a source_quote
+      // joining two lines that are not actually adjacent in the transcription.
+      items: [
+        item("Attendance policy", "2%", "Attendance policy: 2% deducted per absence"),
+        item("A+", "98", fakeTwoLineQuote, "A+ A A- B+ B B- C+ C C- D+ D D- F\n98"),
+      ],
+      transcription: source,
+    };
+
+    const result = await extractSyllabus(
+      uploaded(source),
+      fakeClient(response(JSON.stringify(badCutoff))),
+    );
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toMatchObject({ raw_label: "Attendance policy" });
+    expect(result.missing_info.some((note) => note.includes("A+"))).toBe(true);
+  });
+
   test("still fails when every item is unverifiable, after retrying once", async () => {
     const twoWeights = "Midterm Exam 25% Final Exam 30%";
     const source = [transcription, twoWeights].join("\n");

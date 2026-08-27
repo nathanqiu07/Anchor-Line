@@ -76,19 +76,22 @@ const penaltyPattern =
   /\b(?:late|penalt(?:y|ies)|deduct(?:ion|ed)?|per\s+day|per\s+diem|drop(?:ped|s)?\s+(?:the\s+)?lowest|no\s+credit)\b/;
 const attendancePattern = /\battend(?:ance|ing)?\b|\babsences?\b|\bmissed?\s+class/;
 const creditPattern = /\b(?:credit\s+hours?|credit\s+units?|semester\s+hours?|credits?|units?)\b/;
+// A curve/grade-adjustment target (e.g. "shift the median to 81%") is part of the grading
+// mechanism, the same as a letter-grade cut-off, so it shares this category rather than
+// falling into grade_weight — it is not a component's share of the final grade.
 const gradingScalePattern =
-  /\b(?:grading\s+scale|letter\s+grade|grade\s+scale)\b|(?:^|[\s(])[a-f][+-]?\s*[=:]|(?:^|[\s(])[a-f][+-]?\s*\d{2,3}\s*(?:-|to|–)\s*\d{2,3}/;
+  /\b(?:grading\s+scale|letter\s+grade|grade\s+scale|curve|curved|median)\b|(?:^|[\s(])[a-f][+-]?\s*[=:]|(?:^|[\s(])[a-f][+-]?\s*\d{2,3}\s*(?:-|to|–)\s*\d{2,3}/;
 const singleLetterGrade = /^[a-f][+-]?$/;
 const logisticsPattern = /\b(?:section|room|building|phone|call|office\s+number|crn|catalog)\b/;
 const scheduleDatePattern = /\b(?:due|deadline|dates?|by|on|week\s+of|scheduled)\b/;
 /** A bare lecture/section code label ("LEC", "SEC 2", "DIS") — the number beside it identifies
  * a section, not a count of anything, even when the surrounding sentence mentions an exam. */
-const sectionCodePattern = /^(?:lec|sec|dis|lab|rec|sect(?:ion)?)\.?$/i;
-/** A raw_label that is itself a comparison qualifier ("more than", "below", "at least") names an
- * eligibility threshold, not a graded component — regardless of assessment words elsewhere in
- * the sentence it was pulled from. */
+const sectionCodePattern = /^(?:lec|sec|dis|lab|rec|sect(?:ion)?)\.?\s*\d*$/i;
+/** A raw_label containing a comparison qualifier ("more than", "participation is below", "at
+ * least") names an eligibility threshold, not a graded component — regardless of assessment
+ * words elsewhere in the sentence it was pulled from. */
 const thresholdQualifierPattern =
-  /^(?:more than|less than|below|above|at least|at most|up to|over|under|within)$/;
+  /\b(?:more than|less than|below|above|at least|at most|up to|over|under|within)\b/;
 
 /** Classifies an important number from its label and source context, never from model semantics. */
 export function classifySyllabusItem(
