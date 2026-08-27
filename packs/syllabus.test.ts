@@ -82,6 +82,30 @@ describe("classifySyllabusItem", () => {
       recognized: false,
     });
   });
+
+  test("a lecture section code is logistics, even next to the word exam", () => {
+    expect(
+      classifySyllabusItem(
+        "LEC",
+        "Final Exam for LEC 001 (8 am on MWF lecture) is scheduled for Monday,",
+        "count",
+      ),
+    ).toMatchObject({ category: "logistics", recognized: true });
+    expect(classifySyllabusItem("SEC", "Meets as SEC 2 on Tuesdays", "count")).toMatchObject({
+      category: "logistics",
+      recognized: true,
+    });
+  });
+
+  test("a bare percentage with no graded component is an unrecognized grade weight", () => {
+    expect(
+      classifySyllabusItem(
+        "more than",
+        "more than 60% of the Poll Everywhere activities, you will receive 1% extra",
+        "percent",
+      ),
+    ).toMatchObject({ category: "grade_weight", recognized: false });
+  });
 });
 
 function analysisWith(items: SyllabusItem[]): SyllabusAnalysis {
@@ -109,13 +133,46 @@ function weight(raw_label: string, value: string): SyllabusItem {
 describe("gradeWeightsSummary", () => {
   test("sums grade-weight percents and flags a balanced set", () => {
     const summary = gradeWeightsSummary(analysisWith([weight("Midterm", "40%"), weight("Final", "60%")]));
-    expect(summary).toEqual({ total: 100, count: 2, balanced: true });
+    expect(summary).toEqual({ total: 100, count: 2, schemeCount: 1, balanced: true });
   });
 
   test("reports an unbalanced set", () => {
     const summary = gradeWeightsSummary(analysisWith([weight("Midterm", "40%"), weight("Final", "50%")]));
     expect(summary.total).toBe(90);
+    expect(summary.schemeCount).toBe(1);
     expect(summary.balanced).toBe(false);
+  });
+
+  test("recognizes two alternative grading methods as separate balanced schemes", () => {
+    const summary = gradeWeightsSummary(
+      analysisWith([
+        weight("Homework", "7%"),
+        weight("Quizzes", "13%"),
+        weight("Midterm 1", "22%"),
+        weight("Midterm 2", "22%"),
+        weight("Final Exam", "36%"),
+        weight("Homework", "7%"),
+        weight("Quizzes", "13%"),
+        weight("Better Midterm", "30%"),
+        weight("Final Exam", "50%"),
+      ]),
+    );
+    expect(summary).toEqual({ total: 200, count: 9, schemeCount: 2, balanced: true });
+  });
+
+  test("excludes bare percentages that classifySyllabusItem could not tie to a graded component", () => {
+    const thresholdItem: SyllabusItem = {
+      raw_label: "more than",
+      category: "grade_weight",
+      kind: "percent",
+      value: "60%",
+      source_quote: "more than 60% of the Poll Everywhere activities, you will receive 1% extra",
+      explanation: "x",
+    };
+    const summary = gradeWeightsSummary(
+      analysisWith([weight("Midterm", "40%"), weight("Final", "60%"), thresholdItem]),
+    );
+    expect(summary).toEqual({ total: 100, count: 2, schemeCount: 1, balanced: true });
   });
 });
 
@@ -138,6 +195,21 @@ describe("syllabusWarnings", () => {
     // The pipeline sets the attendance explanation; mirror that here so the warning fires.
     analysis.items[0].explanation = classifySyllabusItem(item.raw_label, item.source_quote, "percent").explanation;
     expect(syllabusWarnings(analysis).some((warning) => warning.id === "attendance-affects-grade")).toBe(true);
+  });
+
+  test("does not warn when a syllabus offers two alternative, individually balanced grading methods", () => {
+    const analysis = analysisWith([
+      weight("Homework", "7%"),
+      weight("Quizzes", "13%"),
+      weight("Midterm 1", "22%"),
+      weight("Midterm 2", "22%"),
+      weight("Final Exam", "36%"),
+      weight("Homework", "7%"),
+      weight("Quizzes", "13%"),
+      weight("Better Midterm", "30%"),
+      weight("Final Exam", "50%"),
+    ]);
+    expect(syllabusWarnings(analysis).some((warning) => warning.id === "grade-weights-unbalanced")).toBe(false);
   });
 
   test("warns about uncategorized numbers", () => {

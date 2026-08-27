@@ -176,7 +176,9 @@ export function SyllabusWorkspace({ offer }: SyllabusWorkspaceProps) {
 
             const note =
               group.category === "grade_weight" && weights.total !== null
-                ? `${group.note} These total ${weights.total}%.`
+                ? weights.schemeCount > 1
+                  ? `${group.note} This syllabus offers ${weights.schemeCount} grading schemes, each weighted to 100% on its own.`
+                  : `${group.note} These total ${weights.total}%.`
                 : group.note;
 
             return (

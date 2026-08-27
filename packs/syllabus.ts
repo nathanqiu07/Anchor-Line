@@ -71,7 +71,7 @@ function searchable(value: string): string {
 }
 
 const assessmentPattern =
-  /\b(?:exams?|midterms?|finals?|quiz(?:zes)?|tests?|homeworks?|assignments?|projects?|papers?|essays?|labs?|participation|discussions?|presentations?|portfolios?|problem\s+sets?|reading\s+responses?)\b/;
+  /\b(?:exams?|midterms?|finals?|quiz(?:zes)?|tests?|homeworks?|assignments?|projects?|papers?|essays?|labs?|laboratory|reports?|participation|discussions?|presentations?|portfolios?|problem\s+sets?|reading\s+responses?)\b/;
 const penaltyPattern =
   /\b(?:late|penalt(?:y|ies)|deduct(?:ion|ed)?|per\s+day|per\s+diem|drop(?:ped|s)?\s+(?:the\s+)?lowest|no\s+credit)\b/;
 const attendancePattern = /\battend(?:ance|ing)?\b|\babsences?\b|\bmissed?\s+class/;
@@ -81,6 +81,14 @@ const gradingScalePattern =
 const singleLetterGrade = /^[a-f][+-]?$/;
 const logisticsPattern = /\b(?:section|room|building|phone|call|office\s+number|crn|catalog)\b/;
 const scheduleDatePattern = /\b(?:due|deadline|dates?|by|on|week\s+of|scheduled)\b/;
+/** A bare lecture/section code label ("LEC", "SEC 2", "DIS") — the number beside it identifies
+ * a section, not a count of anything, even when the surrounding sentence mentions an exam. */
+const sectionCodePattern = /^(?:lec|sec|dis|lab|rec|sect(?:ion)?)\.?$/i;
+/** A raw_label that is itself a comparison qualifier ("more than", "below", "at least") names an
+ * eligibility threshold, not a graded component — regardless of assessment words elsewhere in
+ * the sentence it was pulled from. */
+const thresholdQualifierPattern =
+  /^(?:more than|less than|below|above|at least|at most|up to|over|under|within)$/;
 
 /** Classifies an important number from its label and source context, never from model semantics. */
 export function classifySyllabusItem(
@@ -91,6 +99,18 @@ export function classifySyllabusItem(
   const label = searchable(rawLabel);
   const source = searchable(sourceQuote);
   const context = `${label} ${source}`;
+
+  // A lecture/section code wins before anything else: "LEC 001" in a sentence about a final
+  // exam would otherwise match the assessment-count pattern below on "exam" alone, mislabeling
+  // a section number as a count of assessments.
+  if (sectionCodePattern.test(rawLabel.trim()) && (kind === "count" || kind === "number")) {
+    return {
+      category: "logistics",
+      normalizedName: rawLabel,
+      explanation: explanations.logistics,
+      recognized: true,
+    };
+  }
 
   // A penalty reads as an assessment weight otherwise ("Late work: 10%"), so it wins first.
   if (penaltyPattern.test(context) && (kind === "percent" || kind === "points" || kind === "count")) {
@@ -133,6 +153,18 @@ export function classifySyllabusItem(
   }
 
   if (kind === "percent" || kind === "points") {
+    // The model's own label is a comparison qualifier ("more than", "below", "at least"), which
+    // marks an eligibility threshold (e.g. extra-credit participation) rather than a graded
+    // component's weight — even when the surrounding sentence happens to also mention "final"
+    // or another assessment word. Label wins over the wider sentence context here.
+    if (thresholdQualifierPattern.test(label)) {
+      return {
+        category: "grade_weight",
+        normalizedName: rawLabel,
+        explanation: explanations.gradeWeight,
+        recognized: false,
+      };
+    }
     if (assessmentPattern.test(context)) {
       return {
         category: "grade_weight",
@@ -228,22 +260,53 @@ function percentValue(value: string): number | null {
 }
 
 export interface GradeWeightSummary {
-  /** The sum of every recognized grade-weight percentage, or null when none are stated. */
+  /** The sum of every recognized grade-weight percentage across every detected scheme, or null when none are stated. */
   total: number | null;
   count: number;
-  /** True only when at least one weight is stated and they total 100% (±0.5 for rounding). */
+  /** How many distinct weighting schemes were detected (see gradeWeightsSummary). */
+  schemeCount: number;
+  /** True only when at least one weight is stated and every detected scheme totals 100% (±0.5 for rounding). */
   balanced: boolean;
 }
 
+/**
+ * Sums recognized grade-weight percentages, grouped into weighting schemes rather than one
+ * grand total. A syllabus legitimately offers more than one grading method ("the better of
+ * two methods below"), each independently weighted to 100% — summing all of them together
+ * would report e.g. 200% as broken. Consecutive percents are grouped by resetting whenever a
+ * running total crosses ~100%, so multiple valid 100% schemes are recognized as separate
+ * schemes instead of one bad total. Items classifySyllabusItem could not confidently tie to a
+ * graded component (a bare percentage like an extra-credit eligibility threshold) are excluded
+ * entirely, since they are not grade weights even though the model may have labeled them so.
+ */
 export function gradeWeightsSummary(analysis: SyllabusAnalysis): GradeWeightSummary {
   const percents = analysis.items
     .filter((item) => item.category === "grade_weight" && item.kind === "percent")
+    .filter((item) => classifySyllabusItem(item.raw_label, item.source_quote, item.kind).recognized)
     .map((item) => percentValue(item.value))
     .filter((value): value is number => value !== null);
 
-  if (percents.length === 0) return { total: null, count: 0, balanced: false };
+  if (percents.length === 0) return { total: null, count: 0, schemeCount: 0, balanced: false };
+
+  const schemes: number[][] = [];
+  let current: number[] = [];
+  let runningTotal = 0;
+  for (const value of percents) {
+    current.push(value);
+    runningTotal += value;
+    if (runningTotal >= 99.5) {
+      schemes.push(current);
+      current = [];
+      runningTotal = 0;
+    }
+  }
+  if (current.length > 0) schemes.push(current);
+
   const total = percents.reduce((sum, value) => sum + value, 0);
-  return { total, count: percents.length, balanced: Math.abs(total - 100) <= 0.5 };
+  const balanced = schemes.every(
+    (scheme) => Math.abs(scheme.reduce((sum, value) => sum + value, 0) - 100) <= 0.5,
+  );
+  return { total, count: percents.length, schemeCount: schemes.length, balanced };
 }
 
 export interface SyllabusWarning {
@@ -258,10 +321,14 @@ export function syllabusWarnings(analysis: SyllabusAnalysis): SyllabusWarning[] 
 
   const weights = gradeWeightsSummary(analysis);
   if (weights.count > 1 && !weights.balanced && weights.total !== null) {
+    const message =
+      weights.schemeCount > 1
+        ? `This syllabus appears to list ${weights.schemeCount} grading schemes, and at least one does not total 100%. Ask the instructor whether a component is missing or weighted differently.`
+        : `The stated grade weights total ${weights.total}%, not 100%. Ask the instructor whether a component is missing or weighted differently.`;
     warnings.push({
       id: "grade-weights-unbalanced",
       title: "Grade weights do not add up to 100%",
-      message: `The stated grade weights total ${weights.total}%, not 100%. Ask the instructor whether a component is missing or weighted differently.`,
+      message,
     });
   }
 
