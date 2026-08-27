@@ -76,11 +76,12 @@ const penaltyPattern =
   /\b(?:late|penalt(?:y|ies)|deduct(?:ion|ed)?|per\s+day|per\s+diem|drop(?:ped|s)?\s+(?:the\s+)?lowest|no\s+credit)\b/;
 const attendancePattern = /\battend(?:ance|ing)?\b|\babsences?\b|\bmissed?\s+class/;
 const creditPattern = /\b(?:credit\s+hours?|credit\s+units?|semester\s+hours?|credits?|units?)\b/;
-// A curve/grade-adjustment target (e.g. "shift the median to 81%") is part of the grading
-// mechanism, the same as a letter-grade cut-off, so it shares this category rather than
-// falling into grade_weight — it is not a component's share of the final grade.
+// A curve/grade-adjustment target (e.g. "shift the median to 81%") or a rounding threshold
+// (e.g. "89.5% rounds up to 90%") is part of the grading mechanism, the same as a letter-grade
+// cut-off, so it shares this category rather than falling into grade_weight — it is not a
+// component's share of the final grade.
 const gradingScalePattern =
-  /\b(?:grading\s+scale|letter\s+grade|grade\s+scale|curve|curved|median)\b|(?:^|[\s(])[a-f][+-]?\s*[=:]|(?:^|[\s(])[a-f][+-]?\s*\d{2,3}\s*(?:-|to|–)\s*\d{2,3}/;
+  /\b(?:grading\s+scale|letter\s+grade|grade\s+scale|curve|curved|median|round(?:ed|ing)?)\b|(?:^|[\s(])[a-f][+-]?\s*[=:]|(?:^|[\s(])[a-f][+-]?\s*\d{2,3}\s*(?:-|to|–)\s*\d{2,3}/;
 const singleLetterGrade = /^[a-f][+-]?$/;
 const logisticsPattern = /\b(?:section|room|building|phone|call|office\s+number|crn|catalog)\b/;
 const scheduleDatePattern = /\b(?:due|deadline|dates?|by|on|week\s+of|scheduled)\b/;

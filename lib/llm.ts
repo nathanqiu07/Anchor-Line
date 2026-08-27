@@ -672,23 +672,6 @@ function normalizeSyllabusSemantics(analysis: SyllabusAnalysis): SyllabusAnalysi
 }
 
 /**
- * True when `sourceQuote` is either one exact transcription line, or exactly two consecutive
- * transcription lines joined by "\n". The second form exists for a two-row table rendered as
- * plain text — a grading-scale cut-off table prints letter grades on one line and their
- * thresholds on the very next line, so a label and its value never share a single line. This
- * stays exact-match only (no fuzziness): the joined pair must be real, adjacent source text.
- */
-function matchesTranscriptionWindow(sourceQuote: string, transcriptionLines: string[]): boolean {
-  if (transcriptionLines.includes(sourceQuote)) return true;
-  for (let index = 0; index < transcriptionLines.length - 1; index += 1) {
-    if (`${transcriptionLines[index]}\n${transcriptionLines[index + 1]}` === sourceQuote) {
-      return true;
-    }
-  }
-  return false;
-}
-
-/**
  * Checks one item's provenance and returns why it fails, or null if it's clean. A plain
  * string (not a thrown error) so a failure can be recorded and skipped instead of aborting
  * every other item on the page — see assertSyllabusProvenance below.
@@ -700,8 +683,8 @@ function syllabusItemProvenanceIssue(
   if (item.source_quote.length === 0 || item.value.length === 0) {
     return "empty source_quote or value";
   }
-  if (!matchesTranscriptionWindow(item.source_quote, transcriptionLines)) {
-    return "source_quote is not one exact line (or two consecutive lines) in the transcription";
+  if (!transcriptionLines.includes(item.source_quote)) {
+    return "source_quote is not one exact line in the transcription";
   }
   if (!item.source_quote.includes(item.value)) {
     return "value does not appear verbatim in its source_quote";

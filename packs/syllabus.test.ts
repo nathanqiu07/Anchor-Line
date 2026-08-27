@@ -39,6 +39,26 @@ describe("classifySyllabusItem", () => {
     });
   });
 
+  test("a curve or grade-adjustment target is a grading scale, not a grade weight", () => {
+    expect(
+      classifySyllabusItem(
+        "shift the median to",
+        "adjusted to a new score S* to shift the median to 81%.",
+        "percent",
+      ),
+    ).toMatchObject({ category: "grading_scale", recognized: true });
+  });
+
+  test("a rounding threshold is a grading scale", () => {
+    expect(
+      classifySyllabusItem(
+        "rounded up",
+        "Scores of 89.5% or higher will be rounded up to the next whole percent.",
+        "percent",
+      ),
+    ).toMatchObject({ category: "grading_scale", recognized: true });
+  });
+
   test("a late deduction is a policy penalty, not a weight", () => {
     expect(classifySyllabusItem("Late work", "Late work: 10% deducted per day", "percent")).toMatchObject({
       category: "policy_penalty",

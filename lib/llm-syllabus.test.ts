@@ -215,49 +215,30 @@ describe("syllabus extraction pipeline", () => {
     expect(result.missing_info.some((note) => note.includes("Midterm Exam"))).toBe(true);
   });
 
-  test("accepts a value whose label and number sit on two consecutive lines (a cut-off table)", async () => {
-    const tableLines = ["A+ A A- B+ B B- C+ C C- D+ D D- F", "98 93 90 87 83 80 77 73 70 67 63 60 < 60"];
-    const source = [transcription, ...tableLines].join("\n");
-    const twoLineQuote = tableLines.join("\n");
-    const anchorSpan = "A+ A A- B+ B B- C+ C C- D+ D D- F\n98";
-    const cutoff: SyllabusAnalysis = {
+  test("extracts a rounding threshold and a curve/grade-adjustment target as grading scale", async () => {
+    const roundingLine = "Scores of 89.5% or higher will be rounded up to the next whole percent.";
+    const curveLine = "If the class median is below 70%, we will curve the exam to a median of 75%.";
+    const source = [transcription, roundingLine, curveLine].join("\n");
+    const withRounding: SyllabusAnalysis = {
       ...analysis,
-      items: [item("A+", "98", twoLineQuote, anchorSpan)],
-      transcription: source,
-    };
-
-    const result = await extractSyllabus(
-      uploaded(source),
-      fakeClient(response(JSON.stringify(cutoff))),
-    );
-
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0]).toMatchObject({ raw_label: "A+", value: "98" });
-  });
-
-  test("rejects a source_quote made of two non-adjacent lines", async () => {
-    const tableLines = ["A+ A A- B+ B B- C+ C C- D+ D D- F", "unrelated middle line", "98 93 90 87 83 80 77 73 70 67 63 60 < 60"];
-    const source = [transcription, ...tableLines].join("\n");
-    const fakeTwoLineQuote = `${tableLines[0]}\n${tableLines[2]}`;
-    const badCutoff: SyllabusAnalysis = {
-      ...analysis,
-      // The Attendance policy item is genuinely anchored; the A+ item claims a source_quote
-      // joining two lines that are not actually adjacent in the transcription.
       items: [
-        item("Attendance policy", "2%", "Attendance policy: 2% deducted per absence"),
-        item("A+", "98", fakeTwoLineQuote, "A+ A A- B+ B B- C+ C C- D+ D D- F\n98"),
+        item("rounded up", "89.5%", roundingLine),
+        item("median is below", "70%", curveLine),
+        item("median of", "75%", curveLine, "curve the exam to a median of 75%"),
       ],
       transcription: source,
     };
 
     const result = await extractSyllabus(
       uploaded(source),
-      fakeClient(response(JSON.stringify(badCutoff))),
+      fakeClient(response(JSON.stringify(withRounding))),
     );
 
-    expect(result.items).toHaveLength(1);
-    expect(result.items[0]).toMatchObject({ raw_label: "Attendance policy" });
-    expect(result.missing_info.some((note) => note.includes("A+"))).toBe(true);
+    expect(result.items).toHaveLength(3);
+    const byLabel = new Map(result.items.map((entry) => [entry.raw_label, entry]));
+    expect(byLabel.get("rounded up")).toMatchObject({ category: "grading_scale" });
+    expect(byLabel.get("median is below")).toMatchObject({ category: "grading_scale" });
+    expect(byLabel.get("median of")).toMatchObject({ category: "grading_scale" });
   });
 
   test("still fails when every item is unverifiable, after retrying once", async () => {
